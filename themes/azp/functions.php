@@ -17,7 +17,7 @@ require_once 'inc/e-library/index.php';
 unload_textdomain('default');
 load_textdomain(
     'default',
-    get_template_directory() . '/languages/default-' . get_locale() . '.mo'
+    get_template_directory() . '/languages/default-' . get_locale() . '.mo',
 );
 
 add_action('login_enqueue_scripts', function () {
@@ -51,10 +51,10 @@ add_action(
             'azp-style',
             get_stylesheet_uri(),
             [],
-            wp_get_theme()->get('Version')
+            wp_get_theme()->get('Version'),
         );
     },
-    50 // load stylesheet last overriding all other styles
+    50, // load stylesheet last overriding all other styles
 );
 
 add_filter('upload_mimes', function ($mimes) {
@@ -64,26 +64,26 @@ add_filter('upload_mimes', function ($mimes) {
 
 add_action('init', function () {
     register_block_type(
-        dirname(__FILE__) . '/inc/blocks/not-logged-in/build/block.json'
+        dirname(__FILE__) . '/inc/blocks/not-logged-in/build/block.json',
     );
     register_block_type(
-        dirname(__FILE__) . '/inc/blocks/acf-field/build/block.json'
+        dirname(__FILE__) . '/inc/blocks/acf-field/build/block.json',
     );
     register_block_type(
-        dirname(__FILE__) . '/inc/blocks/acf-post-object/build/block.json'
+        dirname(__FILE__) . '/inc/blocks/acf-post-object/build/block.json',
     );
     register_block_type(
-        dirname(__FILE__) . '/inc/blocks/acf-repeater/build/block.json'
+        dirname(__FILE__) . '/inc/blocks/acf-repeater/build/block.json',
     );
     register_block_type(
-        dirname(__FILE__) . '/inc/blocks/acf-repeater-row/build/block.json'
+        dirname(__FILE__) . '/inc/blocks/acf-repeater-row/build/block.json',
     );
     register_block_type(
         dirname(__FILE__) .
-            '/inc/blocks/acf-repeater-no-results/build/block.json'
+            '/inc/blocks/acf-repeater-no-results/build/block.json',
     );
     register_block_type(
-        dirname(__FILE__) . '/inc/blocks/post-type/build/block.json'
+        dirname(__FILE__) . '/inc/blocks/post-type/build/block.json',
     );
 });
 
@@ -177,7 +177,7 @@ add_filter(
             'title' => __('Download button', 'azp'),
             'description' => __(
                 'A button that initiates a download of the href',
-                'azp'
+                'azp',
             ),
             'attributes' => [
                 'type' => 'download',
@@ -188,7 +188,7 @@ add_filter(
         return $variations;
     },
     10,
-    2
+    2,
 );
 
 add_filter(
@@ -212,7 +212,7 @@ add_filter(
         return $block_content;
     },
     10,
-    2
+    2,
 );
 
 add_action('wp_before_admin_bar_render', function () {

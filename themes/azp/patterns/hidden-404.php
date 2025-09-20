@@ -10,7 +10,7 @@
 ?>
 <!-- wp:paragraph {"align":"center"} -->
 <p class="has-text-align-center has-large-font-size"><?php echo do_shortcode(
-    '[icon name="magnifying-glass" prefix="fas"]'
+    '[icon name="magnifying-glass" prefix="fas"]',
 ); ?></p>
 <!-- /wp:paragraph -->
 

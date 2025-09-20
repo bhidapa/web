@@ -15,7 +15,7 @@ foreach ($field instanceof WP_Post ? [$field] : $field as $post) {
     $post_type = get_post_type();
     $filter_block_context = static function ($context) use (
         $post_id,
-        $post_type
+        $post_type,
     ) {
         $context['postType'] = $post_type;
         $context['postId'] = $post_id;

@@ -1,6 +1,9 @@
 <?php
 
-$e_library_student = new E_Library_Student();
+add_action('init', function () {
+    global $e_library_student;
+    $e_library_student = new E_Library_Student();
+});
 
 class E_Library_Student
 {
@@ -25,7 +28,7 @@ class E_Library_Student
                 __('Import Students', 'azp'),
                 'edit_users',
                 'import_students',
-                [$this, 'import_students_page']
+                [$this, 'import_students_page'],
             );
         });
     }
@@ -41,8 +44,8 @@ class E_Library_Student
             'trim',
             explode(
                 ',',
-                get_user_meta($user_id, self::STUDY_GROUPS_META_KEY, true)
-            )
+                get_user_meta($user_id, self::STUDY_GROUPS_META_KEY, true),
+            ),
         );
     }
 
@@ -67,7 +70,7 @@ class E_Library_Student
         ) {
             return !!wp_verify_nonce(
                 $_POST['_wpnonce'],
-                self::IMPORT_STUDENTS_ACTION
+                self::IMPORT_STUDENTS_ACTION,
             );
         }
         return null;
@@ -78,7 +81,7 @@ class E_Library_Student
         $imported_students = null;
         if ($this->verify_import_students_action() === true) {
             $imported_students = $this->import_students(
-                $_FILES['file']['tmp_name']
+                $_FILES['file']['tmp_name'],
             );
         }
         ?>
@@ -96,26 +99,26 @@ class E_Library_Student
               implode(', ', $imported_students->get_error_messages()),
           [
               'type' => 'error',
-          ]
+          ],
       );
   } ?>
 
   <p>
     <?php _e(
         'Upload a CSV file containing the students and their belonging library study groups to import.',
-        'azp'
+        'azp',
     ); ?>
   </p>
   <p>
     <?php _e(
         'The CSV contents will be synced, using the username as the identifier, with the users in the database; meaning, new users will be created, existing users will be updated, and users not in the CSV will be deleted.',
-        'azp'
+        'azp',
     ); ?>
   </p>
   <p>
     <?php _e(
         'E-Mails will also be sent to the users to notify them of their new or updated accounts.',
-        'azp'
+        'azp',
     ); ?>
   </p>
 
@@ -126,7 +129,7 @@ class E_Library_Student
   >
     <?php wp_nonce_field(self::IMPORT_STUDENTS_ACTION); ?>
 		<input type="hidden" name="action" value="<?php esc_attr_e(
-      self::IMPORT_STUDENTS_ACTION
+      self::IMPORT_STUDENTS_ACTION,
   ); ?>" />
 
     <table class="form-table">
@@ -187,12 +190,12 @@ class E_Library_Student
             $students[] = [
                 'username' => sanitize_user(
                     $row[$field_indexes['username']],
-                    true
+                    true,
                 ),
                 'email' => trim((string) $row[$field_indexes['email']]),
                 'study_groups' => array_map(
                     'trim',
-                    explode(',', $row[$field_indexes['study_groups']])
+                    explode(',', $row[$field_indexes['study_groups']]),
                 ),
                 'first_name' => $field_indexes['first_name']
                     ? trim((string) $row[$field_indexes['first_name']])
@@ -207,14 +210,14 @@ class E_Library_Student
         if (empty($field_indexes)) {
             return new WP_Error(
                 'no_header',
-                __('No header found in the CSV file.', 'azp')
+                __('No header found in the CSV file.', 'azp'),
             );
         }
 
         if (empty($students)) {
             return new WP_Error(
                 'no_students',
-                __('No students found in the CSV file.', 'azp')
+                __('No students found in the CSV file.', 'azp'),
             );
         }
 
@@ -233,10 +236,10 @@ class E_Library_Student
                         sprintf(
                             __(
                                 'Existing user <strong>%s</strong> is not a student.',
-                                'azp'
+                                'azp',
                             ),
-                            $existing_student->user_login
-                        )
+                            $existing_student->user_login,
+                        ),
                     );
                     continue;
                 }
@@ -259,7 +262,7 @@ class E_Library_Student
                     update_user_meta(
                         $existing_student->ID,
                         self::STUDY_GROUPS_META_KEY,
-                        implode(',', $student['study_groups'])
+                        implode(',', $student['study_groups']),
                     ) !== true
                 ) {
                     $errors->add(
@@ -267,10 +270,10 @@ class E_Library_Student
                         sprintf(
                             __(
                                 'Failed to update study groups for user <strong>%s</strong>.',
-                                'azp'
+                                'azp',
                             ),
-                            $existing_student->user_login
-                        )
+                            $existing_student->user_login,
+                        ),
                     );
                 }
 
@@ -290,7 +293,7 @@ class E_Library_Student
                 'meta_input' => [
                     self::STUDY_GROUPS_META_KEY => implode(
                         ',',
-                        $student['study_groups']
+                        $student['study_groups'],
                     ),
                 ],
             ]);
@@ -301,12 +304,12 @@ class E_Library_Student
             }
 
             $reset_password_key = get_password_reset_key(
-                get_user($new_student_id)
+                get_user($new_student_id),
             );
             $reset_password_url = network_site_url(
                 "wp-login.php?action=rp&key=$reset_password_key&login=" .
                     rawurlencode($student['username']),
-                'login'
+                'login',
             );
 
             $mails[] = [
@@ -320,7 +323,7 @@ Vaše korisničko ime je: <b>%s</b><br>
 Srdačan pozdrav,<br>
 Akademija za psihoterapiju',
                     $student['username'],
-                    $reset_password_url
+                    $reset_password_url,
                 ),
             ];
 
@@ -345,10 +348,10 @@ Akademija za psihoterapiju',
                     __(
                         sprintf(
                             'Failed to send email to <b>%s</b>.',
-                            $mail['to']
+                            $mail['to'],
                         ),
-                        'azp'
-                    )
+                        'azp',
+                    ),
                 );
             }
         }

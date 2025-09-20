@@ -16,12 +16,12 @@
          ? get_sub_field(
              $attributes['field'],
              false,
-             false // we dont want the formatted version ever here because we'll be using the label in choices
+             false, // we dont want the formatted version ever here because we'll be using the label in choices
          )
          : get_field(
              $attributes['field'],
              false,
-             false // we dont want the formatted version ever here because we'll be using the label in choices
+             false, // we dont want the formatted version ever here because we'll be using the label in choices
          );
      $choiceLabel = $field['choices'][$choiceValue];
 

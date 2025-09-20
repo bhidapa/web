@@ -2,17 +2,17 @@
 
 require_once 'student.php';
 
-$e_library = new E_Library();
-
 add_action('init', function () {
+    global $e_library;
+    $e_library = new E_Library();
     register_block_type(
-        dirname(__FILE__) . '/../blocks/e-library/build/block.json'
+        dirname(__FILE__) . '/../blocks/e-library/build/block.json',
     );
     register_block_type(
-        dirname(__FILE__) . '/../blocks/e-library-has-access/build/block.json'
+        dirname(__FILE__) . '/../blocks/e-library-has-access/build/block.json',
     );
     register_block_type(
-        dirname(__FILE__) . '/../blocks/e-library-no-access/build/block.json'
+        dirname(__FILE__) . '/../blocks/e-library-no-access/build/block.json',
     );
 });
 
@@ -36,22 +36,22 @@ class E_Library
         add_filter(
             'template_redirect',
             [$this, 'template_redirect'],
-            self::HIGH_HOOK_PRIORITY
+            self::HIGH_HOOK_PRIORITY,
         );
         add_filter(
             'pre_get_block_templates',
             [$this, 'pre_get_block_templates'],
-            self::HIGH_HOOK_PRIORITY
+            self::HIGH_HOOK_PRIORITY,
         );
         add_filter(
             'rest_prepare_' . self::LITERATURE_POST_TYPE,
             [$this, 'rest_prepare_literature_post_type'],
-            self::HIGH_HOOK_PRIORITY
+            self::HIGH_HOOK_PRIORITY,
         );
         add_filter(
             'pre_get_posts',
             [$this, 'pre_get_posts'],
-            self::HIGH_HOOK_PRIORITY
+            self::HIGH_HOOK_PRIORITY,
         );
     }
 
@@ -164,7 +164,7 @@ class E_Library
     <tr>
         <th>
             <label for="<?php echo esc_attr(
-                E_Library_Student::STUDY_GROUPS_META_KEY
+                E_Library_Student::STUDY_GROUPS_META_KEY,
             ); ?>">
                 <?php _e('Study groups', 'azp'); ?>
             </label>
@@ -174,25 +174,25 @@ class E_Library
             type="text"
             class="regular-text"
             id="<?php echo esc_attr(
-                E_Library_Student::STUDY_GROUPS_META_KEY
+                E_Library_Student::STUDY_GROUPS_META_KEY,
             ); ?>"
             name="<?php echo esc_attr(
-                E_Library_Student::STUDY_GROUPS_META_KEY
+                E_Library_Student::STUDY_GROUPS_META_KEY,
             ); ?>"
             value="<?php echo $user instanceof WP_User
                 ? esc_attr(
                     get_user_meta(
                         $user->ID,
                         E_Library_Student::STUDY_GROUPS_META_KEY,
-                        true
-                    )
+                        true,
+                    ),
                 )
                 : ''; ?>"
             >
             <p class="description">
             <?php _e(
                 'Comma separated study group slugs to which the student belongs.',
-                'azp'
+                'azp',
             ); ?>
             </p>
         </td>
@@ -212,13 +212,13 @@ class E_Library
             update_user_meta(
                 $user_id,
                 E_Library_Student::STUDY_GROUPS_META_KEY,
-                $_REQUEST[E_Library_Student::STUDY_GROUPS_META_KEY]
+                $_REQUEST[E_Library_Student::STUDY_GROUPS_META_KEY],
             );
         }
     }
 
     public function rest_prepare_literature_post_type(
-        WP_REST_Response $response
+        WP_REST_Response $response,
     ) {
         global $e_library_student;
         if (
@@ -233,8 +233,8 @@ class E_Library
                     __('Sorry, you are not allowed to do that.'),
                     [
                         'status' => 401,
-                    ]
-                )
+                    ],
+                ),
             );
         }
         return $response;
@@ -257,7 +257,7 @@ class E_Library
         if (!$this->has_current_user_access_to_the_page()) {
             $block_template = get_block_template(
                 'azp//e-library-unauthorized',
-                'wp_template'
+                'wp_template',
             );
             return [$block_template];
         }
@@ -294,7 +294,7 @@ class E_Library
         $searchable_post_types = array_keys(
             get_post_types([
                 'exclude_from_search' => false,
-            ])
+            ]),
         );
 
         // extract queried post types and make sure it's always an array
@@ -308,7 +308,7 @@ class E_Library
 
         // filter out e-library from queried post types
         $queried_post_types = array_filter($queried_post_types, function (
-            string $post_type
+            string $post_type,
         ) {
             return $post_type !== self::LITERATURE_POST_TYPE;
         });
