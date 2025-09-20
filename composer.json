@@ -1,0 +1,11 @@
+{
+  "config": {
+    "platform": {
+      "php": "8.3"
+    }
+  },
+  "require-dev": {
+    "php-stubs/wordpress-stubs": "^6.7.1",
+    "php-stubs/acf-pro-stubs": "^6.3"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "name": "web",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "check:format": "prettier -c .",
+    "check:types": "tsc --noEmit",
+    "format": "bun check:format -w"
+  },
+  "devDependencies": {
+    "@prettier/plugin-php": "^0.24.0",
+    "@tsconfig/bun": "^1.0.8",
+    "@tsconfig/strictest": "^2.0.5",
+    "@types/bun": "^1.2.22",
+    "prettier": "^3.6.2",
+    "prettier-plugin-pkg": "^0.21.2",
+    "typescript": "^5.9.2"
+  }
+}
