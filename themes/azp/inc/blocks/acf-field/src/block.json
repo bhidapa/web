@@ -1,0 +1,33 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "azp/acf-field",
+  "version": "0.0.0",
+  "title": "ACF Field",
+  "category": "theme",
+  "icon": "block-default",
+  "supports": {
+    "color": {
+      "text": true
+    },
+    "typography": {
+      "textAlign": true
+    }
+  },
+  "attributes": {
+    "prefix": {
+      "type": "string"
+    },
+    "field": {
+      "type": "string"
+    },
+    "subField": {
+      "type": "boolean"
+    },
+    "suffix": {
+      "type": "string"
+    }
+  },
+  "editorScript": "file:./index.tsx",
+  "render": "file:./render.php"
+}

@@ -1,6 +1,6 @@
 volumes:
   db-data:
-  bhidapa-data:
+  azp-data:
 
 services:
   db:
@@ -14,7 +14,7 @@ services:
       - 53386:3306
     volumes:
       - db-data:/var/lib/mysql
-  bhidapa:
+  azp:
     depends_on:
       - db
     build: ./frankenwp
@@ -27,4 +27,5 @@ services:
     ports:
       - 57386:80
     volumes:
-      - bhidapa-data:/var/www/html
+      - azp-data:/var/www/html
+      - ./themes/azp:/var/www/html/wp-content/themes/azp

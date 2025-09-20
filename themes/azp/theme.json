@@ -1,0 +1,477 @@
+{
+  "version": 3,
+  "$schema": "https://schemas.wp.org/trunk/theme.json",
+  "settings": {
+    "useRootPaddingAwareAlignments": true,
+    "color": {
+      "defaultPalette": false,
+      "palette": [
+        {
+          "slug": "base",
+          "color": "#ffffff",
+          "name": "Base"
+        },
+        {
+          "slug": "dark-base",
+          "color": "#808080",
+          "name": "Dark Base"
+        },
+        {
+          "slug": "darker-base",
+          "color": "#eeeeee",
+          "name": "Darker Base"
+        },
+        {
+          "slug": "contrast",
+          "color": "#1e1e1e",
+          "name": "Contrast"
+        },
+        {
+          "slug": "primary",
+          "color": "#09465c",
+          "name": "Primary"
+        },
+        {
+          "slug": "secondary",
+          "color": "#019bbe",
+          "name": "Secondary"
+        },
+        {
+          "slug": "accent",
+          "color": "#cbb26e",
+          "name": "Accent"
+        },
+        {
+          "slug": "transparent",
+          "color": "transparent",
+          "name": "Transparent"
+        }
+      ],
+      "gradients": [
+        {
+          "slug": "primary-white",
+          "gradient": "linear-gradient(#0073aa 49.9%,#fff 50%)",
+          "name": "Primary color to white"
+        },
+        {
+          "slug": "white-primary",
+          "gradient": "linear-gradient(#fff 49.9%,#0073aa 50%)",
+          "name": "Horizontal white to Primary color"
+        }
+      ],
+      "duotone": [
+        {
+          "colors": ["#00a0d2", "#0073aa"],
+          "slug": "secondary-primary",
+          "name": "Secondary and primary"
+        },
+        {
+          "colors": ["#0073aa", "#f0f0f0"],
+          "slug": "primary-contrast",
+          "name": "Primary and Contrast"
+        }
+      ]
+    },
+    "shadow": {
+      "defaultPresets": false,
+      "presets": [
+        {
+          "name": "Elevation 1",
+          "slug": "elevation-1",
+          "shadow": "0px 2px 1px -1px rgba(0,0,0,0.2),0px 1px 1px 0px rgba(0,0,0,0.14),0px 1px 3px 0px rgba(0,0,0,0.12)"
+        },
+        {
+          "name": "Elevation 2",
+          "slug": "elevation-2",
+          "shadow": "0px 3px 1px -2px rgba(0,0,0,0.2),0px 2px 2px 0px rgba(0,0,0,0.14),0px 1px 5px 0px rgba(0,0,0,0.12)"
+        },
+        {
+          "name": "Elevation 3",
+          "slug": "elevation-3",
+          "shadow": "0px 3px 3px -2px rgba(0,0,0,0.2),0px 3px 4px 0px rgba(0,0,0,0.14),0px 1px 8px 0px rgba(0,0,0,0.12)"
+        }
+      ]
+    },
+    "layout": {
+      "allowCustomContentAndWideSize": false,
+      "contentSize": "1000px",
+      "wideSize": "1300px"
+    },
+    "spacing": {
+      "customSpacingSize": false,
+      "units": ["px", "rem", "%"],
+      "padding": true,
+      "margin": true,
+      "blockGap": true,
+      "defaultSpacingSizes": false,
+      "spacingScale": {
+        "operator": "*",
+        "increment": 1.5,
+        "steps": 5,
+        "mediumStep": 1.5,
+        "unit": "rem"
+      }
+    },
+    "typography": {
+      "customFontSize": false,
+      "lineHeight": true,
+      "fontFamilies": [
+        {
+          "name": "Heading",
+          "slug": "heading",
+          "fontFamily": "'Satoshi',sans-serif",
+          "fontFace": [
+            {
+              "fontFamily": "Satoshi",
+              "src": "file:./assets/fonts/satoshi/Satoshi-Light.woff2",
+              "fontWeight": "300",
+              "fontDisplay": "swap",
+              "fontStyle": "normal"
+            },
+            {
+              "fontFamily": "Satoshi",
+              "src": "file:./assets/fonts/satoshi/Satoshi-LightItalic.woff2",
+              "fontWeight": "300",
+              "fontDisplay": "swap",
+              "fontStyle": "italic"
+            },
+            {
+              "fontFamily": "Satoshi",
+              "src": "file:./assets/fonts/satoshi/Satoshi-Regular.woff2",
+              "fontWeight": "400",
+              "fontDisplay": "swap",
+              "fontStyle": "normal"
+            },
+            {
+              "fontFamily": "Satoshi",
+              "src": "file:./assets/fonts/satoshi/Satoshi-Italic.woff2",
+              "fontWeight": "400",
+              "fontDisplay": "swap",
+              "fontStyle": "italic"
+            },
+            {
+              "fontFamily": "Satoshi",
+              "src": "file:./assets/fonts/satoshi/Satoshi-Medium.woff2",
+              "fontWeight": "500",
+              "fontDisplay": "swap",
+              "fontStyle": "normal"
+            },
+            {
+              "fontFamily": "Satoshi",
+              "src": "file:./assets/fonts/satoshi/Satoshi-MediumItalic.woff2",
+              "fontWeight": "500",
+              "fontDisplay": "swap",
+              "fontStyle": "italic"
+            },
+            {
+              "fontFamily": "Satoshi",
+              "src": "file:./assets/fonts/satoshi/Satoshi-Bold.woff2",
+              "fontWeight": "700",
+              "fontDisplay": "swap",
+              "fontStyle": "normal"
+            },
+            {
+              "fontFamily": "Satoshi",
+              "src": "file:./assets/fonts/satoshi/Satoshi-BoldItalic.woff2",
+              "fontWeight": "700",
+              "fontDisplay": "swap",
+              "fontStyle": "italic"
+            },
+            {
+              "fontFamily": "Satoshi",
+              "src": "file:./assets/fonts/satoshi/Satoshi-Black.woff2",
+              "fontWeight": "900",
+              "fontDisplay": "swap",
+              "fontStyle": "normal"
+            },
+            {
+              "fontFamily": "Satoshi",
+              "src": "file:./assets/fonts/satoshi/Satoshi-BlackItalic.woff2",
+              "fontWeight": "900",
+              "fontDisplay": "swap",
+              "fontStyle": "italic"
+            }
+          ]
+        },
+        {
+          "name": "Body",
+          "slug": "body",
+          "fontFamily": "'Erode',serif",
+          "fontFace": [
+            {
+              "fontFamily": "Erode",
+              "src": "file:./assets/fonts/erode/Erode-Light.woff2",
+              "fontWeight": "300",
+              "fontDisplay": "swap",
+              "fontStyle": "normal"
+            },
+            {
+              "fontFamily": "Erode",
+              "src": "file:./assets/fonts/erode/Erode-LightItalic.woff2",
+              "fontWeight": "300",
+              "fontDisplay": "swap",
+              "fontStyle": "italic"
+            },
+            {
+              "fontFamily": "Erode",
+              "src": "file:./assets/fonts/erode/Erode-Regular.woff2",
+              "fontWeight": "400",
+              "fontDisplay": "swap",
+              "fontStyle": "normal"
+            },
+            {
+              "fontFamily": "Erode",
+              "src": "file:./assets/fonts/erode/Erode-Italic.woff2",
+              "fontWeight": "400",
+              "fontDisplay": "swap",
+              "fontStyle": "italic"
+            },
+            {
+              "fontFamily": "Erode",
+              "src": "file:./assets/fonts/erode/Erode-Medium.woff2",
+              "fontWeight": "500",
+              "fontDisplay": "swap",
+              "fontStyle": "normal"
+            },
+            {
+              "fontFamily": "Erode",
+              "src": "file:./assets/fonts/erode/Erode-MediumItalic.woff2",
+              "fontWeight": "500",
+              "fontDisplay": "swap",
+              "fontStyle": "italic"
+            },
+            {
+              "fontFamily": "Erode",
+              "src": "file:./assets/fonts/erode/Erode-Semibold.woff2",
+              "fontWeight": "600",
+              "fontDisplay": "swap",
+              "fontStyle": "normal"
+            },
+            {
+              "fontFamily": "Erode",
+              "src": "file:./assets/fonts/erode/Erode-SemiboldItalic.woff2",
+              "fontWeight": "600",
+              "fontDisplay": "swap",
+              "fontStyle": "italic"
+            },
+            {
+              "fontFamily": "Erode",
+              "src": "file:./assets/fonts/erode/Erode-Bold.woff2",
+              "fontWeight": "700",
+              "fontDisplay": "swap",
+              "fontStyle": "normal"
+            },
+            {
+              "fontFamily": "Erode",
+              "src": "file:./assets/fonts/erode/Erode-BoldItalic.woff2",
+              "fontWeight": "700",
+              "fontDisplay": "swap",
+              "fontStyle": "italic"
+            }
+          ]
+        },
+        {
+          "name": "Monospace",
+          "slug": "monospace",
+          "fontFamily": "Consolas,Menlo,Monaco,\"SF Mono\",\"DejaVu Sans Mono\",\"Roboto Mono\",\"Courier New\",Courier,monospace"
+        }
+      ]
+    },
+    "border": {
+      "radius": true,
+      "color": true,
+      "width": true
+    }
+  },
+  "styles": {
+    "typography": {
+      "fontFamily": "var(--wp--preset--font-family--body)",
+      "fontWeight": "500",
+      "lineHeight": "1.5"
+    },
+    "spacing": {
+      "padding": {
+        "right": "var(--wp--preset--spacing--50)",
+        "left": "var(--wp--preset--spacing--50)"
+      }
+    },
+    "color": {
+      "background": "var(--wp--preset--color--base)",
+      "text": "var(--wp--preset--color--contrast)"
+    },
+    "elements": {
+      "h1": {
+        "typography": {
+          "fontFamily": "var(--wp--preset--font-family--heading)",
+          "fontWeight": "800"
+        }
+      },
+      "h2": {
+        "typography": {
+          "fontFamily": "var(--wp--preset--font-family--heading)",
+          "fontWeight": "900"
+        }
+      },
+      "h3": {
+        "typography": {
+          "fontFamily": "var(--wp--preset--font-family--heading)",
+          "fontWeight": "900"
+        }
+      },
+      "h4": {
+        "typography": {
+          "fontFamily": "var(--wp--preset--font-family--heading)",
+          "fontWeight": "700"
+        }
+      },
+      "h5": {
+        "typography": {
+          "fontFamily": "var(--wp--preset--font-family--heading)",
+          "fontWeight": "700"
+        }
+      },
+      "h6": {
+        "typography": {
+          "fontFamily": "var(--wp--preset--font-family--heading)",
+          "fontWeight": "700"
+        }
+      },
+      "link": {
+        "color": {
+          "text": "var(--wp--preset--color--secondary)"
+        },
+        "typography": {
+          "textDecoration": "none"
+        },
+        ":hover": {
+          "typography": {
+            "textDecoration": "underline"
+          }
+        }
+      }
+    },
+    "blocks": {
+      "core/navigation": {
+        "elements": {
+          "link": {
+            "typography": {
+              "fontFamily": "var(--wp--preset--font-family--heading)",
+              "textDecoration": "none",
+              "fontWeight": "600"
+            },
+            ":hover": {
+              "typography": {
+                "textDecoration": "underline"
+              }
+            }
+          }
+        }
+      },
+      "core/post-title": {
+        "elements": {
+          "link": {
+            ":hover": {
+              "typography": {
+                "textDecoration": "underline"
+              }
+            }
+          }
+        }
+      },
+      "core/button": {
+        "border": {
+          "radius": "0"
+        },
+        "color": {
+          "background": "var(--wp--preset--color--secondary)"
+        },
+        "typography": {
+          "fontFamily": "var(--wp--preset--font-family--heading)",
+          "fontWeight": "700",
+          "textTransform": "uppercase",
+          "letterSpacing": "0.1rem"
+        },
+        "variations": {
+          "outline": {
+            "color": {
+              "text": "var(--wp--preset--color--secondary)",
+              "background": "var(--wp--preset--color--base)"
+            }
+          },
+          "naked": {
+            "color": {
+              "text": "var(--wp--preset--color--secondary)",
+              "background": "var(--wp--preset--color--base)"
+            }
+          }
+        }
+      },
+      "core/image": {
+        "variations": {
+          "rounded": {
+            "border": {
+              "radius": "3px"
+            }
+          }
+        }
+      },
+      "core/quote": {
+        "border": {
+          "left": {
+            "color": "var(--wp--preset--color--contrast)",
+            "style": "solid",
+            "width": "3px"
+          }
+        },
+        "spacing": {
+          "margin": {
+            "top": "var(--wp--preset--spacing--50)",
+            "right": "var(--wp--preset--spacing--50)  !important",
+            "bottom": "var(--wp--preset--spacing--50)",
+            "left": "var(--wp--preset--spacing--50) !important"
+          },
+          "padding": {
+            "top": "var(--wp--preset--spacing--20)",
+            "right": "var(--wp--preset--spacing--50)",
+            "bottom": "var(--wp--preset--spacing--20)",
+            "left": "var(--wp--preset--spacing--50)"
+          }
+        },
+        "elements": {
+          "cite": {
+            "typography": {
+              "fontWeight": "400"
+            }
+          }
+        }
+      },
+      "core/navigation-submenu": {
+        "spacing": {
+          "padding": {
+            "top": "0 !important",
+            "bottom": "var(--wp--preset--spacing--20) !important"
+          }
+        }
+      }
+    }
+  },
+  "templateParts": [
+    {
+      "name": "header",
+      "title": "Header",
+      "area": "header"
+    },
+    {
+      "name": "footer",
+      "title": "Footer",
+      "area": "footer"
+    }
+  ],
+  "customTemplates": [
+    {
+      "name": "e-library-unauthorized",
+      "title": "E-Library Unauthorized",
+      "postTypes": ["page"]
+    }
+  ]
+}

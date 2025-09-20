@@ -1,0 +1,14 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "azp/not-logged-in",
+  "version": "0.0.0",
+  "title": "Not Logged In",
+  "category": "theme",
+  "icon": "block-default",
+  "editorScript": "file:./index.tsx",
+  "render": "file:./render.php",
+  "supports": {
+    "html": false
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "azp/acf-repeater-no-results",
+  "version": "0.0.0",
+  "ancestor": ["azp/acf-repeater"],
+  "title": "No Results",
+  "category": "theme",
+  "icon": "block-default",
+  "usesContext": ["azp/acf-repeater_field"],
+  "editorScript": "file:./index.tsx",
+  "render": "file:./render.php",
+  "supports": {
+    "reusable": false,
+    "html": false
+  }
+}
