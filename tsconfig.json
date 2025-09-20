@@ -2,5 +2,6 @@
   "extends": [
     "@tsconfig/bun/tsconfig.json",
     "@tsconfig/strictest/tsconfig.json"
-  ]
+  ],
+  "include": ["prettier.config.ts", "blocks/*/src"]
 }
