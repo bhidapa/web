@@ -2,12 +2,12 @@ import { InspectorControls, useBlockProps } from '@wordpress/block-editor';
 import { registerBlockType } from '@wordpress/blocks';
 import { PanelBody, ToggleControl } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
-import { name, attributes, category, title } from './block.json';
+import block from './block.json';
 
-registerBlockType<{ icon: boolean; plural: boolean }>(name, {
-  title,
-  attributes: attributes as any,
-  category,
+registerBlockType<{ icon: boolean; plural: boolean }>(block.name, {
+  title: block.title,
+  attributes: block.attributes as any,
+  category: block.category,
   edit: ({ attributes, setAttributes }) => (
     <>
       <InspectorControls>

@@ -28,6 +28,5 @@ services:
       - 58386:80
     volumes:
       - azp-data:/var/www/html
+      - ./mu-plugins:/var/www/html/wp-content/mu-plugins
       - ./themes/azp:/var/www/html/wp-content/themes/azp
-      - ./mu-plugin-bhidapa.php:/var/www/html/wp-content/mu-plugins/bhidapa.php
-      - ./blocks:/var/www/html/wp-content/mu-plugins/bhidapa/blocks

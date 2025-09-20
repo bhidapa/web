@@ -3,8 +3,8 @@
   "apiVersion": 3,
   "name": "bhidapa/post-type",
   "version": "0.0.0",
-  "title": "Post Type",
   "category": "text",
+  "title": "Post Type",
   "icon": "block-default",
   "supports": {
     "color": {

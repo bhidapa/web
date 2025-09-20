@@ -82,9 +82,6 @@ add_action('init', function () {
         dirname(__FILE__) .
             '/inc/blocks/acf-repeater-no-results/build/block.json',
     );
-    register_block_type(
-        dirname(__FILE__) . '/inc/blocks/post-type/build/block.json',
-    );
 });
 
 // Disable comments
