@@ -17,15 +17,14 @@ services:
   bhidapa:
     depends_on:
       - db
-    build:
-      context: .
-      dockerfile: ./frankenwp/Dockerfile
+    build: ./frankenwp
     environment:
       WORDPRESS_DB_HOST: db
       WORDPRESS_DB_USER: wordpress
       WORDPRESS_DB_PASSWORD: wordpress
       WORDPRESS_DEBUG: 1
+      SERVER_NAME: :57386
     ports:
-      - 57386:80
+      - 57386:57386
     volumes:
       - bhidapa-data:/var/www/html

@@ -37,6 +37,8 @@ RUN chown -R www-data:www-data /data/caddy && \
     chown -R www-data:www-data /usr/src/wordpress && \
     chown -R www-data:www-data /usr/local/bin/docker-entrypoint.sh
 
+COPY Caddyfile /etc/caddy/Caddyfile
+
 WORKDIR /var/www/html
 
 USER www-data

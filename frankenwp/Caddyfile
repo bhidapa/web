@@ -1,0 +1,26 @@
+{
+	# avoid redirect loops with reverse proxies and cloud load balancers
+	auto_https disable_redirects
+
+	# certificates are issued internally
+	local_certs
+
+	# enable frankenphp
+	frankenphp
+
+	order php_server before file_server
+	order php before file_server
+}
+
+{$SERVER_NAME:localhost} {
+	root * /var/www/html/
+
+	encode br zstd gzip
+
+	@static {
+		file
+		path *.ico *.css *.js *.gif *.jpg *.jpeg *.png *.svg *.pdf *.woff *.woff2
+	}
+
+	php_server
+}
