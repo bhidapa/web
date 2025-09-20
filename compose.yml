@@ -19,12 +19,12 @@ services:
       - db
     build: ./frankenwp
     environment:
+      SERVER_NAME: :80
       WORDPRESS_DB_HOST: db
       WORDPRESS_DB_USER: wordpress
       WORDPRESS_DB_PASSWORD: wordpress
       WORDPRESS_DEBUG: 1
-      SERVER_NAME: :57386
     ports:
-      - 57386:57386
+      - 57386:80
     volumes:
       - bhidapa-data:/var/www/html
