@@ -220,3 +220,99 @@ ul.acf-checkbox-list li,
   font-weight: 500;
   font-size: 1rem;
 }
+
+.wpcf7 {
+  border: 2px solid var(--wp--preset--color--contrast);
+  padding: var(--wp--preset--spacing--50);
+
+  .wpcf7-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--wp--preset--spacing--50);
+  }
+
+  .wpcf7-form > p {
+    margin: 0;
+  }
+
+  .label,
+  label {
+    font-weight: bold;
+    font-family: var(--wp--preset--font-family--heading);
+  }
+
+  .wpcf7-text,
+  .wpcf7-textarea {
+    border: 1px solid var(--wp--preset--color--contrast);
+    width: 100%;
+    resize: vertical;
+    padding: var(--wp--preset--spacing--20);
+  }
+
+  .wpcf7-form-control,
+  .wpcf7-form-control label,
+  .wpcf7-form-control-wrap {
+    font-weight: 500;
+    font-family: var(--wp--preset--font-family--body);
+    box-sizing: border-box;
+  }
+
+  .wpcf7-submit {
+    cursor: pointer;
+    border: none;
+    align-self: baseline;
+    font-family: var(--wp--preset--font-family--heading);
+    font-size: var(--wp--preset--font-size--small);
+    text-transform: uppercase;
+    padding: calc(0.667em + 2px) calc(1.333em + 2px);
+    letter-spacing: 0.1rem;
+    font-weight: 700;
+    text-decoration: none;
+    transition: box-shadow 200ms cubic-bezier(0.4, 0, 0.2, 1);
+    background-color: var(--wp--preset--color--secondary);
+    color: var(--wp--preset--color--base);
+
+    &:hover {
+      box-shadow: var(--wp--preset--shadow--elevation-3);
+    }
+
+    .has-spinner {
+      display: none;
+    }
+  }
+
+  .wpcf7-not-valid-tip {
+    color: #cc3b19;
+    padding: 0;
+
+    &::before {
+      white-space: nowrap;
+      font-family: FontAwesome;
+      content: '\f06a  ';
+    }
+  }
+
+  form.invalid .wpcf7-response-output,
+  .wpcf7 form.unaccepted .wpcf7-response-output,
+  .wpcf7 form.payment-required .wpcf7-response-output {
+    border: none;
+    background-color: #cc9c19;
+    color: white;
+    margin: 0;
+    padding: var(--wp--preset--spacing--20) var(--wp--preset--spacing--40);
+  }
+
+  .wpcf7-spinner {
+    display: none;
+    margin: 0;
+    background-color: var(--wp--preset--color--secondary);
+    opacity: 1;
+    margin: calc(0.667em + 2px) 0; /* match button height */
+  }
+  form.submitting .wpcf7-spinner {
+    display: block;
+  }
+  form.submitting .wpcf7-spinner {
+    display: block;
+  }
+}

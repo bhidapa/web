@@ -4,6 +4,7 @@
   "name": "bhidapa/post-type",
   "version": "0.0.0",
   "title": "Post Type",
+  "category": "text",
   "icon": "block-default",
   "supports": {
     "color": {

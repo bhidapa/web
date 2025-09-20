@@ -2,11 +2,12 @@ import { InspectorControls, useBlockProps } from '@wordpress/block-editor';
 import { registerBlockType } from '@wordpress/blocks';
 import { PanelBody, ToggleControl } from '@wordpress/components';
 import { __ } from '@wordpress/i18n';
-import { attributes } from './block.json';
+import { name, attributes, category, title } from './block.json';
 
-registerBlockType<{ icon: boolean; plural: boolean }>({
-  // @ts-expect-error cant import json as const
-  attributes,
+registerBlockType<{ icon: boolean; plural: boolean }>(name, {
+  title,
+  attributes: attributes as any,
+  category,
   edit: ({ attributes, setAttributes }) => (
     <>
       <InspectorControls>
