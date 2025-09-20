@@ -57,7 +57,9 @@ RUN chown -R www-data:www-data /data/caddy && \
     chown -R www-data:www-data /usr/src/wordpress && \
     chown -R www-data:www-data /usr/local/bin/docker-entrypoint.sh
 
-COPY Caddyfile /etc/caddy/Caddyfile
+COPY custom.ini /usr/local/etc/php/conf.d/
+
+COPY Caddyfile /etc/caddy/
 
 WORKDIR /var/www/html
 
