@@ -311,7 +311,7 @@ const wpService = new awsx.ecs.FargateService('wp-service', {
           },
         ],
         environment: [
-          // { name: 'SERVICE_NAME', value: '' },
+          { name: 'SERVICE_NAME', value: 'testing.akp.ba' },
           { name: 'WORDPRESS_DB_HOST', value: dbCluster.endpoint },
           { name: 'WORDPRESS_DB_NAME', value: 'akp' },
         ],
