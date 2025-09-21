@@ -1,5 +1,6 @@
 import * as pulumi from '@pulumi/pulumi';
 import * as aws from '@pulumi/aws';
+import * as awsx from '@pulumi/awsx';
 
 const region = aws.config.region!;
 const proj = pulumi.getProject();
@@ -98,17 +99,8 @@ new aws.ec2.MainRouteTableAssociation('main-route-table-association', {
   routeTableId: privateRouteTable.id,
 });
 
-// ECR Repository for WordPress Docker image
-const ecrRepository = new aws.ecr.Repository('wp', {
-  name: name('wp'),
-  imageScanningConfiguration: {
-    scanOnPush: true,
-  },
-  tags: { proj, Name: name('wp-ecr') },
-});
-
 // Security Groups
-const albSecurityGroup = new aws.ec2.SecurityGroup('alb-sg', {
+const lbSecurityGroup = new aws.ec2.SecurityGroup('alb-sg', {
   name: name('alb-sg'),
   vpcId: vpc.id,
   description: 'Security group for Application Load Balancer',
@@ -119,9 +111,8 @@ const albSecurityGroup = new aws.ec2.SecurityGroup('alb-sg', {
   egress: [
     { protocol: '-1', fromPort: 0, toPort: 0, cidrBlocks: ['0.0.0.0/0'] },
   ],
-  tags: { proj, Name: name('alb-sg') },
+  tags: { proj },
 });
-
 const ecsSecurityGroup = new aws.ec2.SecurityGroup('ecs-sg', {
   name: name('ecs-sg'),
   vpcId: vpc.id,
@@ -131,21 +122,20 @@ const ecsSecurityGroup = new aws.ec2.SecurityGroup('ecs-sg', {
       protocol: 'tcp',
       fromPort: 80,
       toPort: 80,
-      securityGroups: [albSecurityGroup.id],
+      securityGroups: [lbSecurityGroup.id],
     },
     {
       protocol: 'tcp',
       fromPort: 443,
       toPort: 443,
-      securityGroups: [albSecurityGroup.id],
+      securityGroups: [lbSecurityGroup.id],
     },
   ],
   egress: [
     { protocol: '-1', fromPort: 0, toPort: 0, cidrBlocks: ['0.0.0.0/0'] },
   ],
-  tags: { proj, Name: name('ecs-sg') },
+  tags: { proj },
 });
-
 const dbSecurityGroup = new aws.ec2.SecurityGroup('wp-db-sg', {
   name: name('wp-db-sg'),
   vpcId: vpc.id,
@@ -158,9 +148,8 @@ const dbSecurityGroup = new aws.ec2.SecurityGroup('wp-db-sg', {
       securityGroups: [ecsSecurityGroup.id],
     },
   ],
-  tags: { proj, Name: name('wp-db-sg') },
+  tags: { proj },
 });
-
 const efsSecurityGroup = new aws.ec2.SecurityGroup('efs-sg', {
   name: name('efs-sg'),
   vpcId: vpc.id,
@@ -173,30 +162,20 @@ const efsSecurityGroup = new aws.ec2.SecurityGroup('efs-sg', {
       securityGroups: [ecsSecurityGroup.id],
     },
   ],
-  tags: { proj, Name: name('efs-sg') },
+  tags: { proj },
 });
 
-// Database Secrets
+// Aurora Serverless v2 MySQL
 const dbPassword = new aws.kms.Key('wp-db-password', {
-  description: 'WordPress database password',
-  // generateSecretString: {
-  //   secretStringTemplate: JSON.stringify({ username: 'wp' }),
-  //   generateStringKey: 'password',
-  //   excludeCharacters: '"@/\\',
-  //   passwordLength: 32,
-  // },
-  tags: { proj, Name: name('wp-db-password') },
+  tags: { proj },
 });
-
-// Aurora Serverless v2 Database
 const dbSubnetGroup = new aws.rds.SubnetGroup('wp-db-subnet-group', {
   name: name('wp-db-subnet-group'),
   subnetIds: [privateSubnet.id, privateSubnet2.id],
   description: 'Subnet group for Aurora database',
-  tags: { proj, Name: name('wp-db-subnet-group') },
+  tags: { proj },
 });
-
-const auroraCluster = new aws.rds.Cluster('db-cluster', {
+const dbCluster = new aws.rds.Cluster('db-cluster', {
   clusterIdentifier: name('wp-db'),
   engine: aws.rds.EngineType.AuroraMysql,
   engineVersion: '8.0.mysql_aurora.3.10.0',
@@ -213,55 +192,218 @@ const auroraCluster = new aws.rds.Cluster('db-cluster', {
   preferredBackupWindow: '03:00-04:00',
   preferredMaintenanceWindow: 'mon:04:00-mon:05:00',
   storageEncrypted: true,
-  tags: { proj, Name: name('wp-db') },
+  tags: { proj },
 });
-new aws.rds.ClusterInstance('aurora-main-instance', {
-  clusterIdentifier: auroraCluster.id,
+const dbMain = new aws.rds.ClusterInstance('aurora-main-instance', {
+  clusterIdentifier: dbCluster.id,
   instanceClass: 'db.serverless',
-  engine: auroraCluster.engine.apply(
+  engine: dbCluster.engine.apply(
     (x) =>
       // @ts-expect-error
       aws.rds.EngineType[x],
   ),
-  engineVersion: auroraCluster.engineVersion,
-  tags: { proj, Name: name('wp-db-main-instance') },
+  engineVersion: dbCluster.engineVersion,
+  tags: { proj },
 });
 
 // EFS File System
-const efsFileSystem = new aws.efs.FileSystem('wp-efs', {
+const efs = new aws.efs.FileSystem('wp-efs', {
   creationToken: name('wp-efs'),
   performanceMode: 'generalPurpose',
   throughputMode: 'provisioned',
   provisionedThroughputInMibps: 100,
   encrypted: true,
-  tags: { proj, Name: name('wp-efs') },
+  tags: { proj },
 });
 new aws.efs.MountTarget('efs-mount-target-1', {
-  fileSystemId: efsFileSystem.id,
+  fileSystemId: efs.id,
   subnetId: privateSubnet.id,
   securityGroups: [efsSecurityGroup.id],
 });
 new aws.efs.MountTarget('efs-mount-target-2', {
-  fileSystemId: efsFileSystem.id,
+  fileSystemId: efs.id,
   subnetId: privateSubnet2.id,
   securityGroups: [efsSecurityGroup.id],
 });
 new aws.efs.BackupPolicy('efs-backup-policy', {
-  fileSystemId: efsFileSystem.id,
+  fileSystemId: efs.id,
   backupPolicy: {
     status: 'ENABLED',
   },
 });
+
+// Application Load Balancer
+const lb = new awsx.lb.ApplicationLoadBalancer('wp-lb', {
+  name: name('wp-lb'),
+  securityGroups: [lbSecurityGroup.id],
+  subnets: [publicSubnet, publicSubnet2],
+  listeners: [
+    {
+      port: 80,
+      protocol: 'HTTP',
+      defaultActions: [
+        {
+          type: 'redirect',
+          redirect: {
+            port: '443',
+            protocol: 'HTTP',
+            statusCode: 'HTTP_301',
+          },
+        },
+      ],
+    },
+    {
+      port: 443,
+      protocol: 'TCP', // not HTTPS because the container will set up the certificats
+    },
+  ],
+  tags: { proj },
+});
+const targetGroup = new aws.lb.TargetGroup('wp-tg', {
+  name: name('wp-tg'),
+  vpcId: vpc.id,
+  port: 80,
+  protocol: 'TCP',
+  tags: { proj },
+  // TODO: healthCheck
+});
+const targetGroupTls = new aws.lb.TargetGroup('wp-tg-tls', {
+  name: name('wp-tg-tls'),
+  vpcId: vpc.id,
+  port: 443,
+  protocol: 'TCP',
+  tags: { proj },
+  // TODO: healthCheck
+});
+
+// WordPress on Fargate
+const ecrRepo = new aws.ecr.Repository('ecr-repo', {
+  name: name('repo'),
+  imageScanningConfiguration: {
+    scanOnPush: true,
+  },
+  tags: { proj },
+});
+const image = new awsx.ecr.Image('ecr-image', {
+  repositoryUrl: ecrRepo.repositoryUrl,
+  context: '../wp',
+  platform: 'linux/amd64',
+});
+const ecsCluster = new aws.ecs.Cluster('cluster', {
+  name: name('cluster'),
+});
+const fargateService = new awsx.ecs.FargateService('wp-service', {
+  name: name('wp-service'),
+  cluster: ecsCluster.arn,
+  taskDefinitionArgs: {
+    family: name('wp'),
+    containers: {
+      akp: {
+        name: 'akp',
+        image: image.imageUri,
+        cpu: 256,
+        memory: 512,
+        essential: true,
+        portMappings: [
+          {
+            containerPort: 80,
+          },
+          {
+            containerPort: 443,
+          },
+        ],
+        environment: [
+          // { name: 'SERVICE_NAME', value: '' },
+          { name: 'WORDPRESS_DB_HOST', value: dbCluster.endpoint },
+          { name: 'WORDPRESS_DB_NAME', value: 'akp' },
+        ],
+        secrets: [
+          {
+            name: 'WORDPRESS_DB_USER',
+            valueFrom: dbCluster.masterUserSecretKmsKeyId,
+          },
+          {
+            name: 'WORDPRESS_DB_PASSWORD',
+            valueFrom: dbPassword.keyId,
+          },
+        ],
+        mountPoints: [
+          {
+            sourceVolume: 'akp-data',
+            containerPath: '/var/www/html',
+            readOnly: false,
+          },
+        ],
+        logConfiguration: {
+          logDriver: 'awslogs',
+          options: {
+            'awslogs-create-group': 'true',
+            'awslogs-group': `/ecs/${name('wp')}/akp`,
+            'awslogs-region': region,
+            'awslogs-stream-prefix': 'akp',
+          },
+        },
+      },
+    },
+    volumes: [
+      {
+        name: 'akp-data',
+        efsVolumeConfiguration: {
+          rootDirectory: '/akp',
+          fileSystemId: efs.id,
+          transitEncryption: 'ENABLED',
+        },
+      },
+    ],
+  },
+  desiredCount: 1,
+  networkConfiguration: {
+    subnets: [privateSubnet.id, privateSubnet2.id],
+    securityGroups: [ecsSecurityGroup.id],
+    assignPublicIp: false,
+  },
+  loadBalancers: [
+    {
+      targetGroupArn: targetGroup.arn,
+      containerName: 'wp',
+      containerPort: 80,
+    },
+    {
+      targetGroupArn: targetGroupTls.arn,
+      containerName: 'wp',
+      containerPort: 443,
+    },
+  ],
+  tags: { proj },
+});
+
+// Auto Scaling
+const autoScalingTarget = new aws.appautoscaling.Target(
+  'ecs-autoscaling-target',
   {
-    subnetId: privateSubnet.id,
-    routeTableId: privateRouteTable.id,
+    maxCapacity: 3,
+    minCapacity: 1,
+    resourceId: pulumi.interpolate`service/${ecsCluster.name}/${fargateService.service.name}`,
+    scalableDimension: 'ecs:service:DesiredCount',
+    serviceNamespace: 'ecs',
   },
 );
-// @ts-expect-error
-const mainRouteTableAssociation = new aws.ec2.MainRouteTableAssociation(
-  'main-route-table-association',
-  {
-    vpcId: vpc.id,
-    routeTableId: privateRouteTable.id,
+new aws.appautoscaling.Policy('ecs-autoscaling-policy', {
+  name: name('wp-autoscaling-policy'),
+  policyType: 'TargetTrackingScaling',
+  resourceId: autoScalingTarget.resourceId,
+  scalableDimension: autoScalingTarget.scalableDimension,
+  serviceNamespace: autoScalingTarget.serviceNamespace,
+  targetTrackingScalingPolicyConfiguration: {
+    predefinedMetricSpecification: {
+      predefinedMetricType: 'ECSServiceAverageCPUUtilization',
+    },
+    targetValue: 70.0,
+    scaleInCooldown: 300,
+    scaleOutCooldown: 300,
   },
-);
+});
+
+export const dbClusterEndpoint = dbCluster.endpoint;
+export const dbMainEndpoint = dbMain.endpoint;
+export const lbDnsName = lb.loadBalancer.dnsName;
