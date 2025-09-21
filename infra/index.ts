@@ -150,8 +150,8 @@ const dbSecurityGroup = new aws.ec2.SecurityGroup('wp-db-sg', {
   ],
   tags: { proj },
 });
-const efsSecurityGroup = new aws.ec2.SecurityGroup('efs-sg', {
-  name: name('efs-sg'),
+const efsSecurityGroup = new aws.ec2.SecurityGroup('wp-fs-sg', {
+  name: name('wp-fs-sg'),
   vpcId: vpc.id,
   description: 'Security group for EFS',
   ingress: [
@@ -176,7 +176,7 @@ const dbSubnetGroup = new aws.rds.SubnetGroup('wp-db-subnet-group', {
   tags: { proj },
 });
 const dbEngine = aws.rds.EngineType.AuroraMysql;
-const dbCluster = new aws.rds.Cluster('db-cluster', {
+const dbCluster = new aws.rds.Cluster('wp-db-cluster', {
   clusterIdentifier: name('wp-db'),
   engine: dbEngine,
   engineVersion: '8.0.mysql_aurora.3.10.0',
@@ -195,8 +195,8 @@ const dbCluster = new aws.rds.Cluster('db-cluster', {
   storageEncrypted: true,
   tags: { proj },
 });
-const dbMaster = new aws.rds.ClusterInstance('db-master', {
-  identifier: name('db-master'),
+const dbMaster = new aws.rds.ClusterInstance('wp-db-master', {
+  identifier: name('wp-db-master'),
   clusterIdentifier: dbCluster.id,
   instanceClass: 'db.serverless',
   engine: dbEngine,
@@ -213,17 +213,17 @@ const efs = new aws.efs.FileSystem('wp-efs', {
   encrypted: true,
   tags: { proj },
 });
-new aws.efs.MountTarget('efs-mount-target-1', {
+new aws.efs.MountTarget('wp-fs-mount-target-1', {
   fileSystemId: efs.id,
   subnetId: privateSubnet.id,
   securityGroups: [efsSecurityGroup.id],
 });
-new aws.efs.MountTarget('efs-mount-target-2', {
+new aws.efs.MountTarget('wp-fs-mount-target-2', {
   fileSystemId: efs.id,
   subnetId: privateSubnet2.id,
   securityGroups: [efsSecurityGroup.id],
 });
-new aws.efs.BackupPolicy('efs-backup-policy', {
+new aws.efs.BackupPolicy('wp-fs-backup-policy', {
   fileSystemId: efs.id,
   backupPolicy: {
     status: 'ENABLED',
@@ -275,15 +275,15 @@ const targetGroupTls = new aws.lb.TargetGroup('wp-tg-tls', {
 });
 
 // WordPress on Fargate
-const ecrRepo = new aws.ecr.Repository('ecr-repo', {
+const wpRepo = new aws.ecr.Repository('wp-repo', {
   name: name('repo'),
   imageScanningConfiguration: {
     scanOnPush: true,
   },
   tags: { proj },
 });
-const image = new awsx.ecr.Image('ecr-image', {
-  repositoryUrl: ecrRepo.repositoryUrl,
+const wpImage = new awsx.ecr.Image('wp-image', {
+  repositoryUrl: wpRepo.repositoryUrl,
   context: '../wp',
   platform: 'linux/amd64',
 });
@@ -298,7 +298,7 @@ const wpService = new awsx.ecs.FargateService('wp-service', {
     containers: {
       akp: {
         name: 'akp',
-        image: image.imageUri,
+        image: wpImage.imageUri,
         cpu: 256,
         memory: 512,
         essential: true,
