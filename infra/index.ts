@@ -113,8 +113,8 @@ const lbSecurityGroup = new aws.ec2.SecurityGroup('lb-sg', {
   ],
   tags: { proj },
 });
-const ecsSecurityGroup = new aws.ec2.SecurityGroup('ecs-sg', {
-  name: name('ecs-sg'),
+const wpSecurityGroup = new aws.ec2.SecurityGroup('wp-sg', {
+  name: name('wp-sg'),
   vpcId: vpc.id,
   description: 'Security group for ECS WordPress tasks',
   ingress: [
@@ -145,7 +145,7 @@ const dbSecurityGroup = new aws.ec2.SecurityGroup('wp-db-sg', {
       protocol: 'tcp',
       fromPort: 3306,
       toPort: 3306,
-      securityGroups: [ecsSecurityGroup.id],
+      securityGroups: [wpSecurityGroup.id],
     },
   ],
   tags: { proj },
@@ -159,7 +159,7 @@ const efsSecurityGroup = new aws.ec2.SecurityGroup('efs-sg', {
       protocol: 'tcp',
       fromPort: 2049,
       toPort: 2049,
-      securityGroups: [ecsSecurityGroup.id],
+      securityGroups: [wpSecurityGroup.id],
     },
   ],
   tags: { proj },
@@ -175,9 +175,10 @@ const dbSubnetGroup = new aws.rds.SubnetGroup('wp-db-subnet-group', {
   description: 'Subnet group for Aurora database',
   tags: { proj },
 });
+const dbEngine = aws.rds.EngineType.AuroraMysql;
 const dbCluster = new aws.rds.Cluster('db-cluster', {
   clusterIdentifier: name('wp-db'),
-  engine: aws.rds.EngineType.AuroraMysql,
+  engine: dbEngine,
   engineVersion: '8.0.mysql_aurora.3.10.0',
   serverlessv2ScalingConfiguration: {
     maxCapacity: 3,
@@ -194,14 +195,11 @@ const dbCluster = new aws.rds.Cluster('db-cluster', {
   storageEncrypted: true,
   tags: { proj },
 });
-const dbMain = new aws.rds.ClusterInstance('aurora-main-instance', {
+const dbMaster = new aws.rds.ClusterInstance('db-master', {
+  identifier: name('db-master'),
   clusterIdentifier: dbCluster.id,
   instanceClass: 'db.serverless',
-  engine: dbCluster.engine.apply(
-    (x) =>
-      // @ts-expect-error
-      aws.rds.EngineType[x],
-  ),
+  engine: dbEngine,
   engineVersion: dbCluster.engineVersion,
   tags: { proj },
 });
@@ -289,12 +287,12 @@ const image = new awsx.ecr.Image('ecr-image', {
   context: '../wp',
   platform: 'linux/amd64',
 });
-const ecsCluster = new aws.ecs.Cluster('cluster', {
-  name: name('cluster'),
+const wpCluster = new aws.ecs.Cluster('wp-cluster', {
+  name: name('wp-cluster'),
 });
-const fargateService = new awsx.ecs.FargateService('wp-service', {
+const wpService = new awsx.ecs.FargateService('wp-service', {
   name: name('wp-service'),
-  cluster: ecsCluster.arn,
+  cluster: wpCluster.arn,
   taskDefinitionArgs: {
     family: name('wp'),
     containers: {
@@ -359,7 +357,7 @@ const fargateService = new awsx.ecs.FargateService('wp-service', {
   desiredCount: 1,
   networkConfiguration: {
     subnets: [privateSubnet.id, privateSubnet2.id],
-    securityGroups: [ecsSecurityGroup.id],
+    securityGroups: [wpSecurityGroup.id],
     assignPublicIp: false,
   },
   loadBalancers: [
@@ -379,16 +377,16 @@ const fargateService = new awsx.ecs.FargateService('wp-service', {
 
 // Auto Scaling
 const autoScalingTarget = new aws.appautoscaling.Target(
-  'ecs-autoscaling-target',
+  'wp-autoscaling-target',
   {
     maxCapacity: 3,
     minCapacity: 1,
-    resourceId: pulumi.interpolate`service/${ecsCluster.name}/${fargateService.service.name}`,
+    resourceId: pulumi.interpolate`service/${wpCluster.name}/${wpService.service.name}`,
     scalableDimension: 'ecs:service:DesiredCount',
-    serviceNamespace: 'ecs',
+    serviceNamespace: 'wp',
   },
 );
-new aws.appautoscaling.Policy('ecs-autoscaling-policy', {
+new aws.appautoscaling.Policy('wp-autoscaling-policy', {
   name: name('wp-autoscaling-policy'),
   policyType: 'TargetTrackingScaling',
   resourceId: autoScalingTarget.resourceId,
@@ -404,6 +402,38 @@ new aws.appautoscaling.Policy('ecs-autoscaling-policy', {
   },
 });
 
+// Route53 DNS Records
+const hostedZone = aws.route53.getZone({
+  name: 'akp.ba',
+  privateZone: false,
+});
+new aws.route53.Record('wp-akp-dns-a', {
+  zoneId: hostedZone.then((zone) => zone.zoneId),
+  name: 'testing.akp.ba',
+  type: 'A',
+  aliases: [
+    {
+      name: lb.loadBalancer.dnsName,
+      zoneId: lb.loadBalancer.zoneId,
+      // TODO: once ALB health check is set, change to true
+      evaluateTargetHealth: false,
+    },
+  ],
+});
+new aws.route53.Record('wp-akp-dns-aaaa', {
+  zoneId: hostedZone.then((zone) => zone.zoneId),
+  name: 'testing.akp.ba',
+  type: 'AAAA',
+  aliases: [
+    {
+      name: lb.loadBalancer.dnsName,
+      zoneId: lb.loadBalancer.zoneId,
+      // TODO: once ALB health check is set, change to true
+      evaluateTargetHealth: false,
+    },
+  ],
+});
+
 export const dbClusterEndpoint = dbCluster.endpoint;
-export const dbMainEndpoint = dbMain.endpoint;
+export const dbMasterEndpoint = dbMaster.endpoint;
 export const lbDnsName = lb.loadBalancer.dnsName;
