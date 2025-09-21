@@ -17,7 +17,7 @@ services:
   azp:
     depends_on:
       - db
-    build: ./frankenwp
+    build: ./wp
     environment:
       SERVER_NAME: :80
       WORDPRESS_DB_HOST: db
