@@ -324,6 +324,7 @@ const wpImage = new awsx.ecr.Image('wp-image', {
 const wpCluster = new aws.ecs.Cluster('wp-cluster', {
   name: name('wp-cluster'),
 });
+// TODO: the task execution role needs to have access to kms
 const wpService = new awsx.ecs.FargateService('wp-service', {
   name: name('wp-service'),
   cluster: wpCluster.arn,
@@ -345,6 +346,7 @@ const wpService = new awsx.ecs.FargateService('wp-service', {
         secrets: [
           {
             name: 'WORDPRESS_DB_USER',
+            // TODO: make sure this one is correct?
             valueFrom: dbCluster.masterUserSecretKmsKeyId,
           },
           {
