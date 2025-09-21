@@ -17,11 +17,11 @@ const vpc = new aws.ec2.Vpc('vpc', {
   tags: { proj, Name: name() },
 });
 
-const privateSubnet = new aws.ec2.Subnet('private-subnet', {
+const privateSubnet = new aws.ec2.Subnet('private-subnet-1', {
   vpcId: vpc.id,
   cidrBlock: '123.4.1.0/24',
   availabilityZone: `${region}a`,
-  tags: { proj, Name: name('private') },
+  tags: { proj, Name: name('private-1') },
 });
 const privateSubnet2 = new aws.ec2.Subnet('private-subnet-2', {
   vpcId: vpc.id,
@@ -29,12 +29,12 @@ const privateSubnet2 = new aws.ec2.Subnet('private-subnet-2', {
   availabilityZone: `${region}b`,
   tags: { proj, Name: name('private-2') },
 });
-const publicSubnet = new aws.ec2.Subnet('public-subnet', {
+const publicSubnet = new aws.ec2.Subnet('public-subnet-1', {
   vpcId: vpc.id,
   cidrBlock: '123.4.9.0/24',
   availabilityZone: `${region}a`,
   mapPublicIpOnLaunch: true,
-  tags: { proj, Name: name('public') },
+  tags: { proj, Name: name('public-1') },
 });
 const publicSubnet2 = new aws.ec2.Subnet('public-subnet-2', {
   vpcId: vpc.id,
@@ -57,7 +57,7 @@ new aws.ec2.Route('public-route', {
   destinationCidrBlock: '0.0.0.0/0',
   gatewayId: igw.id,
 });
-new aws.ec2.RouteTableAssociation('public-route-table-association', {
+new aws.ec2.RouteTableAssociation('public-route-table-association-1', {
   subnetId: publicSubnet.id,
   routeTableId: publicRouteTable.id,
 });
@@ -86,7 +86,7 @@ new aws.ec2.Route('private-route', {
   destinationCidrBlock: '0.0.0.0/0',
   natGatewayId: natgw.id,
 });
-new aws.ec2.RouteTableAssociation('private-route-table-association', {
+new aws.ec2.RouteTableAssociation('private-route-table-association-1', {
   subnetId: privateSubnet.id,
   routeTableId: privateRouteTable.id,
 });
