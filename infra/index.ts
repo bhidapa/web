@@ -231,47 +231,81 @@ new aws.efs.BackupPolicy('wp-fs-backup-policy', {
 });
 
 // Application Load Balancer
-const lb = new awsx.lb.ApplicationLoadBalancer('wp-lb', {
-  name: name('wp-lb'),
-  securityGroups: [lbSecurityGroup.id],
-  subnets: [publicSubnet, publicSubnet2],
-  listeners: [
-    {
+const hostedZone = aws.route53.getZone({
+  name: 'akp.ba',
+  privateZone: false,
+});
+const cert = new aws.acm.Certificate('wp-akp-cert', {
+  domainName: 'testing.akp.ba',
+  validationMethod: 'DNS',
+});
+const certRecord = new aws.route53.Record('wp-akp-cert-validation-record', {
+  zoneId: hostedZone.then((zone) => zone.zoneId),
+  name: cert.domainValidationOptions[0].resourceRecordName,
+  records: [cert.domainValidationOptions[0].resourceRecordValue],
+  type: cert.domainValidationOptions[0].resourceRecordType,
+  ttl: 60,
+});
+new aws.acm.CertificateValidation('wp-akp-cert-validation', {
+  certificateArn: cert.arn,
+  validationRecordFqdns: [certRecord.fqdn],
+});
+const lb = new awsx.lb.ApplicationLoadBalancer(
+  'wp-lb',
+  {
+    name: name('wp-lb'),
+    securityGroups: [lbSecurityGroup.id],
+    subnets: [publicSubnet, publicSubnet2],
+    defaultTargetGroup: {
+      name: name('wp-tg'),
+      vpcId: vpc.id,
       port: 80,
       protocol: 'HTTP',
-      defaultActions: [
-        {
-          type: 'redirect',
-          redirect: {
-            port: '443',
-            protocol: 'HTTP',
-            statusCode: 'HTTP_301',
-          },
-        },
-      ],
+      // TODO: try HTTP2
+      // protocolVersion: 'HTTP2',
+      tags: { proj },
+      // TODO: healtcheck
     },
+    listeners: [
+      {
+        port: 80,
+        protocol: 'HTTP',
+        defaultActions: [
+          {
+            type: 'redirect',
+            redirect: {
+              port: '443',
+              protocol: 'HTTP',
+              statusCode: 'HTTP_301',
+            },
+          },
+        ],
+      },
+      {
+        port: 443,
+        protocol: 'HTTPS',
+        certificateArn: cert.arn,
+      },
+    ],
+    tags: { proj },
+  },
+  // TODO: is necessary?
+  // {
+  //   dependsOn: [certValidation],
+  // },
+);
+new aws.route53.Record('wp-akp-dns-a', {
+  zoneId: hostedZone.then((zone) => zone.zoneId),
+  name: 'testing.akp.ba',
+  type: 'A',
+  aliases: [
     {
-      port: 443,
-      protocol: 'TCP', // not HTTPS because the container will set up the certificats
+      name: lb.loadBalancer.dnsName,
+      zoneId: lb.loadBalancer.zoneId,
+      // TODO: once ALB health check is set, change to true
+      evaluateTargetHealth: false,
     },
   ],
-  tags: { proj },
-});
-const targetGroup = new aws.lb.TargetGroup('wp-tg', {
-  name: name('wp-tg'),
-  vpcId: vpc.id,
-  port: 80,
-  protocol: 'TCP',
-  tags: { proj },
-  // TODO: healthCheck
-});
-const targetGroupTls = new aws.lb.TargetGroup('wp-tg-tls', {
-  name: name('wp-tg-tls'),
-  vpcId: vpc.id,
-  port: 443,
-  protocol: 'TCP',
-  tags: { proj },
-  // TODO: healthCheck
 });
 
 // WordPress on Fargate
@@ -302,16 +336,9 @@ const wpService = new awsx.ecs.FargateService('wp-service', {
         cpu: 256,
         memory: 512,
         essential: true,
-        portMappings: [
-          {
-            containerPort: 80,
-          },
-          {
-            containerPort: 443,
-          },
-        ],
+        portMappings: [{ containerPort: 80 }],
         environment: [
-          { name: 'SERVICE_NAME', value: 'testing.akp.ba' },
+          { name: 'SERVICE_NAME', value: ':80' },
           { name: 'WORDPRESS_DB_HOST', value: dbCluster.endpoint },
           { name: 'WORDPRESS_DB_NAME', value: 'akp' },
         ],
@@ -362,14 +389,9 @@ const wpService = new awsx.ecs.FargateService('wp-service', {
   },
   loadBalancers: [
     {
-      targetGroupArn: targetGroup.arn,
-      containerName: 'wp',
+      targetGroupArn: lb.defaultTargetGroup.arn,
+      containerName: 'akp',
       containerPort: 80,
-    },
-    {
-      targetGroupArn: targetGroupTls.arn,
-      containerName: 'wp',
-      containerPort: 443,
     },
   ],
   tags: { proj },
@@ -400,38 +422,6 @@ new aws.appautoscaling.Policy('wp-autoscaling-policy', {
     scaleInCooldown: 300,
     scaleOutCooldown: 300,
   },
-});
-
-// Route53 DNS Records
-const hostedZone = aws.route53.getZone({
-  name: 'akp.ba',
-  privateZone: false,
-});
-new aws.route53.Record('wp-akp-dns-a', {
-  zoneId: hostedZone.then((zone) => zone.zoneId),
-  name: 'testing.akp.ba',
-  type: 'A',
-  aliases: [
-    {
-      name: lb.loadBalancer.dnsName,
-      zoneId: lb.loadBalancer.zoneId,
-      // TODO: once ALB health check is set, change to true
-      evaluateTargetHealth: false,
-    },
-  ],
-});
-new aws.route53.Record('wp-akp-dns-aaaa', {
-  zoneId: hostedZone.then((zone) => zone.zoneId),
-  name: 'testing.akp.ba',
-  type: 'AAAA',
-  aliases: [
-    {
-      name: lb.loadBalancer.dnsName,
-      zoneId: lb.loadBalancer.zoneId,
-      // TODO: once ALB health check is set, change to true
-      evaluateTargetHealth: false,
-    },
-  ],
 });
 
 export const dbClusterEndpoint = dbCluster.endpoint;
