@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "outDir": "bin",
+    "target": "es2016",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "sourceMap": true,
+    "experimentalDecorators": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitReturns": true,
+    "forceConsistentCasingInFileNames": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true
+  },
+  "files": ["index.ts"]
+}

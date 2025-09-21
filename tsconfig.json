@@ -3,5 +3,5 @@
     "@tsconfig/bun/tsconfig.json",
     "@tsconfig/strictest/tsconfig.json"
   ],
-  "include": ["prettier.config.ts", "mu-plugins/blocks/*/src"]
+  "include": ["prettier.config.ts", "mu-plugins/blocks/*/src", "infra/index.ts"]
 }

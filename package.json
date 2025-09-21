@@ -3,7 +3,8 @@
   "type": "module",
   "private": true,
   "workspaces": [
-    "mu-plugins/blocks/*"
+    "mu-plugins/blocks/*",
+    "infra"
   ],
   "scripts": {
     "blocks:build": "bun -F '@blocks/*' build",
