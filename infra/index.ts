@@ -100,8 +100,8 @@ new aws.ec2.MainRouteTableAssociation('main-route-table-association', {
 });
 
 // Security Groups
-const lbSecurityGroup = new aws.ec2.SecurityGroup('alb-sg', {
-  name: name('alb-sg'),
+const lbSecurityGroup = new aws.ec2.SecurityGroup('lb-sg', {
+  name: name('lb-sg'),
   vpcId: vpc.id,
   description: 'Security group for Application Load Balancer',
   ingress: [
