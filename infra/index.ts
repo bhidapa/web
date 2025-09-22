@@ -318,22 +318,22 @@ const lb = new awsx.lb.ApplicationLoadBalancer('lb', {
   name: name('lb'),
   securityGroups: [lbSecurityGroup.id],
   subnets: [publicSubnet1, publicSubnet2],
-  tags: { proj },
-});
-new aws.lb.Listener('lb-http-redirect-listener', {
-  loadBalancerArn: lb.loadBalancer.arn,
-  port: 80,
-  protocol: 'HTTP',
-  defaultActions: [
-    {
-      type: 'redirect',
-      redirect: {
-        port: '443',
-        protocol: 'HTTP',
-        statusCode: 'HTTP_301',
+  listener: {
+    port: 80,
+    protocol: 'HTTP',
+    tags: { proj },
+    defaultActions: [
+      {
+        type: 'redirect',
+        redirect: {
+          port: '443',
+          protocol: 'HTTP',
+          statusCode: 'HTTP_301',
+        },
       },
-    },
-  ],
+    ],
+  },
+  tags: { proj },
 });
 const lbHttps = new aws.lb.Listener('lb-https-listener', {
   loadBalancerArn: lb.loadBalancer.arn,
