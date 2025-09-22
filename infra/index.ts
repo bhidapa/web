@@ -257,6 +257,7 @@ const wpImage = new awsx.ecr.Image('wp-image', {
 // ECS Cluster and Roles
 const wpCluster = new aws.ecs.Cluster('wp-cluster', {
   name: name('wp'),
+  settings: [{ name: 'containerInsights', value: 'enhanced' }],
 });
 const taskExecutionRole = new aws.iam.Role('wp-service-task-exec-role', {
   name: name('wp-service'),
