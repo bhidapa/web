@@ -24,6 +24,7 @@ function name(suffix?: string) {
 // VPC
 const vpc = new aws.ec2.Vpc('vpc', {
   cidrBlock: '192.168.0.0/16',
+  enableDnsHostnames: true, // some services (like EFS) use a named hostname over DNS
   tags: { proj, Name: name() },
 });
 const privateSubnet1 = new aws.ec2.Subnet('private-subnet-1', {
