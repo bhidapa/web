@@ -1,9 +1,6 @@
 {
-	# avoid redirect loops with reverse proxies and cloud load balancers
-	auto_https disable_redirects
-
-	# certificates are issued internally
-	local_certs
+	# https will be handled by load balancers
+	auto_https off
 
 	# enable frankenphp
 	frankenphp
@@ -13,6 +10,9 @@
 }
 
 {$SERVER_NAME:localhost} {
+	trusted_proxies static {$TRUSTED_PROXIES_RANGES:private_ranges}
+	trusted_proxies_strict
+
 	root * /var/www/html/
 
 	encode br zstd gzip

@@ -12,38 +12,39 @@ function name(suffix?: string) {
   return `${proj}-${stack}-${suffix}`;
 }
 
+// VPC
 const vpc = new aws.ec2.Vpc('vpc', {
-  cidrBlock: '123.4.0.0/16',
+  cidrBlock: '192.168.0.0/16',
   tags: { proj, Name: name() },
 });
-
-const privateSubnet = new aws.ec2.Subnet('private-subnet-1', {
+const privateSubnet1 = new aws.ec2.Subnet('private-subnet-1', {
   vpcId: vpc.id,
-  cidrBlock: '123.4.1.0/24',
+  cidrBlock: '192.168.1.0/24',
   availabilityZone: `${region}a`,
   tags: { proj, Name: name('private-1') },
 });
 const privateSubnet2 = new aws.ec2.Subnet('private-subnet-2', {
   vpcId: vpc.id,
-  cidrBlock: '123.4.2.0/24',
+  cidrBlock: '192.168.2.0/24',
   availabilityZone: `${region}b`,
   tags: { proj, Name: name('private-2') },
 });
-const publicSubnet = new aws.ec2.Subnet('public-subnet-1', {
+const publicSubnet1 = new aws.ec2.Subnet('public-subnet-1', {
   vpcId: vpc.id,
-  cidrBlock: '123.4.9.0/24',
+  cidrBlock: '192.168.100.0/24',
   availabilityZone: `${region}a`,
   mapPublicIpOnLaunch: true,
   tags: { proj, Name: name('public-1') },
 });
 const publicSubnet2 = new aws.ec2.Subnet('public-subnet-2', {
   vpcId: vpc.id,
-  cidrBlock: '123.4.8.0/24',
+  cidrBlock: '192.168.200.0/24',
   availabilityZone: `${region}b`,
   mapPublicIpOnLaunch: true,
   tags: { proj, Name: name('public-2') },
 });
 
+// Public Subnet
 const igw = new aws.ec2.InternetGateway('igw', {
   vpcId: vpc.id,
   tags: { proj, Name: name('igw') },
@@ -58,36 +59,35 @@ new aws.ec2.Route('public-route', {
   gatewayId: igw.id,
 });
 new aws.ec2.RouteTableAssociation('public-route-table-association-1', {
-  subnetId: publicSubnet.id,
+  subnetId: publicSubnet1.id,
   routeTableId: publicRouteTable.id,
 });
 new aws.ec2.RouteTableAssociation('public-route-table-association-2', {
   subnetId: publicSubnet2.id,
   routeTableId: publicRouteTable.id,
 });
-
 const eip = new aws.ec2.Eip('nat-gw-eip', {
   domain: 'vpc',
   tags: { proj, Name: name('nat-gw-eip') },
 });
 const natgw = new aws.ec2.NatGateway('nat-gw', {
-  subnetId: publicSubnet.id,
+  subnetId: publicSubnet1.id,
   allocationId: eip.id,
   tags: { proj, Name: name('nat-gw') },
 });
 
+// Private Subnet
 const privateRouteTable = new aws.ec2.RouteTable('private-route-table', {
   vpcId: vpc.id,
   tags: { proj, Name: name('private-route-table') },
 });
-
 new aws.ec2.Route('private-route', {
   routeTableId: privateRouteTable.id,
   destinationCidrBlock: '0.0.0.0/0',
   natGatewayId: natgw.id,
 });
 new aws.ec2.RouteTableAssociation('private-route-table-association-1', {
-  subnetId: privateSubnet.id,
+  subnetId: privateSubnet1.id,
   routeTableId: privateRouteTable.id,
 });
 new aws.ec2.RouteTableAssociation('private-route-table-association-2', {
@@ -122,12 +122,6 @@ const wpSecurityGroup = new aws.ec2.SecurityGroup('wp-sg', {
       protocol: 'tcp',
       fromPort: 80,
       toPort: 80,
-      securityGroups: [lbSecurityGroup.id],
-    },
-    {
-      protocol: 'tcp',
-      fromPort: 443,
-      toPort: 443,
       securityGroups: [lbSecurityGroup.id],
     },
   ],
@@ -166,12 +160,21 @@ const efsSecurityGroup = new aws.ec2.SecurityGroup('wp-fs-sg', {
 });
 
 // Aurora Serverless v2 MySQL
-const dbPassword = new aws.kms.Key('wp-db-password', {
+const dbPassword = new aws.secretsmanager.Secret('wp-db-password', {
+  name: name('wp-db-password'),
   tags: { proj },
+});
+const dbPasswordValue = aws.secretsmanager.getRandomPasswordOutput({
+  passwordLength: 16,
+  excludeCharacters: '"\'@/\\',
+});
+new aws.secretsmanager.SecretVersion('wp-db-password-version', {
+  secretId: dbPassword.id,
+  secretString: dbPasswordValue.randomPassword,
 });
 const dbSubnetGroup = new aws.rds.SubnetGroup('wp-db-subnet-group', {
   name: name('wp-db-subnet-group'),
-  subnetIds: [privateSubnet.id, privateSubnet2.id],
+  subnetIds: [privateSubnet1.id, privateSubnet2.id],
   description: 'Subnet group for Aurora database',
   tags: { proj },
 });
@@ -184,15 +187,15 @@ const dbCluster = new aws.rds.Cluster('wp-db-cluster', {
     maxCapacity: 3,
     minCapacity: 0,
   },
-  manageMasterUserPassword: true,
   masterUsername: 'wp',
-  masterUserSecretKmsKeyId: dbPassword.keyId,
+  masterPassword: dbPasswordValue.randomPassword,
   dbSubnetGroupName: dbSubnetGroup.name,
   vpcSecurityGroupIds: [dbSecurityGroup.id],
   backupRetentionPeriod: 7,
   preferredBackupWindow: '03:00-04:00',
   preferredMaintenanceWindow: 'mon:04:00-mon:05:00',
   storageEncrypted: true,
+  skipFinalSnapshot: true,
   tags: { proj },
 });
 const dbMaster = new aws.rds.ClusterInstance('wp-db-master', {
@@ -215,7 +218,7 @@ const efs = new aws.efs.FileSystem('wp-efs', {
 });
 new aws.efs.MountTarget('wp-fs-mount-target-1', {
   fileSystemId: efs.id,
-  subnetId: privateSubnet.id,
+  subnetId: privateSubnet1.id,
   securityGroups: [efsSecurityGroup.id],
 });
 new aws.efs.MountTarget('wp-fs-mount-target-2', {
@@ -246,23 +249,24 @@ const certRecord = new aws.route53.Record('wp-akp-cert-validation-record', {
   type: cert.domainValidationOptions[0].resourceRecordType,
   ttl: 60,
 });
-new aws.acm.CertificateValidation('wp-akp-cert-validation', {
-  certificateArn: cert.arn,
-  validationRecordFqdns: [certRecord.fqdn],
-});
+const certValidation = new aws.acm.CertificateValidation(
+  'wp-akp-cert-validation',
+  {
+    certificateArn: cert.arn,
+    validationRecordFqdns: [certRecord.fqdn],
+  },
+);
 const lb = new awsx.lb.ApplicationLoadBalancer(
   'wp-lb',
   {
     name: name('wp-lb'),
     securityGroups: [lbSecurityGroup.id],
-    subnets: [publicSubnet, publicSubnet2],
+    subnets: [publicSubnet1, publicSubnet2],
     defaultTargetGroup: {
       name: name('wp-tg'),
       vpcId: vpc.id,
       port: 80,
       protocol: 'HTTP',
-      // TODO: try HTTP2
-      // protocolVersion: 'HTTP2',
       tags: { proj },
       // TODO: healtcheck
     },
@@ -289,10 +293,9 @@ const lb = new awsx.lb.ApplicationLoadBalancer(
     ],
     tags: { proj },
   },
-  // TODO: is necessary?
-  // {
-  //   dependsOn: [certValidation],
-  // },
+  {
+    dependsOn: [certValidation],
+  },
 );
 new aws.route53.Record('wp-akp-dns-a', {
   zoneId: hostedZone.then((zone) => zone.zoneId),
@@ -310,7 +313,7 @@ new aws.route53.Record('wp-akp-dns-a', {
 
 // WordPress on Fargate
 const wpRepo = new aws.ecr.Repository('wp-repo', {
-  name: name('repo'),
+  name: name('wp'),
   imageScanningConfiguration: {
     scanOnPush: true,
   },
@@ -322,59 +325,87 @@ const wpImage = new awsx.ecr.Image('wp-image', {
   platform: 'linux/amd64',
 });
 const wpCluster = new aws.ecs.Cluster('wp-cluster', {
-  name: name('wp-cluster'),
+  name: name('wp'),
 });
-// TODO: the task execution role needs to have access to kms
-const wpService = new awsx.ecs.FargateService('wp-service', {
+const taskExecutionRole = new aws.iam.Role('wp-service-task-exec-role', {
   name: name('wp-service'),
+  assumeRolePolicy: JSON.stringify({
+    Version: '2012-10-17',
+    Statement: [
+      {
+        Action: 'sts:AssumeRole',
+        Effect: 'Allow',
+        Principal: {
+          Service: 'ecs-tasks.amazonaws.com',
+        },
+      },
+    ],
+  }),
+  tags: { proj },
+});
+new aws.iam.RolePolicyAttachment('wp-service-task-exec-role-base-policy', {
+  role: taskExecutionRole.name,
+  // can pull images from ECR and write logs to CloudWatch
+  policyArn:
+    'arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy',
+});
+new aws.iam.RolePolicy('wp-service-task-exec-role-secrets-policy', {
+  name: name('wp-service-secrets-policy'),
+  role: taskExecutionRole.id,
+  // can pull db password from Secrets Manager
+  policy: JSON.stringify({
+    Version: '2012-10-17',
+    Statement: [
+      {
+        Effect: 'Allow',
+        Action: ['secretsmanager:GetSecretValue'],
+        Resource: dbPassword.arn,
+      },
+    ],
+  }),
+});
+const akpService = new awsx.ecs.FargateService('wp-akp-service', {
+  name: name('wp-akp'),
   cluster: wpCluster.arn,
   taskDefinitionArgs: {
-    family: name('wp'),
-    containers: {
-      akp: {
-        name: 'akp',
-        image: wpImage.imageUri,
-        cpu: 256,
-        memory: 512,
-        essential: true,
-        portMappings: [{ containerPort: 80 }],
-        environment: [
-          { name: 'SERVICE_NAME', value: ':80' },
-          { name: 'WORDPRESS_DB_HOST', value: dbCluster.endpoint },
-          { name: 'WORDPRESS_DB_NAME', value: 'akp' },
-        ],
-        secrets: [
-          {
-            name: 'WORDPRESS_DB_USER',
-            // TODO: make sure this one is correct?
-            valueFrom: dbCluster.masterUserSecretKmsKeyId,
-          },
-          {
-            name: 'WORDPRESS_DB_PASSWORD',
-            valueFrom: dbPassword.keyId,
-          },
-        ],
-        mountPoints: [
-          {
-            sourceVolume: 'akp-data',
-            containerPath: '/var/www/html',
-            readOnly: false,
-          },
-        ],
-        logConfiguration: {
-          logDriver: 'awslogs',
-          options: {
-            'awslogs-create-group': 'true',
-            'awslogs-group': `/ecs/${name('wp')}/akp`,
-            'awslogs-region': region,
-            'awslogs-stream-prefix': 'akp',
-          },
+    family: name('wp-akp'),
+    executionRole: {
+      roleArn: taskExecutionRole.arn,
+    },
+    container: {
+      name: 'wp',
+      image: wpImage.imageUri,
+      cpu: 256,
+      memory: 512,
+      essential: true,
+      portMappings: [{ containerPort: 80 }],
+      environment: [
+        { name: 'SERVICE_NAME', value: ':80' },
+        { name: 'WORDPRESS_DB_HOST', value: dbCluster.endpoint },
+        { name: 'WORDPRESS_DB_NAME', value: 'akp' },
+        { name: 'WORDPRESS_DB_USER', value: dbCluster.masterUsername },
+      ],
+      secrets: [{ name: 'WORDPRESS_DB_PASSWORD', valueFrom: dbPassword.arn }],
+      mountPoints: [
+        {
+          sourceVolume: 'wp-data',
+          containerPath: '/var/www/html',
+          readOnly: false,
+        },
+      ],
+      logConfiguration: {
+        logDriver: 'awslogs',
+        options: {
+          'awslogs-create-group': 'true',
+          'awslogs-group': `/ecs/${name('wp')}/akp`,
+          'awslogs-region': region,
+          'awslogs-stream-prefix': 'akp',
         },
       },
     },
     volumes: [
       {
-        name: 'akp-data',
+        name: 'wp-data',
         efsVolumeConfiguration: {
           rootDirectory: '/akp',
           fileSystemId: efs.id,
@@ -385,14 +416,14 @@ const wpService = new awsx.ecs.FargateService('wp-service', {
   },
   desiredCount: 1,
   networkConfiguration: {
-    subnets: [privateSubnet.id, privateSubnet2.id],
+    subnets: [privateSubnet1.id, privateSubnet2.id],
     securityGroups: [wpSecurityGroup.id],
     assignPublicIp: false,
   },
   loadBalancers: [
     {
       targetGroupArn: lb.defaultTargetGroup.arn,
-      containerName: 'akp',
+      containerName: 'wp',
       containerPort: 80,
     },
   ],
@@ -400,22 +431,22 @@ const wpService = new awsx.ecs.FargateService('wp-service', {
 });
 
 // Auto Scaling
-const autoScalingTarget = new aws.appautoscaling.Target(
-  'wp-autoscaling-target',
+const akpAutoScalingTarget = new aws.appautoscaling.Target(
+  'wp-akp-autoscaling-target',
   {
+    serviceNamespace: 'ecs',
+    resourceId: pulumi.interpolate`service/${wpCluster.name}/${akpService.service.name}`,
+    scalableDimension: 'ecs:service:DesiredCount',
     maxCapacity: 3,
     minCapacity: 1,
-    resourceId: pulumi.interpolate`service/${wpCluster.name}/${wpService.service.name}`,
-    scalableDimension: 'ecs:service:DesiredCount',
-    serviceNamespace: 'wp',
   },
 );
-new aws.appautoscaling.Policy('wp-autoscaling-policy', {
-  name: name('wp-autoscaling-policy'),
+new aws.appautoscaling.Policy('wp-akp-autoscaling-policy', {
+  name: name('wp-akp-policy'),
   policyType: 'TargetTrackingScaling',
-  resourceId: autoScalingTarget.resourceId,
-  scalableDimension: autoScalingTarget.scalableDimension,
-  serviceNamespace: autoScalingTarget.serviceNamespace,
+  resourceId: akpAutoScalingTarget.resourceId,
+  scalableDimension: akpAutoScalingTarget.scalableDimension,
+  serviceNamespace: akpAutoScalingTarget.serviceNamespace,
   targetTrackingScalingPolicyConfiguration: {
     predefinedMetricSpecification: {
       predefinedMetricType: 'ECSServiceAverageCPUUtilization',
