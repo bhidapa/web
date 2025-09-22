@@ -284,7 +284,7 @@ new aws.iam.RolePolicy('wp-service-task-exec-role-secrets-policy', {
       {
         Effect: 'Allow',
         Action: ['secretsmanager:GetSecretValue'],
-        Resource: dbPassword.awsId,
+        Resource: dbPassword.id,
       },
     ],
   },
@@ -399,7 +399,7 @@ for (const website of websites) {
             { name: 'WORDPRESS_DB_USER', value: dbCluster.masterUsername },
           ],
           secrets: [
-            { name: 'WORDPRESS_DB_PASSWORD', valueFrom: dbPassword.awsId },
+            { name: 'WORDPRESS_DB_PASSWORD', valueFrom: dbPassword.id },
           ],
           mountPoints: [
             {
