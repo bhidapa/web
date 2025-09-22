@@ -16,7 +16,6 @@
 }
 
 :80 {
-
 	root * /var/www/html/
 
 	encode br zstd gzip
