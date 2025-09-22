@@ -10,7 +10,7 @@
 }
 
 {$SERVER_NAME:localhost} {
-	trusted_proxies static {$TRUSTED_PROXIES_RANGES:private_ranges}
+	trusted_proxies static private_ranges
 	trusted_proxies_strict
 
 	root * /var/www/html/
