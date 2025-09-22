@@ -193,7 +193,10 @@ const dbCluster = new aws.rds.Cluster('db-cluster', {
     minCapacity: 0,
   },
   masterUsername: 'wp',
-  masterPassword: pulumi.interpolate`{{resolve:secretsmanager:${dbPassword.id}}}`,
+  // TODO: is there a nicer way to supply the master password?
+  masterPassword: aws.secretsmanager.getSecretVersionOutput({
+    secretId: dbPassword.id,
+  }).secretString,
   dbSubnetGroupName: dbSubnetGroup.name,
   vpcSecurityGroupIds: [dbSecurityGroup.id],
   backupRetentionPeriod: 7,
