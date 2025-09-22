@@ -335,10 +335,36 @@ const lb = new awsx.lb.ApplicationLoadBalancer('lb', {
   },
   tags: { proj },
 });
+// Default SSL Certificate for the Application Load Balancer under the domain lb.bhidapa.ba
+// TODO: do we need to point the lb.bhidapa.ba domain to the load balancer too?
+let cert: aws.acm.Certificate;
+{
+  const hostedZone = aws.route53.getZoneOutput({
+    name: 'bhidapa.ba',
+    privateZone: false,
+  });
+  cert = new aws.acm.Certificate('lb-cert', {
+    domainName: 'lb.bhidapa.ba',
+    validationMethod: 'DNS',
+    tags: { proj, Name: name('lb-cert') },
+  });
+  const certRecord = new aws.route53.Record('lb-cert-validation-record', {
+    zoneId: hostedZone.zoneId,
+    name: cert.domainValidationOptions[0].resourceRecordName,
+    records: [cert.domainValidationOptions[0].resourceRecordValue],
+    type: cert.domainValidationOptions[0].resourceRecordType,
+    ttl: 60,
+  });
+  new aws.acm.CertificateValidation('lb-cert-validation', {
+    certificateArn: cert.arn,
+    validationRecordFqdns: [certRecord.fqdn],
+  });
+}
 const lbHttps = new aws.lb.Listener('lb-https-listener', {
   loadBalancerArn: lb.loadBalancer.arn,
   port: 443,
   protocol: 'HTTPS',
+  certificateArn: cert.arn,
   defaultActions: [
     {
       // 404 for all unmatched routes
@@ -386,7 +412,7 @@ for (const website of websites) {
   });
 
   // SSL Certificate
-  const hostedZone = aws.route53.getZone({
+  const hostedZone = aws.route53.getZoneOutput({
     name: website.hostedZone,
     privateZone: false,
   });
@@ -398,7 +424,7 @@ for (const website of websites) {
   const certRecord = new aws.route53.Record(
     `${website.name}-cert-validation-record`,
     {
-      zoneId: hostedZone.then((zone) => zone.zoneId),
+      zoneId: hostedZone.zoneId,
       name: cert.domainValidationOptions[0].resourceRecordName,
       records: [cert.domainValidationOptions[0].resourceRecordValue],
       type: cert.domainValidationOptions[0].resourceRecordType,
@@ -419,7 +445,7 @@ for (const website of websites) {
 
   // Point domain DNS to Load Balancer
   new aws.route53.Record(`${website.name}-dns-a`, {
-    zoneId: hostedZone.then((zone) => zone.zoneId),
+    zoneId: hostedZone.zoneId,
     name: website.domain,
     type: 'A',
     aliases: [
