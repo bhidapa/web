@@ -381,7 +381,7 @@ for (const website of websites) {
   const fargateService = new awsx.ecs.FargateService(
     `${website.name}-service`,
     {
-      name: name(website.name),
+      name: website.name,
       cluster: wpCluster.arn,
       taskDefinitionArgs: {
         family: name(website.name),
