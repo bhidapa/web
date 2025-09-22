@@ -429,6 +429,9 @@ for (const website of websites) {
           image: wpImage.imageUri,
           essential: true,
           portMappings: [{ containerPort: 80 }],
+          healthCheck: {
+            command: ['CMD-SHELL', 'curl -f http://localhost:80 || exit 1'],
+          },
           environment: [
             { name: 'WORDPRESS_DB_HOST', value: dbCluster.endpoint },
             { name: 'WORDPRESS_DB_NAME', value: website.name },
