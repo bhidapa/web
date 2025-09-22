@@ -300,6 +300,7 @@ for (const website of websites) {
   const cert = new aws.acm.Certificate(`${website.name}-cert`, {
     domainName: website.domain,
     validationMethod: 'DNS',
+    tags: { proj, Name: name(`${website.name}-cert`) },
   });
   const certRecord = new aws.route53.Record(
     `${website.name}-cert-validation-record`,
