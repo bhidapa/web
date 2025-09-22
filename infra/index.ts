@@ -313,9 +313,79 @@ new aws.iam.RolePolicy('wp-service-task-exec-role-fs-mount-policy', {
   },
 });
 
+// Application Load Balancer
+const lb = new awsx.lb.ApplicationLoadBalancer('lb', {
+  name: name('lb'),
+  securityGroups: [lbSecurityGroup.id],
+  subnets: [publicSubnet1, publicSubnet2],
+  tags: { proj },
+});
+new aws.lb.Listener('lb-http-redirect-listener', {
+  loadBalancerArn: lb.loadBalancer.arn,
+  port: 80,
+  protocol: 'HTTP',
+  defaultActions: [
+    {
+      type: 'redirect',
+      redirect: {
+        port: '443',
+        protocol: 'HTTP',
+        statusCode: 'HTTP_301',
+      },
+    },
+  ],
+});
+const lbHttps = new aws.lb.Listener('lb-https-listener', {
+  loadBalancerArn: lb.loadBalancer.arn,
+  port: 443,
+  protocol: 'HTTPS',
+  defaultActions: [
+    {
+      // 404 for all unmatched routes
+      type: 'fixed-response',
+      fixedResponse: {
+        contentType: 'text/plain',
+        statusCode: '404',
+        messageBody: 'Not Found',
+      },
+    },
+  ],
+});
+
 // For Each Website
 for (const website of websites) {
-  // Application Load Balancer
+  // Use Application Load Balancer
+  const tg = new aws.lb.TargetGroup(`${website.name}-lb-tg`, {
+    name: name(`${website.name}-lb-tg`),
+    vpcId: vpc.id,
+    port: 80,
+    protocol: 'HTTP',
+    tags: { proj },
+    healthCheck: {
+      enabled: true,
+      matcher: '200-399',
+      path: '/', // TODO: integrate with WP_Site_Health but needs authentication
+    },
+  });
+  new aws.lb.ListenerRule(`${website.name}-lb-rule`, {
+    listenerArn: lbHttps.arn,
+    conditions: [
+      {
+        hostHeader: {
+          values: [website.domain],
+        },
+      },
+    ],
+    actions: [
+      {
+        type: 'forward',
+        targetGroupArn: tg.arn,
+      },
+    ],
+    tags: { proj },
+  });
+
+  // SSL Certificate
   const hostedZone = aws.route53.getZone({
     name: website.hostedZone,
     privateZone: false,
@@ -339,45 +409,15 @@ for (const website of websites) {
     certificateArn: cert.arn,
     validationRecordFqdns: [certRecord.fqdn],
   });
-  const lb = new awsx.lb.ApplicationLoadBalancer(`${website.name}-lb`, {
-    name: name(`${website.name}-lb`),
-    securityGroups: [lbSecurityGroup.id],
-    subnets: [publicSubnet1, publicSubnet2],
-    defaultTargetGroup: {
-      name: name(`${website.name}-tg`),
-      vpcId: vpc.id,
-      port: 80,
-      protocol: 'HTTP',
-      tags: { proj },
-      healthCheck: {
-        enabled: true,
-        matcher: '200-399',
-        path: '/', // TODO: integrate with WP_Site_Health but needs authentication
-      },
+  new aws.lb.ListenerCertificate(
+    `${website.name}-lb-https-listener-cert-attachment`,
+    {
+      listenerArn: lbHttps.arn,
+      certificateArn: cert.arn,
     },
-    listeners: [
-      {
-        port: 80,
-        protocol: 'HTTP',
-        defaultActions: [
-          {
-            type: 'redirect',
-            redirect: {
-              port: '443',
-              protocol: 'HTTP',
-              statusCode: 'HTTP_301',
-            },
-          },
-        ],
-      },
-      {
-        port: 443,
-        protocol: 'HTTPS',
-        certificateArn: cert.arn,
-      },
-    ],
-    tags: { proj },
-  });
+  );
+
+  // Point domain DNS to Load Balancer
   new aws.route53.Record(`${website.name}-dns-a`, {
     zoneId: hostedZone.then((zone) => zone.zoneId),
     name: website.domain,
@@ -481,7 +521,7 @@ for (const website of websites) {
       },
       loadBalancers: [
         {
-          targetGroupArn: lb.defaultTargetGroup.arn,
+          targetGroupArn: tg.arn,
           containerName: 'wp',
           containerPort: 80,
         },
