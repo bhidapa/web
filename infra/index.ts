@@ -391,6 +391,10 @@ for (const website of websites) {
 
   const fsAccessPoint = new aws.efs.AccessPoint(`${website.name}-fs-ap`, {
     fileSystemId: efs.id,
+    posixUser: {
+      gid: 0,
+      uid: 0,
+    },
     rootDirectory: {
       path: `/${website.name}`,
       creationInfo: {
