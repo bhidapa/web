@@ -337,46 +337,49 @@ const lb = new awsx.lb.ApplicationLoadBalancer('lb', {
 });
 // Default SSL Certificate for the Application Load Balancer under the domain lb.bhidapa.ba
 // TODO: do we need to point the lb.bhidapa.ba domain to the load balancer too?
-let cert: aws.acm.Certificate;
-{
-  const hostedZone = aws.route53.getZoneOutput({
+const lbCert = new aws.acm.Certificate('lb-cert', {
+  domainName: 'lb.bhidapa.ba',
+  validationMethod: 'DNS',
+  tags: { proj, Name: name('lb-cert') },
+});
+const lbCertRecord = new aws.route53.Record('lb-cert-validation-record', {
+  zoneId: aws.route53.getZoneOutput({
     name: 'bhidapa.ba',
     privateZone: false,
-  });
-  cert = new aws.acm.Certificate('lb-cert', {
-    domainName: 'lb.bhidapa.ba',
-    validationMethod: 'DNS',
-    tags: { proj, Name: name('lb-cert') },
-  });
-  const certRecord = new aws.route53.Record('lb-cert-validation-record', {
-    zoneId: hostedZone.zoneId,
-    name: cert.domainValidationOptions[0].resourceRecordName,
-    records: [cert.domainValidationOptions[0].resourceRecordValue],
-    type: cert.domainValidationOptions[0].resourceRecordType,
-    ttl: 60,
-  });
-  new aws.acm.CertificateValidation('lb-cert-validation', {
-    certificateArn: cert.arn,
-    validationRecordFqdns: [certRecord.fqdn],
-  });
-}
-const lbHttps = new aws.lb.Listener('lb-https-listener', {
-  loadBalancerArn: lb.loadBalancer.arn,
-  port: 443,
-  protocol: 'HTTPS',
-  certificateArn: cert.arn,
-  defaultActions: [
-    {
-      // 404 for all unmatched routes
-      type: 'fixed-response',
-      fixedResponse: {
-        contentType: 'text/plain',
-        statusCode: '404',
-        messageBody: 'Not Found',
-      },
-    },
-  ],
+  }).zoneId,
+  name: lbCert.domainValidationOptions[0].resourceRecordName,
+  records: [lbCert.domainValidationOptions[0].resourceRecordValue],
+  type: lbCert.domainValidationOptions[0].resourceRecordType,
+  ttl: 60,
 });
+const lbCertValidation = new aws.acm.CertificateValidation(
+  'lb-cert-validation',
+  {
+    certificateArn: lbCert.arn,
+    validationRecordFqdns: [lbCertRecord.fqdn],
+  },
+);
+const lbHttps = new aws.lb.Listener(
+  'lb-https-listener',
+  {
+    loadBalancerArn: lb.loadBalancer.arn,
+    port: 443,
+    protocol: 'HTTPS',
+    certificateArn: lbCert.arn,
+    defaultActions: [
+      {
+        // 404 for all unmatched routes
+        type: 'fixed-response',
+        fixedResponse: {
+          contentType: 'text/plain',
+          statusCode: '404',
+          messageBody: 'Not Found',
+        },
+      },
+    ],
+  },
+  { dependsOn: [lbCertValidation] },
+);
 
 // For Each Website
 for (const website of websites) {
@@ -431,16 +434,20 @@ for (const website of websites) {
       ttl: 60,
     },
   );
-  new aws.acm.CertificateValidation(`${website.name}-cert-validation`, {
-    certificateArn: cert.arn,
-    validationRecordFqdns: [certRecord.fqdn],
-  });
+  const certValidation = new aws.acm.CertificateValidation(
+    `${website.name}-cert-validation`,
+    {
+      certificateArn: cert.arn,
+      validationRecordFqdns: [certRecord.fqdn],
+    },
+  );
   new aws.lb.ListenerCertificate(
     `${website.name}-lb-https-listener-cert-attachment`,
     {
       listenerArn: lbHttps.arn,
       certificateArn: cert.arn,
     },
+    { dependsOn: [certValidation] },
   );
 
   // Point domain DNS to Load Balancer
