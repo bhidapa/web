@@ -1,6 +1,7 @@
 import * as pulumi from '@pulumi/pulumi';
 import * as aws from '@pulumi/aws';
 import * as awsx from '@pulumi/awsx';
+import * as aws_native from '@pulumi/aws-native';
 
 const websites = [
   {
@@ -168,17 +169,13 @@ const efsSecurityGroup = new aws.ec2.SecurityGroup('fs-sg', {
 });
 
 // Aurora Serverless v2 MySQL
-const dbPassword = new aws.secretsmanager.Secret('db-password', {
+const dbPassword = new aws_native.secretsmanager.Secret('db-password', {
   name: name('db-password'),
-  tags: { proj },
-});
-const dbPasswordValue = aws.secretsmanager.getRandomPasswordOutput({
-  passwordLength: 16,
-  excludeCharacters: '"\'@/\\',
-});
-new aws.secretsmanager.SecretVersion('db-password-version', {
-  secretId: dbPassword.id,
-  secretString: dbPasswordValue.randomPassword,
+  generateSecretString: {
+    passwordLength: 16,
+    excludeCharacters: '"\'@/\\',
+  },
+  tags: [{ key: 'proj', value: proj }],
 });
 const dbSubnetGroup = new aws.rds.SubnetGroup('db-subnet-group', {
   name: name('db-subnet-group'),
@@ -196,7 +193,7 @@ const dbCluster = new aws.rds.Cluster('db-cluster', {
     minCapacity: 0,
   },
   masterUsername: 'wp',
-  masterPassword: dbPasswordValue.randomPassword,
+  masterPassword: pulumi.interpolate`{{resolve:secretsmanager:${dbPassword.id}}}`,
   dbSubnetGroupName: dbSubnetGroup.name,
   vpcSecurityGroupIds: [dbSecurityGroup.id],
   backupRetentionPeriod: 7,
@@ -288,7 +285,7 @@ new aws.iam.RolePolicy('wp-service-task-exec-role-secrets-policy', {
       {
         Effect: 'Allow',
         Action: ['secretsmanager:GetSecretValue'],
-        Resource: [dbPassword.arn],
+        Resource: [dbPassword.awsId],
       },
     ],
   }),
@@ -403,7 +400,7 @@ for (const website of websites) {
             { name: 'WORDPRESS_DB_USER', value: dbCluster.masterUsername },
           ],
           secrets: [
-            { name: 'WORDPRESS_DB_PASSWORD', valueFrom: dbPassword.arn },
+            { name: 'WORDPRESS_DB_PASSWORD', valueFrom: dbPassword.awsId },
           ],
           mountPoints: [
             {

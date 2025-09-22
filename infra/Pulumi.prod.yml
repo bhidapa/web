@@ -1,4 +1,5 @@
 config:
   aws:region: eu-central-1
+  aws-native:region: eu-central-1
 secretsprovider: awskms://9ddef352-b6a8-4aec-a935-cccd851cbc51?region=eu-central-1
 encryptedkey: AQICAHgYg0lJqFqgZoWb3LkDNNQyDjK3n1aEY7G29iukytg5GgG1kJMMvju/Rtuv6AT/FwV2AAAAfjB8BgkqhkiG9w0BBwagbzBtAgEAMGgGCSqGSIb3DQEHATAeBglghkgBZQMEAS4wEQQMqVh1htv3Hgyk3rkTAgEQgDs2RrxLSd0o2DelHe8A/wa76x13VjypfwJE6B5TsXSp6ws0JNNPN6VQNd+9J4u6eeqyAdXtiz6f15UAaw==
