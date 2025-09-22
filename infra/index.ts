@@ -371,6 +371,12 @@ for (const website of websites) {
     ],
   });
 
+  const logGroup = new aws.cloudwatch.LogGroup(`${website.name}-log-group`, {
+    name: `/ecs/${name('wp')}/${website.name}`,
+    retentionInDays: 7,
+    tags: { proj },
+  });
+
   const fargateService = new awsx.ecs.FargateService(
     `${website.name}-service`,
     {
@@ -406,10 +412,8 @@ for (const website of websites) {
           logConfiguration: {
             logDriver: 'awslogs',
             options: {
-              'awslogs-create-group': 'true',
-              'awslogs-group': `/ecs/${name('wp')}/${website.name}`,
-              'awslogs-region': region,
-              'awslogs-stream-prefix': website.name,
+              'awslogs-group': logGroup.name,
+              'awslogs-region': logGroup.region,
             },
           },
         },
