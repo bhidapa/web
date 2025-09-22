@@ -36,4 +36,4 @@ services:
     volumes:
       - akp-data:/var/www/html
       - ./mu-plugins:/var/www/html/wp-content/mu-plugins
-      - ./themes/akp:/var/www/html/wp-content/themes/akp
+      - ./themes/azp:/var/www/html/wp-content/themes/azp
