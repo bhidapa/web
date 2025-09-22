@@ -393,6 +393,11 @@ for (const website of websites) {
     fileSystemId: efs.id,
     rootDirectory: {
       path: `/${website.name}`,
+      creationInfo: {
+        ownerGid: 0,
+        ownerUid: 0,
+        permissions: '755',
+      },
     },
     tags: { proj },
   });
