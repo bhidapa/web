@@ -255,7 +255,7 @@ const wpCluster = new aws.ecs.Cluster('wp-cluster', {
 });
 const taskExecutionRole = new aws.iam.Role('wp-service-task-exec-role', {
   name: name('wp-service'),
-  assumeRolePolicy: JSON.stringify({
+  assumeRolePolicy: {
     Version: '2012-10-17',
     Statement: [
       {
@@ -266,7 +266,7 @@ const taskExecutionRole = new aws.iam.Role('wp-service-task-exec-role', {
         },
       },
     ],
-  }),
+  },
   tags: { proj },
 });
 new aws.iam.RolePolicyAttachment('wp-service-task-exec-role-base-policy', {
@@ -278,17 +278,16 @@ new aws.iam.RolePolicyAttachment('wp-service-task-exec-role-base-policy', {
 new aws.iam.RolePolicy('wp-service-task-exec-role-secrets-policy', {
   name: name('wp-service-secrets-policy'),
   role: taskExecutionRole.id,
-  // can pull db password from Secrets Manager
-  policy: pulumi.jsonStringify({
+  policy: {
     Version: '2012-10-17',
     Statement: [
       {
         Effect: 'Allow',
         Action: ['secretsmanager:GetSecretValue'],
-        Resource: [dbPassword.awsId],
+        Resource: dbPassword.awsId,
       },
     ],
-  }),
+  },
 });
 
 // For Each Website
