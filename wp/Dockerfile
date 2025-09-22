@@ -21,7 +21,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libzip-dev \
     libmemcached-dev \
     vim \
-    zlib1g-dev
+    zlib1g-dev \
+    sendmail
 
 # install the PHP extensions we need (https://make.wordpress.org/hosting/handbook/handbook/server-environment/#php-extensions)
 RUN install-php-extensions \
