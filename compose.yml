@@ -19,7 +19,6 @@ services:
       - db
     build: ./wp
     environment:
-      SERVER_NAME: :80
       WORDPRESS_DB_HOST: db
       WORDPRESS_DB_USER: wordpress
       WORDPRESS_DB_PASSWORD: wordpress

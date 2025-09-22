@@ -9,7 +9,7 @@
 	order php before file_server
 }
 
-{$SERVER_NAME:localhost} {
+:80 {
 	trusted_proxies static private_ranges
 	trusted_proxies_strict
 

@@ -394,7 +394,6 @@ for (const website of websites) {
           essential: true,
           portMappings: [{ containerPort: 80 }],
           environment: [
-            { name: 'SERVICE_NAME', value: ':80' },
             { name: 'WORDPRESS_DB_HOST', value: dbCluster.endpoint },
             { name: 'WORDPRESS_DB_NAME', value: website.name },
             { name: 'WORDPRESS_DB_USER', value: dbCluster.masterUsername },
