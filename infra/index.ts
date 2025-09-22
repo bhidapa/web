@@ -390,8 +390,8 @@ for (const website of websites) {
         executionRole: {
           roleArn: taskExecutionRole.arn,
         },
-        cpu: '2048', // 2 vCPU
-        memory: '2048', // 2 GB
+        cpu: '512', // .5 vCPU
+        memory: '1024', // 1 GB
         container: {
           name: 'wp',
           image: wpImage.imageUri,
