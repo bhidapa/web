@@ -288,7 +288,7 @@ new aws.iam.RolePolicy('wp-service-task-exec-role-secrets-policy', {
       {
         Effect: 'Allow',
         Action: ['secretsmanager:GetSecretValue'],
-        Resource: dbPassword.arn,
+        Resource: [dbPassword.arn],
       },
     ],
   }),
