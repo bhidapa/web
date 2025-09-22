@@ -279,7 +279,7 @@ new aws.iam.RolePolicy('wp-service-task-exec-role-secrets-policy', {
   name: name('wp-service-secrets-policy'),
   role: taskExecutionRole.id,
   // can pull db password from Secrets Manager
-  policy: JSON.stringify({
+  policy: pulumi.jsonStringify({
     Version: '2012-10-17',
     Statement: [
       {
