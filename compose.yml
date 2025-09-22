@@ -1,6 +1,6 @@
 volumes:
   db-data:
-  azp-data:
+  akp-data:
 
 services:
   db:
@@ -14,7 +14,7 @@ services:
       - 53386:3306
     volumes:
       - db-data:/var/lib/mysql
-  azp:
+  akp:
     depends_on:
       - db
     build: ./wp
@@ -26,6 +26,6 @@ services:
     ports:
       - 58386:80
     volumes:
-      - azp-data:/var/www/html
+      - akp-data:/var/www/html
       - ./mu-plugins:/var/www/html/wp-content/mu-plugins
-      - ./themes/azp:/var/www/html/wp-content/themes/azp
+      - ./themes/akp:/var/www/html/wp-content/themes/akp
