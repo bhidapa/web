@@ -138,8 +138,8 @@ const wpSecurityGroup = new aws.ec2.SecurityGroup('wp-sg', {
   ],
   tags: { proj },
 });
-const dbSecurityGroup = new aws.ec2.SecurityGroup('wp-db-sg', {
-  name: name('wp-db-sg'),
+const dbSecurityGroup = new aws.ec2.SecurityGroup('db-sg', {
+  name: name('db-sg'),
   vpcId: vpc.id,
   description: 'Security group for Aurora database',
   ingress: [
@@ -152,8 +152,8 @@ const dbSecurityGroup = new aws.ec2.SecurityGroup('wp-db-sg', {
   ],
   tags: { proj },
 });
-const efsSecurityGroup = new aws.ec2.SecurityGroup('wp-fs-sg', {
-  name: name('wp-fs-sg'),
+const efsSecurityGroup = new aws.ec2.SecurityGroup('fs-sg', {
+  name: name('fs-sg'),
   vpcId: vpc.id,
   description: 'Security group for EFS',
   ingress: [
@@ -168,27 +168,27 @@ const efsSecurityGroup = new aws.ec2.SecurityGroup('wp-fs-sg', {
 });
 
 // Aurora Serverless v2 MySQL
-const dbPassword = new aws.secretsmanager.Secret('wp-db-password', {
-  name: name('wp-db-password'),
+const dbPassword = new aws.secretsmanager.Secret('db-password', {
+  name: name('db-password'),
   tags: { proj },
 });
 const dbPasswordValue = aws.secretsmanager.getRandomPasswordOutput({
   passwordLength: 16,
   excludeCharacters: '"\'@/\\',
 });
-new aws.secretsmanager.SecretVersion('wp-db-password-version', {
+new aws.secretsmanager.SecretVersion('db-password-version', {
   secretId: dbPassword.id,
   secretString: dbPasswordValue.randomPassword,
 });
-const dbSubnetGroup = new aws.rds.SubnetGroup('wp-db-subnet-group', {
-  name: name('wp-db-subnet-group'),
+const dbSubnetGroup = new aws.rds.SubnetGroup('db-subnet-group', {
+  name: name('db-subnet-group'),
   subnetIds: [privateSubnet1.id, privateSubnet2.id],
   description: 'Subnet group for Aurora database',
   tags: { proj },
 });
 const dbEngine = aws.rds.EngineType.AuroraMysql;
-const dbCluster = new aws.rds.Cluster('wp-db-cluster', {
-  clusterIdentifier: name('wp-db'),
+const dbCluster = new aws.rds.Cluster('db-cluster', {
+  clusterIdentifier: name('db'),
   engine: dbEngine,
   engineVersion: '8.0.mysql_aurora.3.10.0',
   serverlessv2ScalingConfiguration: {
@@ -206,8 +206,8 @@ const dbCluster = new aws.rds.Cluster('wp-db-cluster', {
   skipFinalSnapshot: true,
   tags: { proj },
 });
-new aws.rds.ClusterInstance('wp-db-master', {
-  identifier: name('wp-db-master'),
+new aws.rds.ClusterInstance('db-master', {
+  identifier: name('db-master'),
   clusterIdentifier: dbCluster.id,
   instanceClass: 'db.serverless',
   engine: dbEngine,
@@ -217,21 +217,21 @@ new aws.rds.ClusterInstance('wp-db-master', {
 // TODO: automatically create databases for each website (see wp/create-dbs.sql)
 
 // EFS File System
-const efs = new aws.efs.FileSystem('wp-fs', {
-  creationToken: name('wp-fs'),
+const efs = new aws.efs.FileSystem('fs', {
+  creationToken: name('fs'),
   tags: { proj },
 });
-new aws.efs.MountTarget('wp-fs-mount-target-1', {
+new aws.efs.MountTarget('fs-mount-target-1', {
   fileSystemId: efs.id,
   subnetId: privateSubnet1.id,
   securityGroups: [efsSecurityGroup.id],
 });
-new aws.efs.MountTarget('wp-fs-mount-target-2', {
+new aws.efs.MountTarget('fs-mount-target-2', {
   fileSystemId: efs.id,
   subnetId: privateSubnet2.id,
   securityGroups: [efsSecurityGroup.id],
 });
-new aws.efs.BackupPolicy('wp-fs-backup-policy', {
+new aws.efs.BackupPolicy('fs-backup-policy', {
   fileSystemId: efs.id,
   backupPolicy: {
     status: 'ENABLED',
@@ -301,12 +301,12 @@ for (const website of websites) {
     name: website.hostedZone,
     privateZone: false,
   });
-  const cert = new aws.acm.Certificate(`wp-${website.name}-cert`, {
+  const cert = new aws.acm.Certificate(`${website.name}-cert`, {
     domainName: website.domain,
     validationMethod: 'DNS',
   });
   const certRecord = new aws.route53.Record(
-    `wp-${website.name}-cert-validation-record`,
+    `${website.name}-cert-validation-record`,
     {
       zoneId: hostedZone.then((zone) => zone.zoneId),
       name: cert.domainValidationOptions[0].resourceRecordName,
@@ -316,20 +316,20 @@ for (const website of websites) {
     },
   );
   const certValidation = new aws.acm.CertificateValidation(
-    `wp-${website.name}-cert-validation`,
+    `${website.name}-cert-validation`,
     {
       certificateArn: cert.arn,
       validationRecordFqdns: [certRecord.fqdn],
     },
   );
   const lb = new awsx.lb.ApplicationLoadBalancer(
-    `wp-${website.name}-lb`,
+    `${website.name}-lb`,
     {
-      name: name(`wp-${website.name}-lb`),
+      name: name(`${website.name}-lb`),
       securityGroups: [lbSecurityGroup.id],
       subnets: [publicSubnet1, publicSubnet2],
       defaultTargetGroup: {
-        name: name(`wp-${website.name}-tg`),
+        name: name(`${website.name}-tg`),
         vpcId: vpc.id,
         port: 80,
         protocol: 'HTTP',
@@ -367,7 +367,7 @@ for (const website of websites) {
       dependsOn: [certValidation],
     },
   );
-  new aws.route53.Record(`wp-${website.name}-dns-a`, {
+  new aws.route53.Record(`${website.name}-dns-a`, {
     zoneId: hostedZone.then((zone) => zone.zoneId),
     name: website.domain,
     type: 'A',
@@ -381,12 +381,12 @@ for (const website of websites) {
   });
 
   const fargateService = new awsx.ecs.FargateService(
-    `wp-${website.name}-service`,
+    `${website.name}-service`,
     {
-      name: name(`wp-${website.name}`),
+      name: name(`${website.name}`),
       cluster: wpCluster.arn,
       taskDefinitionArgs: {
-        family: name(`wp-${website.name}`),
+        family: name(`${website.name}`),
         executionRole: {
           roleArn: taskExecutionRole.arn,
         },
@@ -452,7 +452,7 @@ for (const website of websites) {
 
   // Auto Scaling
   const autoScalingTarget = new aws.appautoscaling.Target(
-    `wp-${website.name}-autoscaling-target`,
+    `${website.name}-autoscaling-target`,
     {
       serviceNamespace: 'ecs',
       resourceId: pulumi.interpolate`service/${wpCluster.name}/${fargateService.service.name}`,
@@ -461,8 +461,8 @@ for (const website of websites) {
       minCapacity: 1,
     },
   );
-  new aws.appautoscaling.Policy(`wp-${website.name}-autoscaling-policy`, {
-    name: name(`wp-${website.name}-policy`),
+  new aws.appautoscaling.Policy(`${website.name}-autoscaling-policy`, {
+    name: name(`${website.name}-policy`),
     policyType: 'TargetTrackingScaling',
     resourceId: autoScalingTarget.resourceId,
     scalableDimension: autoScalingTarget.scalableDimension,
