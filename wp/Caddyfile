@@ -2,6 +2,12 @@
 	# https will be handled by load balancers
 	auto_https off
 
+	# in production the websites are behind load balancers
+	servers {
+		trusted_proxies static private_ranges
+		trusted_proxies_strict
+	}
+
 	# enable frankenphp
 	frankenphp
 
@@ -10,8 +16,6 @@
 }
 
 :80 {
-	trusted_proxies static private_ranges
-	trusted_proxies_strict
 
 	root * /var/www/html/
 
