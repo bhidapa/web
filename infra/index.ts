@@ -390,11 +390,11 @@ for (const website of websites) {
         executionRole: {
           roleArn: taskExecutionRole.arn,
         },
+        cpu: '2048', // 2 vCPU
+        memory: '2048', // 2 GB
         container: {
           name: 'wp',
           image: wpImage.imageUri,
-          cpu: 256,
-          memory: 512,
           essential: true,
           portMappings: [{ containerPort: 80 }],
           environment: [
