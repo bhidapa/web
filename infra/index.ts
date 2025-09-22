@@ -450,7 +450,6 @@ for (const website of websites) {
             efsVolumeConfiguration: {
               rootDirectory: '/',
               fileSystemId: efs.id,
-              transitEncryption: 'ENABLED',
               authorizationConfig: {
                 accessPointId: fsAccessPoint.id,
               },
