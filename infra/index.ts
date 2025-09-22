@@ -389,6 +389,14 @@ for (const website of websites) {
     ],
   });
 
+  const fsAccessPoint = new aws.efs.AccessPoint(`${website.name}-fs-ap`, {
+    fileSystemId: efs.id,
+    rootDirectory: {
+      path: `/${website.name}`,
+    },
+    tags: { proj },
+  });
+
   const logGroup = new aws.cloudwatch.LogGroup(`${website.name}-log-group`, {
     name: `/ecs/${name('wp')}/${website.name}`,
     retentionInDays: 7,
@@ -440,9 +448,12 @@ for (const website of websites) {
           {
             name: 'wp-data',
             efsVolumeConfiguration: {
-              rootDirectory: `/${website.name}`,
+              rootDirectory: '/',
               fileSystemId: efs.id,
               transitEncryption: 'ENABLED',
+              authorizationConfig: {
+                accessPointId: fsAccessPoint.id,
+              },
             },
           },
         ],
