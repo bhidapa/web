@@ -205,6 +205,7 @@ const dbCluster = new aws.rds.Cluster('db-cluster', {
   preferredMaintenanceWindow: 'mon:04:00-mon:05:00',
   storageEncrypted: true,
   skipFinalSnapshot: true,
+  enableHttpEndpoint: true, // enables Data API so that queries can be run over the AWS console query editor
   tags: { proj },
 });
 new aws.rds.ClusterInstance('db-master', {
