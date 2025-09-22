@@ -300,7 +300,7 @@ for (const website of websites) {
   const cert = new aws.acm.Certificate(`${website.name}-cert`, {
     domainName: website.domain,
     validationMethod: 'DNS',
-    tags: { proj, Name: name(`${website.name}-cert`) },
+    tags: { proj, Name: name(`${website.name}-cert`) }, // not up
   });
   const certRecord = new aws.route53.Record(
     `${website.name}-cert-validation-record`,
@@ -319,51 +319,45 @@ for (const website of websites) {
       validationRecordFqdns: [certRecord.fqdn],
     },
   );
-  const lb = new awsx.lb.ApplicationLoadBalancer(
-    `${website.name}-lb`,
-    {
-      name: name(`${website.name}-lb`),
-      securityGroups: [lbSecurityGroup.id],
-      subnets: [publicSubnet1, publicSubnet2],
-      defaultTargetGroup: {
-        name: name(`${website.name}-tg`),
-        vpcId: vpc.id,
+  const lb = new awsx.lb.ApplicationLoadBalancer(`${website.name}-lb`, {
+    name: name(`${website.name}-lb`),
+    securityGroups: [lbSecurityGroup.id],
+    subnets: [publicSubnet1, publicSubnet2],
+    defaultTargetGroup: {
+      name: name(`${website.name}-tg`),
+      vpcId: vpc.id,
+      port: 80,
+      protocol: 'HTTP',
+      tags: { proj },
+      healthCheck: {
+        enabled: true,
+        matcher: '200-399',
+        path: '/', // TODO: integrate with WP_Site_Health but needs authentication
+      },
+    },
+    listeners: [
+      {
         port: 80,
         protocol: 'HTTP',
-        tags: { proj },
-        healthCheck: {
-          enabled: true,
-          matcher: '200-399',
-          path: '/', // TODO: integrate with WP_Site_Health but needs authentication
-        },
-      },
-      listeners: [
-        {
-          port: 80,
-          protocol: 'HTTP',
-          defaultActions: [
-            {
-              type: 'redirect',
-              redirect: {
-                port: '443',
-                protocol: 'HTTP',
-                statusCode: 'HTTP_301',
-              },
+        defaultActions: [
+          {
+            type: 'redirect',
+            redirect: {
+              port: '443',
+              protocol: 'HTTP',
+              statusCode: 'HTTP_301',
             },
-          ],
-        },
-        {
-          port: 443,
-          protocol: 'HTTPS',
-          certificateArn: cert.arn,
-        },
-      ],
-      tags: { proj },
-    },
-    {
-      dependsOn: [certValidation],
-    },
-  );
+          },
+        ],
+      },
+      {
+        port: 443,
+        protocol: 'HTTPS',
+        certificateArn: cert.arn,
+      },
+    ],
+    tags: { proj },
+  });
   new aws.route53.Record(`${website.name}-dns-a`, {
     zoneId: hostedZone.then((zone) => zone.zoneId),
     name: website.domain,
