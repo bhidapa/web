@@ -293,6 +293,23 @@ new aws.iam.RolePolicy('wp-service-task-exec-role-secrets-policy', {
     ],
   },
 });
+new aws.iam.RolePolicy('wp-service-task-exec-role-fs-mount-policy', {
+  name: name('wp-service-fs-mount-policy'),
+  role: taskExecutionRole.id,
+  policy: {
+    Version: '2012-10-17',
+    Statement: [
+      {
+        Effect: 'Allow',
+        Action: [
+          'elasticfilesystem:ClientMount',
+          'elasticfilesystem:ClientWrite',
+        ],
+        Resource: efs.arn,
+      },
+    ],
+  },
+});
 
 // For Each Website
 for (const website of websites) {
