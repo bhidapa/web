@@ -464,6 +464,7 @@ for (const website of websites) {
     ],
   });
 
+  // Securely Mount EFS to Fargate Under an Isolated Path
   const fsAccessPoint = new aws.efs.AccessPoint(`${website.name}-fs-ap`, {
     fileSystemId: efs.id,
     posixUser: {
@@ -481,94 +482,91 @@ for (const website of websites) {
     tags: { proj },
   });
 
+  // Ready the Log Group
   const logGroup = new aws.cloudwatch.LogGroup(`${website.name}-log-group`, {
     name: `/ecs/${name('wp')}/${website.name}`,
     retentionInDays: 7,
     tags: { proj },
   });
 
-  const fargateService = new awsx.ecs.FargateService(
-    `${website.name}-service`,
-    {
-      name: website.name,
-      cluster: wpCluster.arn,
-      taskDefinitionArgs: {
-        family: name(website.name),
-        executionRole: {
-          roleArn: taskExecutionRole.arn,
+  // Fargate Service
+  const service = new awsx.ecs.FargateService(`${website.name}-service`, {
+    name: website.name,
+    cluster: wpCluster.arn,
+    taskDefinitionArgs: {
+      family: name(website.name),
+      executionRole: {
+        roleArn: taskExecutionRole.arn,
+      },
+      cpu: '512', // .5 vCPU
+      memory: '1024', // 1 GB
+      container: {
+        name: 'wp',
+        image: wpImage.imageUri,
+        essential: true,
+        portMappings: [{ containerPort: 80 }],
+        healthCheck: {
+          command: ['CMD-SHELL', 'curl -f http://localhost:80 || exit 1'],
         },
-        cpu: '512', // .5 vCPU
-        memory: '1024', // 1 GB
-        container: {
-          name: 'wp',
-          image: wpImage.imageUri,
-          essential: true,
-          portMappings: [{ containerPort: 80 }],
-          healthCheck: {
-            command: ['CMD-SHELL', 'curl -f http://localhost:80 || exit 1'],
-          },
-          environment: [
-            { name: 'WORDPRESS_DB_HOST', value: dbCluster.endpoint },
-            { name: 'WORDPRESS_DB_NAME', value: website.name },
-            { name: 'WORDPRESS_DB_USER', value: dbCluster.masterUsername },
-            { name: 'WORDPRESS_DEBUG', value: '1' },
-          ],
-          secrets: [
-            { name: 'WORDPRESS_DB_PASSWORD', valueFrom: dbPassword.id },
-          ],
-          mountPoints: [
-            {
-              sourceVolume: 'wp-data',
-              containerPath: '/var/www/html',
-              readOnly: false,
-            },
-          ],
-          logConfiguration: {
-            logDriver: 'awslogs',
-            options: {
-              'awslogs-group': logGroup.name,
-              'awslogs-region': logGroup.region,
-              'awslogs-stream-prefix': 'ecs',
-            },
-          },
-        },
-        volumes: [
+        environment: [
+          { name: 'WORDPRESS_DB_HOST', value: dbCluster.endpoint },
+          { name: 'WORDPRESS_DB_NAME', value: website.name },
+          { name: 'WORDPRESS_DB_USER', value: dbCluster.masterUsername },
+          { name: 'WORDPRESS_DEBUG', value: '1' },
+        ],
+        secrets: [{ name: 'WORDPRESS_DB_PASSWORD', valueFrom: dbPassword.id }],
+        mountPoints: [
           {
-            name: 'wp-data',
-            efsVolumeConfiguration: {
-              rootDirectory: '/',
-              fileSystemId: efs.id,
-              transitEncryption: 'ENABLED',
-              authorizationConfig: {
-                accessPointId: fsAccessPoint.id,
-              },
-            },
+            sourceVolume: 'wp-data',
+            containerPath: '/var/www/html',
+            readOnly: false,
           },
         ],
+        logConfiguration: {
+          logDriver: 'awslogs',
+          options: {
+            'awslogs-group': logGroup.name,
+            'awslogs-region': logGroup.region,
+            'awslogs-stream-prefix': 'ecs',
+          },
+        },
       },
-      desiredCount: 1,
-      networkConfiguration: {
-        subnets: [privateSubnet1.id, privateSubnet2.id],
-        securityGroups: [wpSecurityGroup.id],
-        assignPublicIp: false,
-      },
-      loadBalancers: [
+      volumes: [
         {
-          targetGroupArn: tg.arn,
-          containerName: 'wp',
-          containerPort: 80,
+          name: 'wp-data',
+          efsVolumeConfiguration: {
+            rootDirectory: '/',
+            fileSystemId: efs.id,
+            transitEncryption: 'ENABLED',
+            authorizationConfig: {
+              accessPointId: fsAccessPoint.id,
+            },
+          },
         },
       ],
-      tags: { proj },
     },
-  );
+    desiredCount: 1,
+    networkConfiguration: {
+      subnets: [privateSubnet1.id, privateSubnet2.id],
+      securityGroups: [wpSecurityGroup.id],
+      assignPublicIp: false,
+    },
+    loadBalancers: [
+      {
+        targetGroupArn: tg.arn,
+        containerName: 'wp',
+        containerPort: 80,
+      },
+    ],
+    tags: { proj },
+  });
 
   // Auto Scaling
   const autoScalingTarget = new aws.appautoscaling.Target(
     `${website.name}-autoscaling-target`,
     {
       serviceNamespace: 'ecs',
-      resourceId: pulumi.interpolate`service/${wpCluster.name}/${fargateService.service.name}`,
+      resourceId: pulumi.interpolate`service/${wpCluster.name}/${service.service.name}`,
       scalableDimension: 'ecs:service:DesiredCount',
       maxCapacity: 3,
       minCapacity: 1,
