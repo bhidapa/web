@@ -436,6 +436,7 @@ for (const website of websites) {
             { name: 'WORDPRESS_DB_HOST', value: dbCluster.endpoint },
             { name: 'WORDPRESS_DB_NAME', value: website.name },
             { name: 'WORDPRESS_DB_USER', value: dbCluster.masterUsername },
+            { name: 'WORDPRESS_DEBUG', value: '1' },
           ],
           secrets: [
             { name: 'WORDPRESS_DB_PASSWORD', valueFrom: dbPassword.id },
