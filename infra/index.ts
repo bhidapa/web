@@ -312,13 +312,10 @@ for (const website of websites) {
       ttl: 60,
     },
   );
-  const certValidation = new aws.acm.CertificateValidation(
-    `${website.name}-cert-validation`,
-    {
-      certificateArn: cert.arn,
-      validationRecordFqdns: [certRecord.fqdn],
-    },
-  );
+  new aws.acm.CertificateValidation(`${website.name}-cert-validation`, {
+    certificateArn: cert.arn,
+    validationRecordFqdns: [certRecord.fqdn],
+  });
   const lb = new awsx.lb.ApplicationLoadBalancer(`${website.name}-lb`, {
     name: name(`${website.name}-lb`),
     securityGroups: [lbSecurityGroup.id],
