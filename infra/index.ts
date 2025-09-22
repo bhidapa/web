@@ -334,7 +334,11 @@ for (const website of websites) {
         port: 80,
         protocol: 'HTTP',
         tags: { proj },
-        // TODO: healtcheck
+        healthCheck: {
+          enabled: true,
+          matcher: '200-399',
+          path: '/', // TODO: integrate with WP_Site_Health but needs authentication
+        },
       },
       listeners: [
         {
@@ -371,8 +375,7 @@ for (const website of websites) {
       {
         name: lb.loadBalancer.dnsName,
         zoneId: lb.loadBalancer.zoneId,
-        // TODO: once ALB health check is set, change to true
-        evaluateTargetHealth: false,
+        evaluateTargetHealth: true,
       },
     ],
   });
