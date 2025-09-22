@@ -208,12 +208,8 @@ const dbMaster = new aws.rds.ClusterInstance('wp-db-master', {
 });
 
 // EFS File System
-const efs = new aws.efs.FileSystem('wp-efs', {
-  creationToken: name('wp-efs'),
-  performanceMode: 'generalPurpose',
-  throughputMode: 'provisioned',
-  provisionedThroughputInMibps: 100,
-  encrypted: true,
+const efs = new aws.efs.FileSystem('wp-fs', {
+  creationToken: name('wp-fs'),
   tags: { proj },
 });
 new aws.efs.MountTarget('wp-fs-mount-target-1', {
