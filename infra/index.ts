@@ -414,6 +414,7 @@ for (const website of websites) {
             options: {
               'awslogs-group': logGroup.name,
               'awslogs-region': logGroup.region,
+              'awslogs-stream-prefix': 'ecs',
             },
           },
         },
