@@ -214,6 +214,7 @@ new aws.rds.ClusterInstance('wp-db-master', {
   engineVersion: dbCluster.engineVersion,
   tags: { proj },
 });
+// TODO: automatically create databases for each website (see wp/create-dbs.sql)
 
 // EFS File System
 const efs = new aws.efs.FileSystem('wp-fs', {

@@ -6,22 +6,30 @@ services:
   db:
     image: mariadb:11.2
     environment:
-      - MYSQL_ROOT_PASSWORD=somewordpress
-      - MYSQL_DATABASE=wordpress
-      - MYSQL_USER=wordpress
-      - MYSQL_PASSWORD=wordpress
+      MARIADB_ROOT_PASSWORD: supersecret
     ports:
       - 53386:3306
     volumes:
       - db-data:/var/lib/mysql
+      - ./wp/create-dbs.sql:/docker-entrypoint-initdb.d/create-dbs.sql
+  phpmyadmin:
+    image: phpmyadmin
+    ports:
+      - 53388:80
+    environment:
+      PMA_ARBITRARY: 1
+      PMA_HOST: db
+      PMA_USER: root
+      PMA_PASSWORD: supersecret
   akp:
     depends_on:
       - db
     build: ./wp
     environment:
       WORDPRESS_DB_HOST: db
-      WORDPRESS_DB_USER: wordpress
-      WORDPRESS_DB_PASSWORD: wordpress
+      WORDPRESS_DB_NAME: akp
+      WORDPRESS_DB_USER: root
+      WORDPRESS_DB_PASSWORD: supersecret
       WORDPRESS_DEBUG: 1
     ports:
       - 58386:80
