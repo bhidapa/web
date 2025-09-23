@@ -18,6 +18,8 @@
 :80 {
 	root * /var/www/html/
 
+	header -Server
+
 	encode br zstd gzip
 
 	@static {
