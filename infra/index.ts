@@ -252,6 +252,7 @@ const wpImage = new awsx.ecr.Image('wp-image', {
   repositoryUrl: wpRepo.repositoryUrl,
   context: '../wp',
   platform: 'linux/amd64',
+  imageTag: 'latest',
 });
 
 // ECS Cluster and Roles
