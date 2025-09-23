@@ -18,7 +18,8 @@
 :80 {
 	root * /var/www/html/
 
-	header -Server
+	header -server
+	header -x-powered-by
 
 	encode br zstd gzip
 
