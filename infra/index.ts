@@ -251,12 +251,39 @@ const wpRepo = new aws.ecr.Repository('wp-repo', {
   },
   tags: { proj },
 });
-const wpImage = new awsx.ecr.Image('wp-image', {
-  repositoryUrl: wpRepo.repositoryUrl,
-  context: '../wp',
-  platform: 'linux/arm64',
-  imageTag: 'latest',
-  cacheFrom: ['local'],
+const wpImage = new awsx.ecr.Image(
+  'wp-image',
+  {
+    repositoryUrl: wpRepo.repositoryUrl,
+    context: '../wp',
+    platform: 'linux/arm64',
+    imageTag: 'latest',
+    cacheFrom: ['local'],
+  },
+  {
+    // pulumi treats each build as creating a new resource, so it tries to clean up the "old" one, which ends up deleting the current latest tag. do not remove the resources ever, we instead use an ecr image policy
+    retainOnDelete: true,
+  },
+);
+new aws.ecr.LifecyclePolicy('wp-repo-lifecycle-policy', {
+  repository: wpRepo.name,
+  policy: {
+    rules: [
+      {
+        rulePriority: 1,
+        description: 'Delete untagged images after 1 day',
+        selection: {
+          tagStatus: 'untagged',
+          countType: 'sinceImagePushed',
+          countUnit: 'days',
+          countNumber: 1,
+        },
+        action: {
+          type: 'expire',
+        },
+      },
+    ],
+  },
 });
 
 // ECS Cluster and Roles
