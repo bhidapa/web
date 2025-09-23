@@ -254,8 +254,9 @@ const wpRepo = new aws.ecr.Repository('wp-repo', {
 new awsx.ecr.Image('wp-image', {
   repositoryUrl: wpRepo.repositoryUrl,
   context: '../wp',
-  platform: 'linux/amd64',
+  platform: 'linux/arm64',
   imageTag: 'latest',
+  cacheFrom: ['local'],
 });
 
 // ECS Cluster and Roles
@@ -506,6 +507,10 @@ for (const website of websites) {
       },
       cpu: '512', // .5 vCPU
       memory: '1024', // 1 GB
+      runtimePlatform: {
+        operatingSystemFamily: 'LINUX',
+        cpuArchitecture: 'ARM64',
+      },
       container: {
         name: 'wp',
         image: pulumi.interpolate`${wpRepo.repositoryUrl}:latest`,
