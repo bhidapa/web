@@ -208,6 +208,8 @@ const dbCluster = new aws.rds.Cluster('db-cluster', {
   skipFinalSnapshot: true,
   enableHttpEndpoint: true, // enables Data API so that queries can be run over the AWS console query editor
   databaseInsightsMode: 'advanced',
+  performanceInsightsEnabled: true,
+  performanceInsightsRetentionPeriod: 465, // necessary for advanced monitoring
   tags: { proj },
 });
 new aws.rds.ClusterInstance('db-master', {
