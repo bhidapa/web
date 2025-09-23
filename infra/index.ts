@@ -505,7 +505,7 @@ for (const website of websites) {
       memory: '1024', // 1 GB
       container: {
         name: 'wp',
-        image: wpImage.imageUri,
+        image: pulumi.interpolate`${wpRepo.repositoryUrl}:latest`,
         essential: true,
         portMappings: [{ containerPort: 80 }],
         healthCheck: {
