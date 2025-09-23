@@ -198,6 +198,7 @@ const dbCluster = new aws.rds.Cluster('db-cluster', {
   masterPassword: aws.secretsmanager.getSecretVersionOutput({
     secretId: dbPassword.id,
   }).secretString,
+  databaseInsightsMode: 'standard',
   dbSubnetGroupName: dbSubnetGroup.name,
   vpcSecurityGroupIds: [dbSecurityGroup.id],
   backupRetentionPeriod: 7,
