@@ -258,7 +258,6 @@ const wpImage = new awsx.ecr.Image(
     context: '../wp',
     platform: 'linux/arm64',
     imageTag: 'latest',
-    cacheFrom: ['local'],
   },
   {
     // pulumi treats each build as creating a new resource, so it tries to clean up the "old" one, which ends up deleting the current latest tag. do not remove the resources ever, we instead use an ecr image policy
