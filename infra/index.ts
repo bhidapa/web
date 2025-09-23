@@ -387,6 +387,7 @@ for (const website of websites) {
   const tg = new aws.lb.TargetGroup(`${website.name}-lb-tg`, {
     name: name(`${website.name}-lb-tg`),
     vpcId: vpc.id,
+    targetType: 'ip',
     port: 80,
     protocol: 'HTTP',
     tags: { proj },
