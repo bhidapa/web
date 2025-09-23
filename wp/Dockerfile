@@ -1,9 +1,11 @@
+# a lot of inspiration came from https://github.com/StephenMiracle/frankenwp/blob/e05bcc3d951dc57636c87befa63357ec1350006d/Dockerfile
+
 FROM wordpress:6.8 AS wp
 
 # dunglas/frankenphp:<frankenphp-version>-php<php-version>-<os>
 FROM dunglas/frankenphp:1.9-php8.4-trixie
 
-# install system dependencies for proper use (see https://github.com/StephenMiracle/frankenwp/blob/e05bcc3d951dc57636c87befa63357ec1350006d/Dockerfile#L45-L60)
+# install system dependencies for proper use
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     ghostscript \
