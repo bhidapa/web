@@ -2,6 +2,7 @@ import * as pulumi from '@pulumi/pulumi';
 import * as aws from '@pulumi/aws';
 import * as awsx from '@pulumi/awsx';
 import * as aws_native from '@pulumi/aws-native';
+import * as docker_build from '@pulumi/docker-build';
 
 const websites = [
   {
@@ -251,19 +252,36 @@ const wpRepo = new aws.ecr.Repository('wp-repo', {
   },
   tags: { proj },
 });
-const wpImage = new awsx.ecr.Image(
-  'wp-image',
-  {
-    repositoryUrl: wpRepo.repositoryUrl,
-    context: '../wp',
-    platform: 'linux/arm64',
-    imageTag: 'latest',
+const wpRepoAuthToken = aws.ecr.getAuthorizationTokenOutput({
+  registryId: wpRepo.registryId,
+});
+const wpImage = new docker_build.Image('wp-image', {
+  context: {
+    location: '../wp',
   },
-  {
-    // pulumi treats each build as creating a new resource, so it tries to clean up the "old" one, which ends up deleting the current latest tag. do not remove the resources ever, we instead use an ecr image policy
-    retainOnDelete: true,
-  },
-);
+  platforms: ['linux/arm64'],
+  push: true,
+  cacheFrom: [
+    { registry: { ref: pulumi.interpolate`${wpRepo.repositoryUrl}:cache` } },
+  ],
+  cacheTo: [
+    {
+      registry: {
+        imageManifest: true,
+        ociMediaTypes: true,
+        ref: pulumi.interpolate`${wpRepo.repositoryUrl}:cache`,
+      },
+    },
+  ],
+  registries: [
+    {
+      address: wpRepo.repositoryUrl,
+      username: wpRepoAuthToken.userName,
+      password: wpRepoAuthToken.password,
+    },
+  ],
+  tags: [pulumi.interpolate`${wpRepo.repositoryUrl}:latest`],
+});
 new aws.ecr.LifecyclePolicy('wp-repo-lifecycle-policy', {
   repository: wpRepo.name,
   policy: {
