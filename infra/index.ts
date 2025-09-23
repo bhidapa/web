@@ -245,12 +245,13 @@ new aws.efs.BackupPolicy('fs-backup-policy', {
 // WordPress Repository
 const wpRepo = new aws.ecr.Repository('wp-repo', {
   name: name('wp'),
+  forceDelete: true,
   imageScanningConfiguration: {
     scanOnPush: true,
   },
   tags: { proj },
 });
-const wpImage = new awsx.ecr.Image('wp-image', {
+new awsx.ecr.Image('wp-image', {
   repositoryUrl: wpRepo.repositoryUrl,
   context: '../wp',
   platform: 'linux/amd64',
@@ -497,6 +498,7 @@ for (const website of websites) {
   const service = new awsx.ecs.FargateService(`${website.name}-service`, {
     name: website.name,
     cluster: wpCluster.arn,
+    enableExecuteCommand: true, // allows us to "docker exec" into running containers (using aws ecs execute-command)
     taskDefinitionArgs: {
       family: name(website.name),
       executionRole: {
