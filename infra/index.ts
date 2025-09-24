@@ -214,7 +214,7 @@ const dbClusterParams = new aws.rds.ClusterParameterGroup(
       {
         name: 'performance_schema',
         value: '1',
-        applyMethod: 'immediate',
+        applyMethod: 'pending-reboot', // because static param
       },
     ],
   },
@@ -241,7 +241,7 @@ const dbCluster = new aws.rds.Cluster('db-cluster', {
   performanceInsightsEnabled: true,
   performanceInsightsRetentionPeriod: 465, // necessary for advanced monitoring
   monitoringRoleArn: enhancedMonitoringRole.arn,
-  monitoringInterval: 10,
+  monitoringInterval: 15,
   dbClusterParameterGroupName: dbClusterParams.name,
   tags: { proj },
 });
@@ -252,7 +252,7 @@ new aws.rds.ClusterInstance('db-master', {
   engine: dbCluster.engine as any, // engine requires enum, we provide string
   engineVersion: dbCluster.engineVersion,
   monitoringRoleArn: enhancedMonitoringRole.arn,
-  monitoringInterval: 10,
+  monitoringInterval: 15,
   tags: { proj },
 });
 // TODO: automatically create databases for each website (see wp/create-dbs.sql)
