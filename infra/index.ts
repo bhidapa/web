@@ -185,15 +185,10 @@ const dbSubnetGroup = new aws.rds.SubnetGroup('db-subnet-group', {
   description: 'Subnet group for Aurora database',
   tags: { proj },
 });
-const dbEngine = aws.rds.EngineType.AuroraMysql;
 const dbCluster = new aws.rds.Cluster('db-cluster', {
   clusterIdentifier: name('db'),
-  engine: dbEngine,
+  engine: aws.rds.EngineType.AuroraMysql,
   engineVersion: '8.0.mysql_aurora.3.10.0',
-  serverlessv2ScalingConfiguration: {
-    maxCapacity: 4,
-    minCapacity: 0,
-  },
   storageType: 'aurora-iopt1', // amazon io optimized
   enabledCloudwatchLogsExports: ['error', 'iam-db-auth-error', 'slowquery'],
   masterUsername: 'wp',
@@ -208,15 +203,14 @@ const dbCluster = new aws.rds.Cluster('db-cluster', {
   preferredMaintenanceWindow: 'mon:04:00-mon:05:00',
   storageEncrypted: true,
   skipFinalSnapshot: true,
-  enableHttpEndpoint: true, // enables Data API so that queries can be run over the AWS console query editor
   databaseInsightsMode: 'standard',
   tags: { proj },
 });
 new aws.rds.ClusterInstance('db-master', {
   identifier: name('db-master'),
   clusterIdentifier: dbCluster.id,
-  instanceClass: 'db.serverless',
-  engine: dbEngine,
+  instanceClass: 'db.t4g.medium', // 2vcpu 4gb ram
+  engine: dbCluster.engine as any, // engine requires enum, we provide string
   engineVersion: dbCluster.engineVersion,
   tags: { proj },
 });
