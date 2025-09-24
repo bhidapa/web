@@ -205,6 +205,20 @@ new aws.iam.RolePolicyAttachment('rds-enhanced-monitoring-policy', {
   policyArn:
     'arn:aws:iam::aws:policy/service-role/AmazonRDSEnhancedMonitoringRole',
 });
+const dbClusterParams = new aws.rds.ClusterParameterGroup(
+  'db-cluster-parameter-group',
+  {
+    name: name('db-cluster-parameter-group'),
+    family: 'aurora-mysql8.0',
+    parameters: [
+      {
+        name: 'performance_schema',
+        value: '1',
+        applyMethod: 'immediate',
+      },
+    ],
+  },
+);
 const dbCluster = new aws.rds.Cluster('db-cluster', {
   clusterIdentifier: name('db'),
   engine: aws.rds.EngineType.AuroraMysql,
