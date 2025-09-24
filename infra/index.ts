@@ -185,6 +185,25 @@ const dbSubnetGroup = new aws.rds.SubnetGroup('db-subnet-group', {
   description: 'Subnet group for Aurora database',
   tags: { proj },
 });
+const enhancedMonitoringRole = new aws.iam.Role('db-enhanced-monitoring-role', {
+  assumeRolePolicy: {
+    Version: '2012-10-17',
+    Statement: [
+      {
+        Action: 'sts:AssumeRole',
+        Effect: 'Allow',
+        Principal: {
+          Service: 'monitoring.rds.amazonaws.com',
+        },
+      },
+    ],
+  },
+});
+new aws.iam.RolePolicyAttachment('rds-enhanced-monitoring-policy', {
+  role: enhancedMonitoringRole.name,
+  policyArn:
+    'arn:aws:iam::aws:policy/service-role/AmazonRDSEnhancedMonitoringRole',
+});
 const dbCluster = new aws.rds.Cluster('db-cluster', {
   clusterIdentifier: name('db'),
   engine: aws.rds.EngineType.AuroraMysql,
@@ -206,6 +225,7 @@ const dbCluster = new aws.rds.Cluster('db-cluster', {
   databaseInsightsMode: 'advanced',
   performanceInsightsEnabled: true,
   performanceInsightsRetentionPeriod: 465, // necessary for advanced monitoring
+  monitoringRoleArn: enhancedMonitoringRole.arn,
   tags: { proj },
 });
 new aws.rds.ClusterInstance('db-master', {
