@@ -248,7 +248,7 @@ const dbCluster = new aws.rds.Cluster('db-cluster', {
 new aws.rds.ClusterInstance('db-master', {
   identifier: name('db-master'),
   clusterIdentifier: dbCluster.id,
-  instanceClass: 'db.t4g.medium', // 2vcpu 4gb ram
+  instanceClass: 'db.r6g.large', // 2vcpu 16gb ram (memory optimized)
   engine: dbCluster.engine as any, // engine requires enum, we provide string
   engineVersion: dbCluster.engineVersion,
   monitoringRoleArn: enhancedMonitoringRole.arn,
