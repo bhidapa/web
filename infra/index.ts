@@ -191,9 +191,11 @@ const dbCluster = new aws.rds.Cluster('db-cluster', {
   engine: dbEngine,
   engineVersion: '8.0.mysql_aurora.3.10.0',
   serverlessv2ScalingConfiguration: {
-    maxCapacity: 3,
+    maxCapacity: 4,
     minCapacity: 0,
   },
+  storageType: 'aurora-iopt1', // amazon io optimized
+  enabledCloudwatchLogsExports: ['error', 'iam-db-auth-error', 'slowquery'],
   masterUsername: 'wp',
   // TODO: is there a nicer way to supply the master password?
   masterPassword: aws.secretsmanager.getSecretVersionOutput({
@@ -207,9 +209,7 @@ const dbCluster = new aws.rds.Cluster('db-cluster', {
   storageEncrypted: true,
   skipFinalSnapshot: true,
   enableHttpEndpoint: true, // enables Data API so that queries can be run over the AWS console query editor
-  databaseInsightsMode: 'advanced',
-  performanceInsightsEnabled: true,
-  performanceInsightsRetentionPeriod: 465, // necessary for advanced monitoring
+  databaseInsightsMode: 'standard',
   tags: { proj },
 });
 new aws.rds.ClusterInstance('db-master', {
