@@ -186,6 +186,7 @@ const dbSubnetGroup = new aws.rds.SubnetGroup('db-subnet-group', {
   tags: { proj },
 });
 const enhancedMonitoringRole = new aws.iam.Role('db-enhanced-monitoring-role', {
+  name: name('db-enhanced-monitoring-role'),
   assumeRolePolicy: {
     Version: '2012-10-17',
     Statement: [
@@ -226,6 +227,8 @@ const dbCluster = new aws.rds.Cluster('db-cluster', {
   performanceInsightsEnabled: true,
   performanceInsightsRetentionPeriod: 465, // necessary for advanced monitoring
   monitoringRoleArn: enhancedMonitoringRole.arn,
+  monitoringInterval: 10,
+  dbClusterParameterGroupName: dbClusterParams.name,
   tags: { proj },
 });
 new aws.rds.ClusterInstance('db-master', {
@@ -234,6 +237,8 @@ new aws.rds.ClusterInstance('db-master', {
   instanceClass: 'db.t4g.medium', // 2vcpu 4gb ram
   engine: dbCluster.engine as any, // engine requires enum, we provide string
   engineVersion: dbCluster.engineVersion,
+  monitoringRoleArn: enhancedMonitoringRole.arn,
+  monitoringInterval: 10,
   tags: { proj },
 });
 // TODO: automatically create databases for each website (see wp/create-dbs.sql)
