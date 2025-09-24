@@ -203,7 +203,9 @@ const dbCluster = new aws.rds.Cluster('db-cluster', {
   preferredMaintenanceWindow: 'mon:04:00-mon:05:00',
   storageEncrypted: true,
   skipFinalSnapshot: true,
-  databaseInsightsMode: 'standard',
+  databaseInsightsMode: 'advanced',
+  performanceInsightsEnabled: true,
+  performanceInsightsRetentionPeriod: 465, // necessary for advanced monitoring
   tags: { proj },
 });
 new aws.rds.ClusterInstance('db-master', {
