@@ -69,11 +69,11 @@ new aws.ec2.Route('public-route', {
   destinationCidrBlock: '0.0.0.0/0',
   gatewayId: igw.id,
 });
-new aws.ec2.RouteTableAssociation('public-route-table-association-1', {
+new aws.ec2.RouteTableAssociation('public-route-table-association-a', {
   subnetId: publicSubnetA.id,
   routeTableId: publicRouteTable.id,
 });
-new aws.ec2.RouteTableAssociation('public-route-table-association-2', {
+new aws.ec2.RouteTableAssociation('public-route-table-association-b', {
   subnetId: publicSubnetB.id,
   routeTableId: publicRouteTable.id,
 });
@@ -97,11 +97,11 @@ new aws.ec2.Route('private-route', {
   destinationCidrBlock: '0.0.0.0/0',
   natGatewayId: natgw.id,
 });
-new aws.ec2.RouteTableAssociation('private-route-table-association-1', {
+new aws.ec2.RouteTableAssociation('private-route-table-association-a', {
   subnetId: privateSubnetA.id,
   routeTableId: privateRouteTable.id,
 });
-new aws.ec2.RouteTableAssociation('private-route-table-association-2', {
+new aws.ec2.RouteTableAssociation('private-route-table-association-b', {
   subnetId: privateSubnetB.id,
   routeTableId: privateRouteTable.id,
 });
@@ -260,14 +260,14 @@ new aws.rds.ClusterInstance('db-master', {
 // EFS File System
 const efs = new aws.efs.FileSystem('fs', {
   creationToken: name('fs'),
-  tags: { proj },
+  tags: { proj, Name: name('fs') },
 });
-new aws.efs.MountTarget('fs-mount-target-1', {
+new aws.efs.MountTarget('fs-mount-target-a', {
   fileSystemId: efs.id,
   subnetId: privateSubnetA.id,
   securityGroups: [efsSecurityGroup.id],
 });
-new aws.efs.MountTarget('fs-mount-target-2', {
+new aws.efs.MountTarget('fs-mount-target-b', {
   fileSystemId: efs.id,
   subnetId: privateSubnetB.id,
   securityGroups: [efsSecurityGroup.id],
