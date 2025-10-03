@@ -28,31 +28,31 @@ const vpc = new aws.ec2.Vpc('vpc', {
   enableDnsHostnames: true, // some services (like EFS) use a named hostname over DNS
   tags: { proj, Name: name() },
 });
-const privateSubnet1 = new aws.ec2.Subnet('private-subnet-1', {
+const privateSubnetA = new aws.ec2.Subnet('private-subnet-a', {
   vpcId: vpc.id,
   cidrBlock: '192.168.1.0/24',
   availabilityZone: `${region}a`,
-  tags: { proj, Name: name('private-1') },
+  tags: { proj, Name: name('private-a') },
 });
-const privateSubnet2 = new aws.ec2.Subnet('private-subnet-2', {
+const privateSubnetB = new aws.ec2.Subnet('private-subnet-b', {
   vpcId: vpc.id,
   cidrBlock: '192.168.2.0/24',
   availabilityZone: `${region}b`,
-  tags: { proj, Name: name('private-2') },
+  tags: { proj, Name: name('private-b') },
 });
-const publicSubnet1 = new aws.ec2.Subnet('public-subnet-1', {
+const publicSubnetA = new aws.ec2.Subnet('public-subnet-a', {
   vpcId: vpc.id,
   cidrBlock: '192.168.100.0/24',
   availabilityZone: `${region}a`,
   mapPublicIpOnLaunch: true,
-  tags: { proj, Name: name('public-1') },
+  tags: { proj, Name: name('public-a') },
 });
-const publicSubnet2 = new aws.ec2.Subnet('public-subnet-2', {
+const publicSubnetB = new aws.ec2.Subnet('public-subnet-b', {
   vpcId: vpc.id,
   cidrBlock: '192.168.200.0/24',
   availabilityZone: `${region}b`,
   mapPublicIpOnLaunch: true,
-  tags: { proj, Name: name('public-2') },
+  tags: { proj, Name: name('public-b') },
 });
 
 // Public Subnet
@@ -70,11 +70,11 @@ new aws.ec2.Route('public-route', {
   gatewayId: igw.id,
 });
 new aws.ec2.RouteTableAssociation('public-route-table-association-1', {
-  subnetId: publicSubnet1.id,
+  subnetId: publicSubnetA.id,
   routeTableId: publicRouteTable.id,
 });
 new aws.ec2.RouteTableAssociation('public-route-table-association-2', {
-  subnetId: publicSubnet2.id,
+  subnetId: publicSubnetB.id,
   routeTableId: publicRouteTable.id,
 });
 const eip = new aws.ec2.Eip('nat-gw-eip', {
@@ -82,7 +82,7 @@ const eip = new aws.ec2.Eip('nat-gw-eip', {
   tags: { proj, Name: name('nat-gw-eip') },
 });
 const natgw = new aws.ec2.NatGateway('nat-gw', {
-  subnetId: publicSubnet1.id,
+  subnetId: publicSubnetA.id,
   allocationId: eip.id,
   tags: { proj, Name: name('nat-gw') },
 });
@@ -98,11 +98,11 @@ new aws.ec2.Route('private-route', {
   natGatewayId: natgw.id,
 });
 new aws.ec2.RouteTableAssociation('private-route-table-association-1', {
-  subnetId: privateSubnet1.id,
+  subnetId: privateSubnetA.id,
   routeTableId: privateRouteTable.id,
 });
 new aws.ec2.RouteTableAssociation('private-route-table-association-2', {
-  subnetId: privateSubnet2.id,
+  subnetId: privateSubnetB.id,
   routeTableId: privateRouteTable.id,
 });
 new aws.ec2.MainRouteTableAssociation('main-route-table-association', {
@@ -181,7 +181,7 @@ const dbPassword = new aws_native.secretsmanager.Secret('db-password', {
 });
 const dbSubnetGroup = new aws.rds.SubnetGroup('db-subnet-group', {
   name: name('db-subnet-group'),
-  subnetIds: [privateSubnet1.id, privateSubnet2.id],
+  subnetIds: [privateSubnetA.id, privateSubnetB.id],
   description: 'Subnet group for Aurora database',
   tags: { proj },
 });
@@ -246,7 +246,7 @@ const dbCluster = new aws.rds.Cluster('db-cluster', {
   tags: { proj },
 });
 new aws.rds.ClusterInstance('db-master', {
-  identifier: name('db-master'),
+  identifier: 'master',
   clusterIdentifier: dbCluster.id,
   instanceClass: 'db.t4g.medium', // 2vcpu 4gb ram
   engine: dbCluster.engine as any, // engine requires enum, we provide string
@@ -264,12 +264,12 @@ const efs = new aws.efs.FileSystem('fs', {
 });
 new aws.efs.MountTarget('fs-mount-target-1', {
   fileSystemId: efs.id,
-  subnetId: privateSubnet1.id,
+  subnetId: privateSubnetA.id,
   securityGroups: [efsSecurityGroup.id],
 });
 new aws.efs.MountTarget('fs-mount-target-2', {
   fileSystemId: efs.id,
-  subnetId: privateSubnet2.id,
+  subnetId: privateSubnetB.id,
   securityGroups: [efsSecurityGroup.id],
 });
 new aws.efs.BackupPolicy('fs-backup-policy', {
@@ -402,7 +402,7 @@ new aws.iam.RolePolicy('wp-service-task-exec-role-fs-mount-policy', {
 const lb = new awsx.lb.ApplicationLoadBalancer('lb', {
   name: name('lb'),
   securityGroups: [lbSecurityGroup.id],
-  subnets: [publicSubnet1, publicSubnet2],
+  subnets: [publicSubnetA, publicSubnetB],
   listener: {
     port: 80,
     protocol: 'HTTP',
@@ -642,7 +642,7 @@ for (const website of websites) {
       },
       desiredCount: 1,
       networkConfiguration: {
-        subnets: [privateSubnet1.id, privateSubnet2.id],
+        subnets: [privateSubnetA.id, privateSubnetB.id],
         securityGroups: [wpSecurityGroup.id],
         assignPublicIp: false,
       },
