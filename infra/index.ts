@@ -122,7 +122,7 @@ const lbSecurityGroup = new aws.ec2.SecurityGroup('lb-sg', {
   egress: [
     { protocol: '-1', fromPort: 0, toPort: 0, cidrBlocks: ['0.0.0.0/0'] },
   ],
-  tags: { proj },
+  tags: { proj, Name: name('lb-sg') },
 });
 const wpSecurityGroup = new aws.ec2.SecurityGroup('wp-sg', {
   name: name('wp-sg'),
@@ -139,7 +139,7 @@ const wpSecurityGroup = new aws.ec2.SecurityGroup('wp-sg', {
   egress: [
     { protocol: '-1', fromPort: 0, toPort: 0, cidrBlocks: ['0.0.0.0/0'] },
   ],
-  tags: { proj },
+  tags: { proj, Name: name('wp-sg') },
 });
 const dbSecurityGroup = new aws.ec2.SecurityGroup('db-sg', {
   name: name('db-sg'),
@@ -153,7 +153,7 @@ const dbSecurityGroup = new aws.ec2.SecurityGroup('db-sg', {
       securityGroups: [wpSecurityGroup.id],
     },
   ],
-  tags: { proj },
+  tags: { proj, name: name('db-sg') },
 });
 const efsSecurityGroup = new aws.ec2.SecurityGroup('fs-sg', {
   name: name('fs-sg'),
@@ -167,10 +167,11 @@ const efsSecurityGroup = new aws.ec2.SecurityGroup('fs-sg', {
       securityGroups: [wpSecurityGroup.id],
     },
   ],
-  tags: { proj },
+  tags: { proj, name: name('fs-sg') },
 });
 
 // Aurora Serverless v2 MySQL
+// TODO: figure out how to store the secret with both username and password
 const dbPassword = new aws_native.secretsmanager.Secret('db-password', {
   name: name('db-password'),
   generateSecretString: {
