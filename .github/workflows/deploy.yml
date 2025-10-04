@@ -1,0 +1,33 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+# Need ID token write permission to use GitHub OIDC with AWS
+permissions:
+  id-token: write
+
+jobs:
+  infra:
+    environment: prod
+    name: Infra
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: aws-actions/configure-aws-credentials@v5
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: eu-central-1
+      - run: bun i
+      - uses: pulumi/actions@v6
+        id: infra
+        with:
+          command: up
+          stack-name: ${{ vars.STACK_NAME }}
+
+  # TODO: deploy wordpress and migrations
