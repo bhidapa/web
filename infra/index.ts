@@ -452,7 +452,7 @@ echo "/mnt/efs-root /mnt/efs fuse.bindfs map=ec2-user/root:@ec2-user/@root,creat
 cat > /usr/local/bin/wp-mysql << 'EOF'
 #!/bin/bash
 DB_PASSWORD=$(aws secretsmanager get-secret-value --secret-id ${dbPassword.id} --region ${region} --query SecretString --output text)
-mysql -h ${dbInstance.endpoint} -u ${dbInstance.username} -p"$DB_PASSWORD" "$@"
+mysql -h ${dbInstance.address} -P ${dbInstance.port} -u ${dbInstance.username} -p"$DB_PASSWORD" "$@"
 EOF
 chmod +x /usr/local/bin/wp-mysql
 
