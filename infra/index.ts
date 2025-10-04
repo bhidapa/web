@@ -270,7 +270,6 @@ const dbInstance = new aws.rds.Instance('db-instance', {
   instanceClass: 'db.t4g.micro', // arm 2vcpu 1gb ram
   allocatedStorage: 10,
   storageType: 'gp3', // General Purpose SSD with good baseline performance for reads
-  iops: 3000, // gp3 baseline (included in cost)
   storageEncrypted: true,
   enabledCloudwatchLogsExports: ['error', 'slowquery'],
   username: 'wp',
