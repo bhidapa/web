@@ -202,7 +202,7 @@ const efsSecurityGroup = new aws.ec2.SecurityGroup('fs-sg', {
   tags: { proj, name: name('fs-sg') },
 });
 
-// Aurora Serverless v2 MySQL
+// MariaDB RDS
 // TODO: figure out how to store the secret with both username and password
 const dbPassword = new aws_native.secretsmanager.Secret('db-password', {
   name: name('db-password'),
@@ -215,7 +215,7 @@ const dbPassword = new aws_native.secretsmanager.Secret('db-password', {
 const dbSubnetGroup = new aws.rds.SubnetGroup('db-subnet-group', {
   name: name('db-subnet-group'),
   subnetIds: [privateSubnetA.id, privateSubnetB.id],
-  description: 'Subnet group for Aurora database',
+  description: 'Subnet group for MariaDB database',
   tags: { proj },
 });
 const enhancedMonitoringRole = new aws.iam.Role('db-enhanced-monitoring-role', {
@@ -238,54 +238,70 @@ new aws.iam.RolePolicyAttachment('rds-enhanced-monitoring-policy', {
   policyArn:
     'arn:aws:iam::aws:policy/service-role/AmazonRDSEnhancedMonitoringRole',
 });
-const dbClusterParams = new aws.rds.ClusterParameterGroup(
-  'db-cluster-parameter-group',
-  {
-    name: name('db-cluster-parameter-group'),
-    family: 'aurora-mysql8.0',
-    parameters: [
-      {
-        name: 'performance_schema',
-        value: '1',
-        applyMethod: 'pending-reboot', // because static param
-      },
-    ],
-  },
-);
-const dbCluster = new aws.rds.Cluster('db-cluster', {
-  clusterIdentifier: name('db'),
-  engine: aws.rds.EngineType.AuroraMysql,
-  engineVersion: '8.0.mysql_aurora.3.10.0',
-  storageType: 'aurora-iopt1', // amazon io optimized
-  enabledCloudwatchLogsExports: ['error', 'iam-db-auth-error', 'slowquery'],
-  masterUsername: 'wp',
-  // TODO: is there a nicer way to supply the master password?
-  masterPassword: aws.secretsmanager.getSecretVersionOutput({
+const dbParameterGroup = new aws.rds.ParameterGroup('db-parameter-group', {
+  name: name('db-parameter-group'),
+  family: 'mariadb11.8',
+  parameters: [
+    {
+      name: 'performance_schema',
+      value: '1',
+      applyMethod: 'pending-reboot', // because static param
+    },
+    // InnoDB Buffer Pool - most critical for read performance
+    // Set to 70% of 1GB RAM (~700MB) for optimal caching
+    {
+      name: 'innodb_buffer_pool_size',
+      value: '{DBInstanceClassMemory*7/10}',
+      applyMethod: 'pending-reboot',
+    },
+    // Table cache for faster table access
+    {
+      name: 'table_open_cache',
+      value: '2000',
+      applyMethod: 'immediate',
+    },
+    // Query cache for repeated reads (WordPress benefits)
+    {
+      name: 'query_cache_size',
+      value: '33554432', // 32MB
+      applyMethod: 'immediate',
+    },
+    {
+      name: 'query_cache_type',
+      value: '1', // ON
+      applyMethod: 'immediate',
+    },
+  ],
+  tags: { proj },
+});
+const dbInstance = new aws.rds.Instance('db-instance', {
+  identifier: name('db'),
+  engine: 'mariadb',
+  engineVersion: '11.8',
+  autoMinorVersionUpgrade: true,
+  instanceClass: 'db.t4g.micro', // arm 2vcpu 1gb ram
+  allocatedStorage: 10,
+  storageType: 'gp3', // General Purpose SSD with good baseline performance for reads
+  iops: 3000, // gp3 baseline (included in cost)
+  storageEncrypted: true,
+  enabledCloudwatchLogsExports: ['error', 'slowquery'],
+  username: 'wp',
+  password: aws.secretsmanager.getSecretVersionOutput({
     secretId: dbPassword.id,
   }).secretString,
   dbSubnetGroupName: dbSubnetGroup.name,
   vpcSecurityGroupIds: [dbSecurityGroup.id],
   backupRetentionPeriod: 7,
-  preferredBackupWindow: '03:00-04:00',
-  preferredMaintenanceWindow: 'mon:04:00-mon:05:00',
-  storageEncrypted: true,
+  backupWindow: '03:00-04:00',
+  maintenanceWindow: 'mon:04:00-mon:05:00',
   skipFinalSnapshot: true,
-  databaseInsightsMode: 'advanced',
   performanceInsightsEnabled: true,
-  performanceInsightsRetentionPeriod: 465, // necessary for advanced monitoring
+  performanceInsightsRetentionPeriod: 7, // 7 days free tier
   monitoringRoleArn: enhancedMonitoringRole.arn,
-  monitoringInterval: 15,
-  dbClusterParameterGroupName: dbClusterParams.name,
-  tags: { proj },
-});
-new aws.rds.ClusterInstance('db-master', {
-  identifier: 'master',
-  clusterIdentifier: dbCluster.id,
-  instanceClass: 'db.t4g.medium', // 2vcpu 4gb ram
-  engine: dbCluster.engine as any, // engine requires enum, we provide string
-  engineVersion: dbCluster.engineVersion,
-  monitoringRoleArn: enhancedMonitoringRole.arn,
-  monitoringInterval: 15,
+  monitoringInterval: 60, // 60 seconds - free tier
+  parameterGroupName: dbParameterGroup.name,
+  publiclyAccessible: false,
+  multiAz: false, // no need to multi-az
   tags: { proj },
 });
 // TODO: automatically create databases for each website (see wp/create-dbs.sql)
@@ -421,7 +437,7 @@ echo "${efs.id}:/ /mnt/efs efs _netdev,tls,iam 0 0" >> /etc/fstab
 cat > /usr/local/bin/wp-mysql << 'EOF'
 #!/bin/bash
 DB_PASSWORD=$(aws secretsmanager get-secret-value --secret-id ${dbPassword.id} --region ${region} --query SecretString --output text)
-mysql -h ${dbCluster.endpoint} -u ${dbCluster.masterUsername} -p"$DB_PASSWORD" "$@"
+mysql -h ${dbInstance.endpoint} -u ${dbInstance.username} -p"$DB_PASSWORD" "$@"
 EOF
 chmod +x /usr/local/bin/wp-mysql
 
@@ -756,9 +772,9 @@ for (const website of websites) {
             command: ['CMD-SHELL', 'curl -f http://localhost:80 || exit 1'],
           },
           environment: [
-            { name: 'WORDPRESS_DB_HOST', value: dbCluster.endpoint },
+            { name: 'WORDPRESS_DB_HOST', value: dbInstance.endpoint },
             { name: 'WORDPRESS_DB_NAME', value: website.name },
-            { name: 'WORDPRESS_DB_USER', value: dbCluster.masterUsername },
+            { name: 'WORDPRESS_DB_USER', value: dbInstance.username },
             { name: 'WORDPRESS_DEBUG', value: '1' },
           ],
           secrets: [
