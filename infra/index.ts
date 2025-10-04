@@ -378,12 +378,26 @@ const jumpServerInstanceProfile = new aws.iam.InstanceProfile(
     role: jumpServerRole.name,
   },
 );
-
 const jumpServerEip = new aws.ec2.Eip('jump-server-eip', {
   domain: 'vpc',
   tags: { proj, Name: name('jump-server-eip') },
 });
-
+const jumpServerFsAccessPoint = new aws.efs.AccessPoint('jump-server-fs-ap', {
+  fileSystemId: efs.id,
+  posixUser: {
+    gid: 0,
+    uid: 0,
+  },
+  rootDirectory: {
+    path: '/',
+    creationInfo: {
+      ownerGid: 0,
+      ownerUid: 0,
+      permissions: '755',
+    },
+  },
+  tags: { proj },
+});
 const jumpServer = new aws.ec2.Instance('jump-server', {
   ami: aws.ec2.getAmiOutput({
     mostRecent: true,
@@ -425,10 +439,9 @@ dnf install -y \
 
 # Mount EFS at root with all privileges
 mkdir -p /mnt/efs
-mount -t efs -o tls,iam ${efs.id}:/ /mnt/efs
-w
+mount -t efs -o noresvport,iam,tls,accesspoint=${jumpServerFsAccessPoint.id} ${efs.id}:/ /mnt/efs
 # Add to fstab for persistent mount
-echo "${efs.id}:/ /mnt/efs efs _netdev,tls,iam 0 0" >> /etc/fstab
+echo "${efs.id}:/ /mnt/efs efs _netdev,noresvport,iam,tls,accesspoint=${jumpServerFsAccessPoint.id} 0 0" >> /etc/fstab
 
 # Create a helper script for mysql connection
 cat > /usr/local/bin/wp-mysql << 'EOF'
@@ -438,14 +451,13 @@ mysql -h ${dbInstance.address} -P ${dbInstance.port} -u ${dbInstance.username} -
 EOF
 chmod +x /usr/local/bin/wp-mysql
 
-echo "Jump server setup complete!"
+echo "OK"
 `,
 });
 new aws.ec2.EipAssociation('jump-server-eip-assoc', {
   instanceId: jumpServer.id,
   allocationId: jumpServerEip.id,
 });
-
 export const jumpServerUsername = 'ec2-user';
 export const jumpServerEndpoint = jumpServerEip.publicDns;
 
