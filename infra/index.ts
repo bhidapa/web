@@ -388,6 +388,11 @@ const jumpServerInstanceProfile = new aws.iam.InstanceProfile(
   },
 );
 
+const jumpServerEip = new aws.ec2.Eip('jump-server-eip', {
+  domain: 'vpc',
+  tags: { proj, Name: name('jump-server-eip') },
+});
+
 const jumpServer = new aws.ec2.Instance('jump-server', {
   ami: aws.ec2.getAmiOutput({
     mostRecent: true,
@@ -444,10 +449,13 @@ chmod +x /usr/local/bin/wp-mysql
 echo "Jump server setup complete!"
 `,
 });
+new aws.ec2.EipAssociation('jump-server-eip-assoc', {
+  instanceId: jumpServer.id,
+  allocationId: jumpServerEip.id,
+});
 
 export const jumpServerUsername = 'ec2-user';
-export const jumpServerPublicIp = jumpServer.publicIp;
-export const jumpServerPublicDns = jumpServer.publicDns;
+export const jumpServerEndpoint = jumpServerEip.publicDns;
 
 // WordPress Repository
 const wpRepo = new aws.ecr.Repository('wp-repo', {
