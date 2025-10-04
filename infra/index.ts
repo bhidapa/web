@@ -405,7 +405,7 @@ const jumpServer = new aws.ec2.Instance('jump-server', {
   }).id,
   instanceType: 't4g.nano',
   subnetId: publicSubnetA.id,
-  keyName: 'web-prod-jump-server',
+  keyName: 'jump-server',
   vpcSecurityGroupIds: [jumpServerSecurityGroup.id],
   iamInstanceProfile: jumpServerInstanceProfile.name,
   tags: { proj, Name: name('jump-server') },
