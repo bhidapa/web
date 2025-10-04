@@ -769,8 +769,8 @@ for (const website of websites) {
         executionRole: {
           roleArn: taskExecutionRole.arn,
         },
-        cpu: '512', // .5 vCPU
-        memory: '1024', // 1 GB
+        cpu: '1024', // 1 vCPU
+        memory: '2048', // 2 GB
         runtimePlatform: {
           operatingSystemFamily: 'LINUX',
           cpuArchitecture: 'ARM64',
