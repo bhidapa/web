@@ -268,7 +268,7 @@ const dbInstance = new aws.rds.Instance('db-instance', {
   engineVersion: '11.8',
   autoMinorVersionUpgrade: true,
   instanceClass: 'db.t4g.micro', // arm 2vcpu 1gb ram
-  allocatedStorage: 10,
+  allocatedStorage: 20, // 20gb minimum
   storageType: 'gp3', // General Purpose SSD with good baseline performance for reads
   storageEncrypted: true,
   enabledCloudwatchLogsExports: ['error', 'slowquery'],
