@@ -8,6 +8,7 @@ on:
 # Need ID token write permission to use GitHub OIDC with AWS
 permissions:
   id-token: write
+  contents: read
 
 jobs:
   infra:
