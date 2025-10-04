@@ -282,8 +282,6 @@ const dbInstance = new aws.rds.Instance('db-instance', {
   backupWindow: '03:00-04:00',
   maintenanceWindow: 'mon:04:00-mon:05:00',
   skipFinalSnapshot: true,
-  performanceInsightsEnabled: true,
-  performanceInsightsRetentionPeriod: 7, // 7 days free tier
   monitoringRoleArn: enhancedMonitoringRole.arn,
   monitoringInterval: 60, // 60 seconds - free tier
   parameterGroupName: dbParameterGroup.name,
