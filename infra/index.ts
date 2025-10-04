@@ -421,14 +421,32 @@ dnf install -y \
   rsync \
   mariadb105 \
   nfs-utils \
-  vim
+  vim \
+  fuse \
+  fuse-libs
 
-# Mount EFS at root with all privileges
+# Install bindfs from EPEL (Extra Packages for Enterprise Linux)
+dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm
+dnf install -y bindfs
+
+# Mount EFS to the root location (actual filesystem)
+mkdir -p /mnt/efs-root
+mount -t efs -o tls,iam ${efs.id}:/ /mnt/efs-root
+
+# Create user-accessible mount point
 mkdir -p /mnt/efs
-mount -t efs -o tls,iam ${efs.id}:/ /mnt/efs
-w
-# Add to fstab for persistent mount
-echo "${efs.id}:/ /mnt/efs efs _netdev,tls,iam 0 0" >> /etc/fstab
+
+# Use bindfs to map permissions without changing actual ownership
+# This allows ec2-user to edit files as if they were root, but preserves original ownership
+bindfs \
+  --map=ec2-user/root:@ec2-user/@root \
+  --create-for-user=root \
+  --create-for-group=root \
+  /mnt/efs-root /mnt/efs
+
+# Add to fstab for persistent mounts
+echo "${efs.id}:/ /mnt/efs-root efs _netdev,tls,iam 0 0" >> /etc/fstab
+echo "/mnt/efs-root /mnt/efs fuse.bindfs map=ec2-user/root:@ec2-user/@root,create-for-user=root,create-for-group=root,_netdev 0 0" >> /etc/fstab
 
 # Create a helper script for mysql connection
 cat > /usr/local/bin/wp-mysql << 'EOF'
@@ -438,7 +456,7 @@ mysql -h ${dbInstance.endpoint} -u ${dbInstance.username} -p"$DB_PASSWORD" "$@"
 EOF
 chmod +x /usr/local/bin/wp-mysql
 
-echo "Jump server setup complete!"
+echo "OK"
 `,
 });
 new aws.ec2.EipAssociation('jump-server-eip-assoc', {
