@@ -259,6 +259,12 @@ const dbParameterGroup = new aws.rds.ParameterGroup('db-parameter-group', {
       value: '33554432', // 32MB
       applyMethod: 'immediate',
     },
+    // ssl unnecessary and not used, db is in private vpc with security groups
+    {
+      name: 'require_secure_transport',
+      value: '0', // OFF
+      applyMethod: 'immediate',
+    },
   ],
   tags: { proj },
 });
