@@ -242,33 +242,21 @@ const dbParameterGroup = new aws.rds.ParameterGroup('db-parameter-group', {
   name: name('db-parameter-group'),
   family: 'mariadb11.8',
   parameters: [
+    // For advanced performance monitoring
     {
       name: 'performance_schema',
       value: '1',
       applyMethod: 'pending-reboot', // because static param
     },
-    // InnoDB Buffer Pool - most critical for read performance
-    // Set to 70% of 1GB RAM (~700MB) for optimal caching
-    {
-      name: 'innodb_buffer_pool_size',
-      value: '{DBInstanceClassMemory*7/10}',
-      applyMethod: 'pending-reboot',
-    },
-    // Table cache for faster table access
-    {
-      name: 'table_open_cache',
-      value: '2000',
-      applyMethod: 'immediate',
-    },
     // Query cache for repeated reads (WordPress benefits)
-    {
-      name: 'query_cache_size',
-      value: '33554432', // 32MB
-      applyMethod: 'immediate',
-    },
     {
       name: 'query_cache_type',
       value: '1', // ON
+      applyMethod: 'pending-reboot', // because static param
+    },
+    {
+      name: 'query_cache_size',
+      value: '33554432', // 32MB
       applyMethod: 'immediate',
     },
   ],
