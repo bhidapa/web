@@ -420,7 +420,8 @@ dnf install -y \
   amazon-efs-utils \
   rsync \
   mariadb105 \
-  nfs-utils
+  nfs-utils \
+  vim
 
 # Mount EFS at root with all privileges
 mkdir -p /mnt/efs
