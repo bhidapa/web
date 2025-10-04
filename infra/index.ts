@@ -141,6 +141,24 @@ const wpSecurityGroup = new aws.ec2.SecurityGroup('wp-sg', {
   ],
   tags: { proj, Name: name('wp-sg') },
 });
+const jumpServerSecurityGroup = new aws.ec2.SecurityGroup('jump-server-sg', {
+  name: name('jump-server-sg'),
+  vpcId: vpc.id,
+  description: 'Security group for Jump Server EC2 instance',
+  ingress: [
+    {
+      protocol: 'tcp',
+      fromPort: 22,
+      toPort: 22,
+      cidrBlocks: ['0.0.0.0/0'],
+      description: 'SSH access',
+    },
+  ],
+  egress: [
+    { protocol: '-1', fromPort: 0, toPort: 0, cidrBlocks: ['0.0.0.0/0'] },
+  ],
+  tags: { proj, Name: name('jump-server-sg') },
+});
 const dbSecurityGroup = new aws.ec2.SecurityGroup('db-sg', {
   name: name('db-sg'),
   vpcId: vpc.id,
@@ -151,6 +169,13 @@ const dbSecurityGroup = new aws.ec2.SecurityGroup('db-sg', {
       fromPort: 3306,
       toPort: 3306,
       securityGroups: [wpSecurityGroup.id],
+    },
+    {
+      protocol: 'tcp',
+      fromPort: 3306,
+      toPort: 3306,
+      securityGroups: [jumpServerSecurityGroup.id],
+      description: 'MySQL access from Jump Server',
     },
   ],
   tags: { proj, name: name('db-sg') },
@@ -165,6 +190,13 @@ const efsSecurityGroup = new aws.ec2.SecurityGroup('fs-sg', {
       fromPort: 2049,
       toPort: 2049,
       securityGroups: [wpSecurityGroup.id],
+    },
+    {
+      protocol: 'tcp',
+      fromPort: 2049,
+      toPort: 2049,
+      securityGroups: [jumpServerSecurityGroup.id],
+      description: 'NFS access from Jump Server',
     },
   ],
   tags: { proj, name: name('fs-sg') },
@@ -279,6 +311,127 @@ new aws.efs.BackupPolicy('fs-backup-policy', {
     status: 'ENABLED',
   },
 });
+
+// EC2 Jump Server for rsync and database management
+const jumpServerRole = new aws.iam.Role('jump-server-role', {
+  name: name('jump-server-role'),
+  assumeRolePolicy: {
+    Version: '2012-10-17',
+    Statement: [
+      {
+        Action: 'sts:AssumeRole',
+        Effect: 'Allow',
+        Principal: {
+          Service: 'ec2.amazonaws.com',
+        },
+      },
+    ],
+  },
+  tags: { proj },
+});
+new aws.iam.RolePolicyAttachment('jump-server-ssm-policy', {
+  role: jumpServerRole.name,
+  policyArn: 'arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore',
+});
+new aws.iam.RolePolicy('jump-server-secrets-policy', {
+  name: name('jump-server-secrets-policy'),
+  role: jumpServerRole.id,
+  policy: {
+    Version: '2012-10-17',
+    Statement: [
+      {
+        Effect: 'Allow',
+        Action: ['secretsmanager:GetSecretValue'],
+        Resource: dbPassword.id,
+      },
+    ],
+  },
+});
+new aws.iam.RolePolicy('jump-server-efs-policy', {
+  name: name('jump-server-efs-policy'),
+  role: jumpServerRole.id,
+  policy: {
+    Version: '2012-10-17',
+    Statement: [
+      {
+        Effect: 'Allow',
+        Action: [
+          'elasticfilesystem:ClientMount',
+          'elasticfilesystem:ClientWrite',
+        ],
+        Resource: efs.arn,
+      },
+    ],
+  },
+});
+const jumpServerInstanceProfile = new aws.iam.InstanceProfile(
+  'jump-server-instance-profile',
+  {
+    name: name('jump-server-instance-profile'),
+    role: jumpServerRole.name,
+  },
+);
+
+const jumpServer = new aws.ec2.Instance('jump-server', {
+  ami: aws.ec2.getAmiOutput({
+    mostRecent: true,
+    owners: ['amazon'],
+    filters: [
+      {
+        name: 'name',
+        values: ['al2023-ami-*-arm64'],
+      },
+      {
+        name: 'architecture',
+        values: ['arm64'],
+      },
+      {
+        name: 'virtualization-type',
+        values: ['hvm'],
+      },
+    ],
+  }).id,
+  instanceType: 't4g.nano',
+  subnetId: publicSubnetA.id,
+  keyName: 'web-prod-jump-server',
+  vpcSecurityGroupIds: [jumpServerSecurityGroup.id],
+  iamInstanceProfile: jumpServerInstanceProfile.name,
+  tags: { proj, Name: name('jump-server') },
+  userData: pulumi.interpolate`#!/bin/bash
+set -e
+
+# Update system
+dnf update -y
+
+# Install required packages
+dnf install -y \
+  amazon-efs-utils \
+  rsync \
+  mariadb105 \
+  nfs-utils
+
+# Mount EFS at root with all privileges
+mkdir -p /mnt/efs
+mount -t efs -o tls,iam ${efs.id}:/ /mnt/efs
+w
+# Add to fstab for persistent mount
+echo "${efs.id}:/ /mnt/efs efs _netdev,tls,iam 0 0" >> /etc/fstab
+
+# Create a helper script for mysql connection
+cat > /usr/local/bin/wp-mysql << 'EOF'
+#!/bin/bash
+DB_PASSWORD=$(aws secretsmanager get-secret-value --secret-id ${dbPassword.id} --region ${region} --query SecretString --output text)
+mysql -h ${dbCluster.endpoint} -u ${dbCluster.masterUsername} -p"$DB_PASSWORD" "$@"
+EOF
+chmod +x /usr/local/bin/wp-mysql
+
+echo "Jump server setup complete!"
+`,
+});
+
+export const jumpServerUsername = 'ec2-user';
+export const jumpServerPublicIp = jumpServer.publicIp;
+export const jumpServerPublicDns = jumpServer.publicDns;
 
 // WordPress Repository
 const wpRepo = new aws.ecr.Repository('wp-repo', {
