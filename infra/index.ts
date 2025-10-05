@@ -613,23 +613,24 @@ const lb = new awsx.lb.ApplicationLoadBalancer('lb', {
   name: name('lb'),
   securityGroups: [lbSecurityGroup.id],
   subnets: [publicSubnetA, publicSubnetB],
+  listener: {
+    port: 80,
+    protocol: 'HTTP',
+    defaultActions: [
+      {
+        type: 'fixed-response',
+        fixedResponse: {
+          contentType: 'text/plain',
+          statusCode: '418',
+          messageBody: "I'm a teapot",
+        },
+      },
+    ],
+    tags: { proj },
+  },
   tags: { proj },
 });
-const lbHttp = new aws.lb.Listener('lb-http-listener', {
-  loadBalancerArn: lb.loadBalancer.arn,
-  port: 80,
-  protocol: 'HTTP',
-  defaultActions: [
-    {
-      type: 'fixed-response',
-      fixedResponse: {
-        contentType: 'text/plain',
-        statusCode: '418',
-        messageBody: "I'm a teapot",
-      },
-    },
-  ],
-});
+const lbHttp = lb.listeners.apply((l) => l![0]);
 new aws.lb.ListenerRule('lb-http-listener-redirect-to-https-rule', {
   listenerArn: lbHttp.arn,
   priority: 100, // highest priority, everything must go over HTTPS
