@@ -644,9 +644,9 @@ const lbCertRecord = new aws.route53.Record('lb-cert-validation-record', {
     name: 'bhidapa.ba',
     privateZone: false,
   }).zoneId,
-  name: lbCert.domainValidationOptions[0].resourceRecordName,
-  records: [lbCert.domainValidationOptions[0].resourceRecordValue],
-  type: lbCert.domainValidationOptions[0].resourceRecordType,
+  name: lbCert.domainValidationOptions[0]!.resourceRecordName,
+  records: [lbCert.domainValidationOptions[0]!.resourceRecordValue],
+  type: lbCert.domainValidationOptions[0]!.resourceRecordType,
   ttl: 60,
 });
 const lbCertValidation = new aws.acm.CertificateValidation(
@@ -725,9 +725,9 @@ for (const website of websites) {
     `${website.name}-cert-validation-record`,
     {
       zoneId: hostedZone.zoneId,
-      name: cert.domainValidationOptions[0].resourceRecordName,
-      records: [cert.domainValidationOptions[0].resourceRecordValue],
-      type: cert.domainValidationOptions[0].resourceRecordType,
+      name: cert.domainValidationOptions[0]!.resourceRecordName,
+      records: [cert.domainValidationOptions[0]!.resourceRecordValue],
+      type: cert.domainValidationOptions[0]!.resourceRecordType,
       ttl: 60,
     },
   );
@@ -778,9 +778,9 @@ for (const website of websites) {
       `${alt.name}-${website.name}-cert-validation-record`,
       {
         zoneId: hostedZone.zoneId,
-        name: cert.domainValidationOptions[0].resourceRecordName,
-        records: [cert.domainValidationOptions[0].resourceRecordValue],
-        type: cert.domainValidationOptions[0].resourceRecordType,
+        name: cert.domainValidationOptions[0]!.resourceRecordName,
+        records: [cert.domainValidationOptions[0]!.resourceRecordValue],
+        type: cert.domainValidationOptions[0]!.resourceRecordType,
         ttl: 60,
       },
     );
