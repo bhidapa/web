@@ -634,7 +634,7 @@ const lbHttp = lb.listeners.apply((l) => l![0]);
 new aws.lb.ListenerRule('lb-http-listener-redirect-to-https-rule', {
   listenerArn: lbHttp.arn,
   priority: 100, // highest priority, everything must go over HTTPS
-  conditions: [],
+  conditions: [{ pathPattern: { values: ['/*'] } }],
   actions: [
     {
       type: 'redirect',
@@ -693,8 +693,8 @@ const lbHttps = new aws.lb.Listener(
 );
 new aws.lb.ListenerRule('lb-https-listener-404-on-unmatched-rule', {
   listenerArn: lbHttp.arn,
-  priority: 1000, // lowest priotiy, only hit if no other rules match
-  conditions: [],
+  priority: 1000, // lowest priority, only hit if no other rules match
+  conditions: [{ pathPattern: { values: ['/*'] } }],
   actions: [
     {
       type: 'fixed-response',
