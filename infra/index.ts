@@ -4,11 +4,34 @@ import * as awsx from '@pulumi/awsx';
 import * as aws_native from '@pulumi/aws-native';
 import * as docker_build from '@pulumi/docker-build';
 
-const websites = [
+interface Website {
+  name: string;
+  hostedZone: string;
+  domain: string;
+  /** Alternative domains that all redirect back to the {@link domain main domain}. */
+  alternate?: {
+    name: string;
+    hostedZone?: string;
+    domain: string;
+  }[];
+}
+
+const websites: Website[] = [
   {
     name: 'akp',
     hostedZone: 'akp.ba',
     domain: 'akp.ba',
+    alternate: [
+      {
+        name: 'www',
+        domain: 'www.akp.ba',
+      },
+      {
+        name: 'academy-bhidapa',
+        hostedZone: 'bhidapa.ba',
+        domain: 'academy.bhidapa.ba',
+      },
+    ],
   },
 ];
 
@@ -637,6 +660,7 @@ const lbHttps = new aws.lb.Listener(
     defaultActions: [
       {
         // 404 for all unmatched routes
+        // this rule will have the default priority which always evaluates last
         type: 'fixed-response',
         fixedResponse: {
           contentType: 'text/plain',
@@ -667,6 +691,7 @@ for (const website of websites) {
   });
   new aws.lb.ListenerRule(`${website.name}-lb-rule`, {
     listenerArn: lbHttps.arn,
+    priority: 500,
     conditions: [
       {
         hostHeader: {
@@ -732,6 +757,81 @@ for (const website of websites) {
       },
     ],
   });
+
+  // Redirect any alternate domains to the main domain
+  for (const alt of website.alternate || []) {
+    // SSL Certificate
+    const hostedZone = aws.route53.getZoneOutput({
+      name: alt.hostedZone || website.hostedZone,
+      privateZone: false,
+    });
+    const cert = new aws.acm.Certificate(`${alt.name}-${website.name}-cert`, {
+      domainName: website.domain,
+      validationMethod: 'DNS',
+      tags: { proj, Name: name(`${alt.name}-${website.name}-cert`) }, // not up
+    });
+    const certRecord = new aws.route53.Record(
+      `${alt.name}-${website.name}-cert-validation-record`,
+      {
+        zoneId: hostedZone.zoneId,
+        name: cert.domainValidationOptions[0].resourceRecordName,
+        records: [cert.domainValidationOptions[0].resourceRecordValue],
+        type: cert.domainValidationOptions[0].resourceRecordType,
+        ttl: 60,
+      },
+    );
+    const certValidation = new aws.acm.CertificateValidation(
+      `${alt.name}-${website.name}-cert-validation`,
+      {
+        certificateArn: cert.arn,
+        validationRecordFqdns: [certRecord.fqdn],
+      },
+    );
+    new aws.lb.ListenerCertificate(
+      `${alt.name}-${website.name}-lb-https-listener-cert-attachment`,
+      {
+        listenerArn: lbHttps.arn,
+        certificateArn: cert.arn,
+      },
+      { dependsOn: [certValidation] },
+    );
+
+    // Redirect rule
+    new aws.lb.ListenerRule(`${alt.name}-${website.name}-lb-redirect-rule`, {
+      listenerArn: lbHttps.arn,
+      priority: 100,
+      conditions: [
+        {
+          hostHeader: {
+            values: [alt.domain],
+          },
+        },
+      ],
+      actions: [
+        {
+          type: 'redirect',
+          redirect: {
+            host: website.domain,
+            path: '/#{path}',
+            query: '#{query}',
+            protocol: 'HTTPS',
+            port: '443',
+            statusCode: 'HTTP_301',
+          },
+        },
+      ],
+      tags: { proj },
+    });
+
+    // Point alternative domain DNS to main domain using CNAME
+    new aws.route53.Record(`${alt.name}-${website.name}-dns-cname`, {
+      zoneId: hostedZone.zoneId,
+      name: alt.domain,
+      type: 'CNAME',
+      records: [website.domain],
+      ttl: 300,
+    });
+  }
 
   // Securely Mount EFS to Fargate Under an Isolated Path
   const fsAccessPoint = new aws.efs.AccessPoint(`${website.name}-fs-ap`, {
