@@ -11,8 +11,11 @@ interface Website {
   /** Alternative domains that all redirect back to the {@link domain main domain}. */
   alternate?: {
     name: string;
-    hostedZone?: string;
     domain: string;
+    /** If the hosted zone is different from the main website, set it. */
+    hostedZone?: string;
+    /** @default 'CNAME' */
+    recordType?: 'CNAME' | 'A';
   }[];
 }
 
@@ -28,8 +31,9 @@ const websites: Website[] = [
       },
       {
         name: 'academy-bhidapa',
-        hostedZone: 'bhidapa.ba',
         domain: 'academy.bhidapa.ba',
+        hostedZone: 'bhidapa.ba',
+        recordType: 'A', // because we have TXT records for this domain
       },
     ],
   },
@@ -824,13 +828,32 @@ for (const website of websites) {
     });
 
     // Point alternative domain DNS to main domain using CNAME
-    new aws.route53.Record(`${alt.name}-${website.name}-dns-cname`, {
-      zoneId: hostedZone.zoneId,
-      name: alt.domain,
-      type: 'CNAME',
-      records: [website.domain],
-      ttl: 300,
-    });
+    const pulumiRecordName = `${alt.name}-${website.name}-dns-record`;
+    switch (alt.recordType) {
+      case 'A':
+        new aws.route53.Record(pulumiRecordName, {
+          zoneId: hostedZone.zoneId,
+          name: alt.domain,
+          type: 'A',
+          aliases: [
+            {
+              name: lb.loadBalancer.dnsName,
+              zoneId: lb.loadBalancer.zoneId,
+              evaluateTargetHealth: true,
+            },
+          ],
+        });
+        break;
+      case 'CNAME':
+        new aws.route53.Record(pulumiRecordName, {
+          zoneId: hostedZone.zoneId,
+          name: alt.domain,
+          type: 'CNAME',
+          records: [website.domain],
+          ttl: 300,
+        });
+        break;
+    }
   }
 
   // Securely Mount EFS to Fargate Under an Isolated Path
