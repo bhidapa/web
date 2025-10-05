@@ -6,6 +6,10 @@
     "mu-plugins/blocks/*",
     "infra"
   ],
+  "engines": {
+    "bun": ">=1.2.23",
+    "node": ">=24.0.0"
+  },
   "scripts": {
     "blocks:build": "bun -F '@blocks/*' build",
     "blocks:start": "bun -F '@blocks/*' start",
