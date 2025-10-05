@@ -620,7 +620,6 @@ const lb = new awsx.lb.ApplicationLoadBalancer('lb', {
       {
         type: 'redirect',
         redirect: {
-          port: '443',
           protocol: 'HTTPS',
           statusCode: 'HTTP_301',
         },
@@ -818,7 +817,6 @@ for (const website of websites) {
             path: '/#{path}',
             query: '#{query}',
             protocol: 'HTTPS',
-            port: '443',
             statusCode: 'HTTP_301',
           },
         },
