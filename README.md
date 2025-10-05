@@ -10,7 +10,8 @@ The infrastructure is built on a modern, high-performance containerized architec
 
 ### ssh into the wp container
 
-Has [wp-cli](https://wp-cli.org/) installed.
+> [!TIP]
+> Has [wp-cli](https://wp-cli.org/) installed.
 
 ```sh
 aws ecs execute-command \
