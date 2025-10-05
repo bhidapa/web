@@ -613,21 +613,37 @@ const lb = new awsx.lb.ApplicationLoadBalancer('lb', {
   name: name('lb'),
   securityGroups: [lbSecurityGroup.id],
   subnets: [publicSubnetA, publicSubnetB],
-  listener: {
-    port: 80,
-    protocol: 'HTTP',
-    tags: { proj },
-    defaultActions: [
-      {
-        type: 'redirect',
-        redirect: {
-          port: '443',
-          protocol: 'HTTP',
-          statusCode: 'HTTP_301',
-        },
+  tags: { proj },
+});
+const lbHttp = new aws.lb.Listener('lb-http-listener', {
+  loadBalancerArn: lb.loadBalancer.arn,
+  port: 80,
+  protocol: 'HTTP',
+  defaultActions: [
+    {
+      type: 'fixed-response',
+      fixedResponse: {
+        contentType: 'text/plain',
+        statusCode: '418',
+        messageBody: "I'm a teapot",
       },
-    ],
-  },
+    },
+  ],
+});
+new aws.lb.ListenerRule('lb-http-listener-redirect-to-https-rule', {
+  listenerArn: lbHttp.arn,
+  priority: 100, // highest priority, everything must go over HTTPS
+  conditions: [],
+  actions: [
+    {
+      type: 'redirect',
+      redirect: {
+        port: '443',
+        protocol: 'HTTP',
+        statusCode: 'HTTP_301',
+      },
+    },
+  ],
   tags: { proj },
 });
 // Default SSL Certificate for the Application Load Balancer under the domain lb.bhidapa.ba
@@ -663,19 +679,33 @@ const lbHttps = new aws.lb.Listener(
     certificateArn: lbCert.arn,
     defaultActions: [
       {
-        // 404 for all unmatched routes
-        // this rule will have the default priority which always evaluates last
         type: 'fixed-response',
         fixedResponse: {
           contentType: 'text/plain',
-          statusCode: '404',
-          messageBody: 'Not Found',
+          statusCode: '418',
+          messageBody: "I'm a teapot",
         },
       },
     ],
   },
   { dependsOn: [lbCertValidation] },
 );
+new aws.lb.ListenerRule('lb-https-listener-404-on-unmatched-rule', {
+  listenerArn: lbHttp.arn,
+  priority: 1000, // lowest priotiy, only hit if no other rules match
+  conditions: [],
+  actions: [
+    {
+      type: 'fixed-response',
+      fixedResponse: {
+        contentType: 'text/plain',
+        statusCode: '404',
+        messageBody: 'Not Found',
+      },
+    },
+  ],
+  tags: { proj },
+});
 
 // For Each Website
 for (const website of websites) {
@@ -695,7 +725,7 @@ for (const website of websites) {
   });
   new aws.lb.ListenerRule(`${website.name}-lb-rule`, {
     listenerArn: lbHttps.arn,
-    priority: 500,
+    priority: 500, // lower than alternate domains redirects, otherwise highest
     conditions: [
       {
         hostHeader: {
@@ -804,7 +834,7 @@ for (const website of websites) {
     // Redirect rule
     new aws.lb.ListenerRule(`${alt.name}-${website.name}-lb-redirect-rule`, {
       listenerArn: lbHttps.arn,
-      priority: 100 + i,
+      priority: 400 + i, // higher priority than main domain rule
       conditions: [
         {
           hostHeader: {
