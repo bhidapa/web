@@ -15,7 +15,8 @@
     "blocks:start": "bun -F '@blocks/*' start",
     "check:format": "prettier -c .",
     "check:types": "tsc --noEmit",
-    "format": "bun check:format -w"
+    "format": "bun check:format -w",
+    "push": "bun scripts/push.ts"
   },
   "devDependencies": {
     "@prettier/plugin-php": "^0.24.0",
