@@ -640,7 +640,7 @@ new aws.lb.ListenerRule('lb-http-listener-redirect-to-https-rule', {
       type: 'redirect',
       redirect: {
         port: '443',
-        protocol: 'HTTP',
+        protocol: 'HTTPS',
         statusCode: 'HTTP_301',
       },
     },
