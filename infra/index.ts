@@ -764,13 +764,14 @@ for (const website of websites) {
 
   // Redirect any alternate domains to the main domain
   for (const alt of website.alternate || []) {
+    const i = website.alternate!.indexOf(alt);
     // SSL Certificate
     const hostedZone = aws.route53.getZoneOutput({
       name: alt.hostedZone || website.hostedZone,
       privateZone: false,
     });
     const cert = new aws.acm.Certificate(`${alt.name}-${website.name}-cert`, {
-      domainName: website.domain,
+      domainName: alt.domain,
       validationMethod: 'DNS',
       tags: { proj, Name: name(`${alt.name}-${website.name}-cert`) }, // not up
     });
@@ -803,7 +804,7 @@ for (const website of websites) {
     // Redirect rule
     new aws.lb.ListenerRule(`${alt.name}-${website.name}-lb-redirect-rule`, {
       listenerArn: lbHttps.arn,
-      priority: 100,
+      priority: 100 + i,
       conditions: [
         {
           hostHeader: {
@@ -845,6 +846,7 @@ for (const website of websites) {
         });
         break;
       case 'CNAME':
+      default:
         new aws.route53.Record(pulumiRecordName, {
           zoneId: hostedZone.zoneId,
           name: alt.domain,
