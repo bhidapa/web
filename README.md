@@ -33,7 +33,8 @@ aws ecs execute-command \
 ### ssh into the jump server
 
 > [!TIP]
-> Use `wp-mysql` to connect to the RDS database.
+> Use `wp-mysql` to connect to the RDS database. Note that you have to set the `WORDPRESS_DB_*` variables.
+>
 > The EFS drive is mounted under `/mnt/efs`.
 
 ```sh
