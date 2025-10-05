@@ -618,11 +618,11 @@ const lb = new awsx.lb.ApplicationLoadBalancer('lb', {
     protocol: 'HTTP',
     defaultActions: [
       {
-        type: 'fixed-response',
-        fixedResponse: {
-          contentType: 'text/plain',
-          statusCode: '418',
-          messageBody: "I'm a teapot",
+        type: 'redirect',
+        redirect: {
+          port: '443',
+          protocol: 'HTTPS',
+          statusCode: 'HTTP_301',
         },
       },
     ],
@@ -630,23 +630,7 @@ const lb = new awsx.lb.ApplicationLoadBalancer('lb', {
   },
   tags: { proj },
 });
-const lbHttp = lb.listeners.apply((l) => l![0]);
-new aws.lb.ListenerRule('lb-http-listener-redirect-to-https-rule', {
-  listenerArn: lbHttp.arn,
-  priority: 100, // highest priority, everything must go over HTTPS
-  conditions: [{ pathPattern: { values: ['/*'] } }],
-  actions: [
-    {
-      type: 'redirect',
-      redirect: {
-        port: '443',
-        protocol: 'HTTPS',
-        statusCode: 'HTTP_301',
-      },
-    },
-  ],
-  tags: { proj },
-});
+
 // Default SSL Certificate for the Application Load Balancer under the domain lb.bhidapa.ba
 // TODO: do we need to point the lb.bhidapa.ba domain to the load balancer too?
 const lbCert = new aws.acm.Certificate('lb-cert', {
@@ -691,22 +675,6 @@ const lbHttps = new aws.lb.Listener(
   },
   { dependsOn: [lbCertValidation] },
 );
-new aws.lb.ListenerRule('lb-https-listener-404-on-unmatched-rule', {
-  listenerArn: lbHttp.arn,
-  priority: 1000, // lowest priority, only hit if no other rules match
-  conditions: [{ pathPattern: { values: ['/*'] } }],
-  actions: [
-    {
-      type: 'fixed-response',
-      fixedResponse: {
-        contentType: 'text/plain',
-        statusCode: '404',
-        messageBody: 'Not Found',
-      },
-    },
-  ],
-  tags: { proj },
-});
 
 // For Each Website
 for (const website of websites) {
@@ -726,7 +694,6 @@ for (const website of websites) {
   });
   new aws.lb.ListenerRule(`${website.name}-lb-rule`, {
     listenerArn: lbHttps.arn,
-    priority: 500, // lower than alternate domains redirects, otherwise highest
     conditions: [
       {
         hostHeader: {
@@ -835,7 +802,7 @@ for (const website of websites) {
     // Redirect rule
     new aws.lb.ListenerRule(`${alt.name}-${website.name}-lb-redirect-rule`, {
       listenerArn: lbHttps.arn,
-      priority: 400 + i, // higher priority than main domain rule
+      priority: 50 + i,
       conditions: [
         {
           hostHeader: {
