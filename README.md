@@ -18,7 +18,7 @@ This codebase manages the following websites:
 ### ssh into the wp container
 
 > [!TIP]
-> Has [wp-cli](https://wp-cli.org/) installed.
+> Has [wp-cli](https://wp-cli.org/) installed. Note that you have to set the `WORDPRESS_DB_*` variables for the desired website.
 
 ```sh
 aws ecs execute-command \
@@ -33,7 +33,7 @@ aws ecs execute-command \
 ### ssh into the jump server
 
 > [!TIP]
-> Use `wp-mysql` to connect to the RDS database. Note that you have to set the `WORDPRESS_DB_*` variables.
+> Use `wp-mysql` to connect to the RDS database.
 >
 > The EFS drive is mounted under `/mnt/efs`.
 
