@@ -22,3 +22,13 @@ aws ecs execute-command \
   --command 'bash' \
   --interactive
 ```
+
+### ssh into the jump server
+
+> [!TIP]
+> Use `wp-mysql` to connect to the RDS database.
+> The EFS drive is mounted under `/mnt/efs`.
+
+```sh
+ssh -i jump-server.pem ec2-user@<jump-server-endpoint>
+```
