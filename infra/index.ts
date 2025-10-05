@@ -8,7 +8,7 @@ const websites = [
   {
     name: 'akp',
     hostedZone: 'akp.ba',
-    domain: 'testing.akp.ba',
+    domain: 'akp.ba',
   },
 ];
 
