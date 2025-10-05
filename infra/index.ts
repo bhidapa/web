@@ -423,6 +423,7 @@ const jumpServer = new aws.ec2.Instance('jump-server', {
   vpcSecurityGroupIds: [jumpServerSecurityGroup.id],
   iamInstanceProfile: jumpServerInstanceProfile.name,
   tags: { proj, Name: name('jump-server') },
+  // TODO: the efs must be in a ready and mountable state before this user data script runs
   userData: pulumi.interpolate`#!/bin/bash
 set -e
 
