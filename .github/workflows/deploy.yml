@@ -15,6 +15,10 @@ jobs:
     environment: prod
     name: Infra
     runs-on: ubuntu-latest
+    outputs:
+      jump-server-endpoint: ${{ steps.infra.outputs.jumpServerEndpoint }}
+      jump-server-username: ${{ steps.infra.outputs.jumpServerUsername }}
+      website-names: ${{ steps.infra.outputs.websiteNames }}
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v4
@@ -33,4 +37,26 @@ jobs:
           command: up
           stack-name: ${{ vars.STACK_NAME }}
 
-  # TODO: deploy wordpress and migrations
+  deploy:
+    needs: infra
+    environment: prod
+    name: Deploy ${{ matrix.website }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        website: ${{ fromJson(needs.infra.outputs.website-names) }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: oven-sh/setup-bun@v2
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ needs.infra.outputs.jump-server-endpoint }} >> ~/.ssh/known_hosts
+      - run: bun i
+      - run: bun build
+      - env:
+          ENDPOINT: '${{ needs.infra.outputs.jump-server-username }}@${{ needs.infra.outputs.jump-server-endpoint }}'
+          WEBSITE: ${{ matrix.website }}
+        run: bun push

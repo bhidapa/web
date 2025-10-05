@@ -38,6 +38,7 @@ const websites: Website[] = [
     ],
   },
 ];
+export const websiteNames = websites.map((w) => w.name);
 
 const region = aws.config.region!;
 const proj = pulumi.getProject();
