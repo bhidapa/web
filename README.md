@@ -1,7 +1,23 @@
-<img alt="BHIDAPA" src="/logo.svg" width="100" />
+<img alt="BHIDAPA" src="/logo.svg" width="65" />
 
 # Web
 
 This GitHub repository serves as the central codebase for the entire online presence of [BHIDAPA](https://bhidapa.ba/). It contains the source code, custom themes, plugins, and configuration files necessary to run and maintain all affiliated websites, ensuring consistent development and deployment across the organization's digital platforms.
 
 The infrastructure is built on a modern, high-performance containerized architecture. It uses modern [WordPress](https://wordpress.org/) with [Gutenberg blocks](https://wordpress.org/gutenberg/) powered by [FrankenPHP](https://frankenphp.dev/) and fronted by [Caddy](https://caddyserver.com/). The repository utilizes [Bun](https://bun.com/) for building the blocks and all other necessary tooling and scripting.
+
+## Cheatsheet
+
+### ssh into the wp container
+
+Has [wp-cli](https://wp-cli.org/) installed.
+
+```sh
+aws ecs execute-command \
+  --region eu-central-1 \
+  --cluster <project>-<stack>-wp \
+  --task <task-id> \
+  --container wp \
+  --command 'bash' \
+  --interactive
+```
