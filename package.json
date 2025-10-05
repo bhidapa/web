@@ -23,6 +23,8 @@
     "@tsconfig/bun": "^1.0.8",
     "@tsconfig/strictest": "^2.0.5",
     "@types/bun": "^1.2.22",
+    "@types/wordpress__block-editor": "^11.5.17",
+    "@types/wordpress__blocks": "^12.5.18",
     "@wordpress/block-editor": "^15.4.0",
     "@wordpress/blocks": "^15.4.0",
     "@wordpress/components": "^30.4.0",
