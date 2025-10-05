@@ -59,4 +59,4 @@ jobs:
       - env:
           ENDPOINT: '${{ needs.infra.outputs.jump-server-username }}@${{ needs.infra.outputs.jump-server-endpoint }}'
           WEBSITE: ${{ matrix.website }}
-        run: bun push
+        run: bun scripts/deploy.ts
