@@ -488,7 +488,7 @@ new aws.ec2.EipAssociation('jump-server-eip-assoc', {
   allocationId: jumpServerEip.id,
 });
 export const jumpServerUsername = 'ec2-user';
-export const jumpServerEndpoint = pulumi.secret(jumpServerEip.publicDns);
+export const jumpServerEndpoint = jumpServerEip.publicDns;
 
 // WordPress Repository
 const wpRepo = new aws.ecr.Repository('wp-repo', {
