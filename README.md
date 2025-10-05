@@ -6,6 +6,11 @@ This GitHub repository serves as the central codebase for the entire online pres
 
 The infrastructure is built on a modern, high-performance containerized architecture. It uses modern [WordPress](https://wordpress.org/) with [Gutenberg blocks](https://wordpress.org/gutenberg/) powered by [FrankenPHP](https://frankenphp.dev/) and fronted by [Caddy](https://caddyserver.com/). The repository utilizes [Bun](https://bun.com/) for building the blocks and all other necessary tooling and scripting.
 
+- [BHIDAPA](https://bhidapa.ba/en/)
+- [Academy of Psychotherapy](https://akp.ba/en/)
+- [Congress](https://congress.bhidapa.ba/)
+- [Journal](https://journal.bhidapa.ba/)
+
 ## Cheatsheet
 
 ### ssh into the wp container
