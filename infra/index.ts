@@ -609,6 +609,28 @@ new aws.iam.RolePolicy('wp-service-task-exec-role-fs-mount-policy', {
   },
 });
 
+// Task Role for ECS Execute Command (SSM)
+const taskRole = new aws.iam.Role('wp-service-task-role', {
+  name: name('wp-service-task-role'),
+  assumeRolePolicy: {
+    Version: '2012-10-17',
+    Statement: [
+      {
+        Action: 'sts:AssumeRole',
+        Effect: 'Allow',
+        Principal: {
+          Service: 'ecs-tasks.amazonaws.com',
+        },
+      },
+    ],
+  },
+  tags: { proj },
+});
+new aws.iam.RolePolicyAttachment('wp-service-task-role-ssm-policy', {
+  role: taskRole.name,
+  policyArn: 'arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore',
+});
+
 // Application Load Balancer
 const lb = new awsx.lb.ApplicationLoadBalancer('lb', {
   name: name('lb'),
@@ -893,6 +915,9 @@ for (const website of websites) {
         family: name(website.name),
         executionRole: {
           roleArn: taskExecutionRole.arn,
+        },
+        taskRole: {
+          roleArn: taskRole.arn,
         },
         cpu: '1024', // 1 vCPU
         memory: '2048', // 2 GB
