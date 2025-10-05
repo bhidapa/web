@@ -26,7 +26,7 @@ aws ecs execute-command \
   --cluster <project>-<stack>-wp \
   --task <task-id> \
   --container wp \
-  --command bash \
+  --command 'su -l www-data -s /bin/bash' \
   --interactive
 ```
 
