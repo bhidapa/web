@@ -929,14 +929,15 @@ for (const website of websites) {
 
   // DNS for alternate domains pointing to main
   for (const alt of website.alternate || []) {
+    const hostedZone = aws.route53.getZoneOutput({
+      name: alt.hostedZone || website.hostedZone,
+      privateZone: false,
+    });
     const pulumiRecordName = `${website.name}-to-${alt.name}-dns-record`;
     switch (alt.recordType) {
       case 'A':
         new aws.route53.Record(pulumiRecordName, {
-          zoneId: aws.route53.getZoneOutput({
-            name: alt.hostedZone || website.hostedZone,
-            privateZone: false,
-          }).zoneId,
+          zoneId: hostedZone.zoneId,
           name: alt.domain,
           type: 'A',
           aliases: [
@@ -951,10 +952,7 @@ for (const website of websites) {
       case 'CNAME':
       default:
         new aws.route53.Record(pulumiRecordName, {
-          zoneId: aws.route53.getZoneOutput({
-            name: alt.hostedZone || website.hostedZone,
-            privateZone: false,
-          }).zoneId,
+          zoneId: hostedZone.zoneId,
           name: alt.domain,
           type: 'CNAME',
           records: [website.domain],
