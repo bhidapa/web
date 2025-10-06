@@ -849,29 +849,12 @@ for (const website of websites) {
   );
 
   // CloudFront Cache Policy for WordPress
-  const cfCachePolicy = new aws.cloudfront.CachePolicy(
-    `${website.name}-cf-cache-policy`,
-    {
-      name: name(`${website.name}-cf-cache`),
-      comment: 'Cache policy optimized for WordPress',
-      defaultTtl: 86400, // 1 day
-      maxTtl: 31536000, // 1 year
-      minTtl: 0,
-      parametersInCacheKeyAndForwardedToOrigin: {
-        cookiesConfig: {
-          cookieBehavior: 'none',
-        },
-        headersConfig: {
-          headerBehavior: 'none',
-        },
-        queryStringsConfig: {
-          queryStringBehavior: 'none',
-        },
-        enableAcceptEncodingGzip: true,
-        enableAcceptEncodingBrotli: true,
-      },
-    },
-  );
+  const cfCacheDisabledPolicy = aws.cloudfront.getCachePolicyOutput({
+    name: 'Managed-CachingDisabled',
+  });
+  const cfOriginRequestPolicy = aws.cloudfront.getOriginRequestPolicyOutput({
+    name: 'Managed-AllViewer',
+  });
 
   // CloudFront Distribution
   const cfDistribution = new aws.cloudfront.Distribution(
@@ -911,94 +894,10 @@ for (const website of websites) {
           'DELETE',
         ],
         cachedMethods: ['GET', 'HEAD', 'OPTIONS'],
-        cachePolicyId: cfCachePolicy.id,
-        originRequestPolicyId: '216adef6-5c7f-47e4-b989-5492eafa07d3', // AWS Managed-AllViewer
+        cachePolicyId: cfCacheDisabledPolicy.apply((p) => p.id!),
+        originRequestPolicyId: cfOriginRequestPolicy.apply((p) => p.id!),
         compress: true,
       },
-      orderedCacheBehaviors: [
-        // Don't cache WordPress admin
-        {
-          pathPattern: '/wp-admin/*',
-          targetOriginId: 'alb',
-          viewerProtocolPolicy: 'redirect-to-https',
-          allowedMethods: [
-            'GET',
-            'HEAD',
-            'OPTIONS',
-            'PUT',
-            'POST',
-            'PATCH',
-            'DELETE',
-          ],
-          cachedMethods: ['GET', 'HEAD'],
-          cachePolicyId: '4135ea2d-6df8-44a3-9df3-4b5a84be39ad', // AWS Managed-CachingDisabled
-          originRequestPolicyId: '216adef6-5c7f-47e4-b989-5492eafa07d3', // AWS Managed-AllViewer
-          compress: true,
-        },
-        // Don't cache WordPress login
-        {
-          pathPattern: '/wp-login.php',
-          targetOriginId: 'alb',
-          viewerProtocolPolicy: 'redirect-to-https',
-          allowedMethods: [
-            'GET',
-            'HEAD',
-            'OPTIONS',
-            'PUT',
-            'POST',
-            'PATCH',
-            'DELETE',
-          ],
-          cachedMethods: ['GET', 'HEAD'],
-          cachePolicyId: '4135ea2d-6df8-44a3-9df3-4b5a84be39ad', // AWS Managed-CachingDisabled
-          originRequestPolicyId: '216adef6-5c7f-47e4-b989-5492eafa07d3', // AWS Managed-AllViewer
-          compress: true,
-        },
-        // Minimal cache for mu-plugins (frequently updated via rsync)
-        {
-          pathPattern: '/wp-content/mu-plugins/*',
-          targetOriginId: 'alb',
-          viewerProtocolPolicy: 'redirect-to-https',
-          allowedMethods: ['GET', 'HEAD', 'OPTIONS'],
-          cachedMethods: ['GET', 'HEAD', 'OPTIONS'],
-          cachePolicyId: '4135ea2d-6df8-44a3-9df3-4b5a84be39ad', // AWS Managed-CachingDisabled
-          originRequestPolicyId: '216adef6-5c7f-47e4-b989-5492eafa07d3', // AWS Managed-AllViewer
-          compress: true,
-        },
-        // Minimal cache for themes (frequently updated via rsync)
-        {
-          pathPattern: '/wp-content/themes/*',
-          targetOriginId: 'alb',
-          viewerProtocolPolicy: 'redirect-to-https',
-          allowedMethods: ['GET', 'HEAD', 'OPTIONS'],
-          cachedMethods: ['GET', 'HEAD', 'OPTIONS'],
-          cachePolicyId: '4135ea2d-6df8-44a3-9df3-4b5a84be39ad', // AWS Managed-CachingDisabled
-          originRequestPolicyId: '216adef6-5c7f-47e4-b989-5492eafa07d3', // AWS Managed-AllViewer
-          compress: true,
-        },
-        // Cache other wp-content assets (uploads, plugins, etc.)
-        {
-          pathPattern: '/wp-content/*',
-          targetOriginId: 'alb',
-          viewerProtocolPolicy: 'redirect-to-https',
-          allowedMethods: ['GET', 'HEAD', 'OPTIONS'],
-          cachedMethods: ['GET', 'HEAD', 'OPTIONS'],
-          cachePolicyId: cfCachePolicy.id,
-          originRequestPolicyId: '216adef6-5c7f-47e4-b989-5492eafa07d3', // AWS Managed-AllViewer
-          compress: true,
-        },
-        // Cache WordPress includes
-        {
-          pathPattern: '/wp-includes/*',
-          targetOriginId: 'alb',
-          viewerProtocolPolicy: 'redirect-to-https',
-          allowedMethods: ['GET', 'HEAD', 'OPTIONS'],
-          cachedMethods: ['GET', 'HEAD', 'OPTIONS'],
-          cachePolicyId: cfCachePolicy.id,
-          originRequestPolicyId: '216adef6-5c7f-47e4-b989-5492eafa07d3', // AWS Managed-AllViewer
-          compress: true,
-        },
-      ],
       restrictions: {
         geoRestriction: {
           restrictionType: 'none',
