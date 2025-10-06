@@ -927,24 +927,40 @@ for (const website of websites) {
     ],
   });
 
-  // DNS for alternate domains pointing to main CloudFront distribution
+  // DNS for alternate domains pointing to main
   for (const alt of website.alternate || []) {
-    const pulumiRecordName = `${alt.name}-${website.name}-dns-record`;
-    new aws.route53.Record(pulumiRecordName, {
-      zoneId: aws.route53.getZoneOutput({
-        name: alt.hostedZone || website.hostedZone,
-        privateZone: false,
-      }).zoneId,
-      name: alt.domain,
-      type: 'A',
-      aliases: [
-        {
-          name: cfDistribution.domainName,
-          zoneId: cfDistribution.hostedZoneId,
-          evaluateTargetHealth: false,
-        },
-      ],
-    });
+    const pulumiRecordName = `${website.name}-to-${alt.name}-dns-record`;
+    switch (alt.recordType) {
+      case 'A':
+        new aws.route53.Record(pulumiRecordName, {
+          zoneId: aws.route53.getZoneOutput({
+            name: alt.hostedZone || website.hostedZone,
+            privateZone: false,
+          }).zoneId,
+          name: alt.domain,
+          type: 'A',
+          aliases: [
+            {
+              name: cfDistribution.domainName,
+              zoneId: cfDistribution.hostedZoneId,
+              evaluateTargetHealth: false,
+            },
+          ],
+        });
+        break;
+      case 'CNAME':
+      default:
+        new aws.route53.Record(pulumiRecordName, {
+          zoneId: aws.route53.getZoneOutput({
+            name: alt.hostedZone || website.hostedZone,
+            privateZone: false,
+          }).zoneId,
+          name: alt.domain,
+          type: 'CNAME',
+          records: [website.domain],
+          ttl: 300,
+        });
+    }
   }
 
   // ALB redirect rules for alternate domains
