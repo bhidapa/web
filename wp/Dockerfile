@@ -1,9 +1,5 @@
 # a lot of inspiration came from https://github.com/StephenMiracle/frankenwp/blob/e05bcc3d951dc57636c87befa63357ec1350006d/Dockerfile
 
-# TODO: re-enable opcache when frankenphp supports it properly
-#       https://github.com/php/frankenphp/issues/1530
-#       https://github.com/php/frankenphp/issues/1737
-
 FROM wordpress:6.8 AS wp
 
 # dunglas/frankenphp:<frankenphp-version>-php<php-version>-<os>
