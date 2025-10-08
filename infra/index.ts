@@ -905,6 +905,7 @@ for (const website of websites) {
   });
 
   // Fargate Service
+  // TODO: new service should be deployed after the image gets recreated
   const service = new awsx.ecs.FargateService(
     `${website.name}-service`,
     {
