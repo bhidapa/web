@@ -141,19 +141,19 @@ new aws.iam.RolePolicy('nat-gw-flow-log-policy', {
   name: name('nat-gw-flow-log-policy'),
   role: natGwFlowLogRole.id,
   policy: {
+    // as per https://docs.aws.amazon.com/vpc/latest/userguide/flow-logs-iam-role.html
     Version: '2012-10-17',
     Statement: [
       {
         Effect: 'Allow',
         Action: [
-          // as per https://docs.aws.amazon.com/vpc/latest/userguide/flow-logs-iam-role.html
           'logs:CreateLogGroup',
           'logs:CreateLogStream',
           'logs:PutLogEvents',
           'logs:DescribeLogGroups',
           'logs:DescribeLogStreams',
         ],
-        Resource: natGwFlowLogGroup.arn,
+        Resource: '*',
       },
     ],
   },
