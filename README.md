@@ -50,3 +50,7 @@ aws ecs execute-command \
 ```sh
 ssh -i jump-server.pem ec2-user@<jump-server-endpoint>
 ```
+
+### useful queries for inspecting nat gateway traffic
+
+https://repost.aws/knowledge-center/vpc-find-traffic-sources-nat-gateway
