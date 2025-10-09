@@ -39,7 +39,7 @@ services:
       test:
         [
           'CMD-SHELL',
-          'SCRIPT_NAME=/index.php SCRIPT_FILENAME=/var/www/html/index.php REQUEST_METHOD=GET cgi-fcgi -bind -connect localhost:9000 | grep -q "X-Powered-By: PHP" || exit 1',
+          'SCRIPT_NAME=/healthcheck.php SCRIPT_FILENAME=/opt/healthcheck.php cgi-fcgi -bind -connect localhost:9000 | grep -q "X-Powered-By: PHP" || exit 1',
         ]
     volumes:
       - wp-data:/var/www/html

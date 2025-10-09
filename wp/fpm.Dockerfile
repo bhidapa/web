@@ -3,6 +3,9 @@ FROM wordpress:6.8-php8.3-fpm
 # Install fcgi for healthcheck
 RUN apt-get update && apt-get install -y libfcgi-bin
 
+# Create a simple healthcheck script (we cant use WordPress index.php because it needs many params)
+RUN echo '<?php http_response_code(200); ?>' > /opt/healthcheck.php
+
 # Clean up
 RUN apt-get clean && apt-get autoremove --purge && rm -rf /var/lib/apt/lists/*
 
