@@ -19,7 +19,7 @@ console.log(`Pushing to ${website}`);
 for (const bundle of bundles) {
   console.log(`Syncing ${bundle}`);
   await $`rsync -azvc --no-perms --no-owner --no-group --delete \
-    --exclude "*/node_modules" \
+    --exclude "*/node_modules" --exclude ".DS_Store" \
     ${bundle}/ \
     ${endpoint}:/mnt/efs/${website}/wp-content/${bundle}/`;
 }
