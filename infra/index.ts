@@ -105,6 +105,8 @@ new aws.ec2.RouteTableAssociation('public-route-table-association-b', {
   subnetId: publicSubnetB.id,
   routeTableId: publicRouteTable.id,
 });
+
+// NAT Gateway and Flow Logs
 const eip = new aws.ec2.Eip('nat-gw-eip', {
   domain: 'vpc',
   tags: { proj, Name: name('nat-gw-eip') },
@@ -113,6 +115,50 @@ const natgw = new aws.ec2.NatGateway('nat-gw', {
   subnetId: publicSubnetA.id,
   allocationId: eip.id,
   tags: { proj, Name: name('nat-gw') },
+});
+const natGwFlowLogGroup = new aws.cloudwatch.LogGroup('nat-gw-flow-log-group', {
+  name: `/vpc/flowlogs/${name('nat-gw')}`,
+  retentionInDays: 7,
+  tags: { proj },
+});
+const natGwFlowLogRole = new aws.iam.Role('nat-gw-flow-log-role', {
+  name: name('nat-gw-flow-log-role'),
+  assumeRolePolicy: {
+    Version: '2012-10-17',
+    Statement: [
+      {
+        Effect: 'Allow',
+        Principal: {
+          Service: 'vpc-flow-logs.amazonaws.com',
+        },
+        Action: 'sts:AssumeRole',
+      },
+    ],
+  },
+  tags: { proj },
+});
+new aws.iam.RolePolicy('nat-gw-flow-log-policy', {
+  name: name('nat-gw-flow-log-policy'),
+  role: natGwFlowLogRole.id,
+  policy: {
+    Version: '2012-10-17',
+    Statement: [
+      {
+        Effect: 'Allow',
+        Action: ['logs:CreateLogStream', 'logs:PutLogEvents'],
+        Resource: natGwFlowLogGroup.arn,
+      },
+    ],
+  },
+});
+new aws.ec2.FlowLog('nat-gw-flow-log', {
+  logDestinationType: 'cloud-watch-logs',
+  logDestination: natGwFlowLogGroup.arn,
+  iamRoleArn: natGwFlowLogRole.arn,
+  trafficType: 'ALL',
+  eniId: natgw.networkInterfaceId,
+  maxAggregationInterval: 60,
+  tags: { proj, Name: name('nat-gw-flow-log') },
 });
 
 // Private Subnet
