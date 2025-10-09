@@ -490,64 +490,109 @@ new aws.ec2.EipAssociation('jump-server-eip-assoc', {
 export const jumpServerUsername = 'ec2-user';
 export const jumpServerEndpoint = jumpServerEip.publicDns;
 
-// WordPress Repository
-const wpRepo = new aws.ecr.Repository('wp-repo', {
-  name: name('wp'),
+// WordPress Containers Image Repository
+const wpFpmRepo = new aws.ecr.Repository('wp-fpm-repo', {
+  name: name('wp-fpm'),
   forceDelete: true,
   imageScanningConfiguration: {
     scanOnPush: true,
   },
   tags: { proj },
 });
-const wpRepoAuthToken = aws.ecr.getAuthorizationTokenOutput({
-  registryId: wpRepo.registryId,
+const wpFpmRepoAuthToken = aws.ecr.getAuthorizationTokenOutput({
+  registryId: wpFpmRepo.registryId,
 });
-const wpImage = new docker_build.Image('wp-image', {
-  context: {
-    location: '../wp',
+const wpNginxRepo = new aws.ecr.Repository('wp-nginx-repo', {
+  name: name('wp-nginx'),
+  forceDelete: true,
+  imageScanningConfiguration: {
+    scanOnPush: true,
   },
+  tags: { proj },
+});
+const wpNginxRepoAuthToken = aws.ecr.getAuthorizationTokenOutput({
+  registryId: wpNginxRepo.registryId,
+});
+const wpReposLifecyclePolicy: aws.types.input.ecr.LifecyclePolicyDocument = {
+  rules: [
+    {
+      rulePriority: 1,
+      description: 'Delete untagged images after 1 day',
+      selection: {
+        tagStatus: 'untagged',
+        countType: 'sinceImagePushed',
+        countUnit: 'days',
+        countNumber: 1,
+      },
+      action: {
+        type: 'expire',
+      },
+    },
+  ],
+};
+new aws.ecr.LifecyclePolicy('wp-fpm-repo-lifecycle-policy', {
+  repository: wpFpmRepo.name,
+  policy: wpReposLifecyclePolicy,
+});
+new aws.ecr.LifecyclePolicy('wp-nginx-repo-lifecycle-policy', {
+  repository: wpNginxRepo.name,
+  policy: wpReposLifecyclePolicy,
+});
+
+// Build and Push Images
+const wpFpmImage = new docker_build.Image('wp-fpm-image', {
+  context: { location: '../wp' },
+  dockerfile: { location: '../wp/fpm.Dockerfile' },
   platforms: ['linux/arm64'],
   push: true,
   cacheFrom: [
-    { registry: { ref: pulumi.interpolate`${wpRepo.repositoryUrl}:cache` } },
+    { registry: { ref: pulumi.interpolate`${wpFpmRepo.repositoryUrl}:cache` } },
   ],
   cacheTo: [
     {
       registry: {
         imageManifest: true,
         ociMediaTypes: true,
-        ref: pulumi.interpolate`${wpRepo.repositoryUrl}:cache`,
+        ref: pulumi.interpolate`${wpFpmRepo.repositoryUrl}:cache`,
       },
     },
   ],
   registries: [
     {
-      address: wpRepo.repositoryUrl,
-      username: wpRepoAuthToken.userName,
-      password: wpRepoAuthToken.password,
+      address: wpFpmRepo.repositoryUrl,
+      username: wpFpmRepoAuthToken.userName,
+      password: wpFpmRepoAuthToken.password,
     },
   ],
-  tags: [pulumi.interpolate`${wpRepo.repositoryUrl}:latest`],
+  tags: [pulumi.interpolate`${wpFpmRepo.repositoryUrl}:latest`],
 });
-new aws.ecr.LifecyclePolicy('wp-repo-lifecycle-policy', {
-  repository: wpRepo.name,
-  policy: {
-    rules: [
-      {
-        rulePriority: 1,
-        description: 'Delete untagged images after 1 day',
-        selection: {
-          tagStatus: 'untagged',
-          countType: 'sinceImagePushed',
-          countUnit: 'days',
-          countNumber: 1,
-        },
-        action: {
-          type: 'expire',
-        },
+const wpNginxImage = new docker_build.Image('wp-nginx-image', {
+  context: { location: '../wp' },
+  dockerfile: { location: '../wp/nginx.Dockerfile' },
+  platforms: ['linux/arm64'],
+  push: true,
+  cacheFrom: [
+    {
+      registry: { ref: pulumi.interpolate`${wpNginxRepo.repositoryUrl}:cache` },
+    },
+  ],
+  cacheTo: [
+    {
+      registry: {
+        imageManifest: true,
+        ociMediaTypes: true,
+        ref: pulumi.interpolate`${wpNginxRepo.repositoryUrl}:cache`,
       },
-    ],
-  },
+    },
+  ],
+  registries: [
+    {
+      address: wpNginxRepo.repositoryUrl,
+      username: wpNginxRepoAuthToken.userName,
+      password: wpNginxRepoAuthToken.password,
+    },
+  ],
+  tags: [pulumi.interpolate`${wpNginxRepo.repositoryUrl}:latest`],
 });
 
 // ECS Cluster and Roles
@@ -926,35 +971,72 @@ for (const website of websites) {
           operatingSystemFamily: 'LINUX',
           cpuArchitecture: 'ARM64',
         },
-        container: {
-          name: 'wp',
-          image: pulumi.interpolate`${wpRepo.repositoryUrl}:latest`,
-          essential: true,
-          portMappings: [{ containerPort: 80 }],
-          healthCheck: {
-            command: ['CMD-SHELL', 'curl -f http://localhost:80 || exit 1'],
-          },
-          environment: [
-            { name: 'WORDPRESS_DB_HOST', value: dbInstance.endpoint },
-            { name: 'WORDPRESS_DB_NAME', value: website.name },
-            { name: 'WORDPRESS_DB_USER', value: dbInstance.username },
-          ],
-          secrets: [
-            { name: 'WORDPRESS_DB_PASSWORD', valueFrom: dbPassword.id },
-          ],
-          mountPoints: [
-            {
-              sourceVolume: 'wp-data',
-              containerPath: '/var/www/html',
-              readOnly: false,
+        containers: {
+          fpm: {
+            name: 'fpm',
+            image: pulumi.interpolate`${wpFpmRepo.repositoryUrl}:latest`,
+            essential: true,
+            healthCheck: {
+              command: [
+                'CMD-SHELL',
+                'SCRIPT_NAME=/index.php SCRIPT_FILENAME=/var/www/html/index.php REQUEST_METHOD=GET cgi-fcgi -bind -connect localhost:9000 | grep -q "X-Powered-By: PHP" || exit 1',
+              ],
             },
-          ],
-          logConfiguration: {
-            logDriver: 'awslogs',
-            options: {
-              'awslogs-group': logGroup.name,
-              'awslogs-region': logGroup.region,
-              'awslogs-stream-prefix': 'ecs',
+            environment: [
+              { name: 'INTERNAL_PROXY_HOST', value: 'localhost' },
+              { name: 'INTERNAL_PROXY_PORT', value: '80' },
+              { name: 'WORDPRESS_DB_HOST', value: dbInstance.endpoint },
+              { name: 'WORDPRESS_DB_NAME', value: website.name },
+              { name: 'WORDPRESS_DB_USER', value: dbInstance.username },
+            ],
+            secrets: [
+              { name: 'WORDPRESS_DB_PASSWORD', valueFrom: dbPassword.id },
+            ],
+            mountPoints: [
+              {
+                sourceVolume: 'wp-data',
+                containerPath: '/var/www/html',
+                readOnly: false,
+              },
+            ],
+            logConfiguration: {
+              logDriver: 'awslogs',
+              options: {
+                'awslogs-group': logGroup.name,
+                'awslogs-region': logGroup.region,
+                'awslogs-stream-prefix': 'ecs',
+              },
+            },
+          },
+          nginx: {
+            name: 'nginx',
+            image: pulumi.interpolate`${wpNginxRepo.repositoryUrl}:latest`,
+            essential: true,
+            dependsOn: [
+              {
+                containerName: 'fpm',
+                condition: 'HEALTHY',
+              },
+            ],
+            portMappings: [{ containerPort: 80 }],
+            healthCheck: {
+              command: ['CMD-SHELL', 'curl -f http://localhost:80 || exit 1'],
+            },
+            environment: [{ name: 'FASTCGI_PASS', value: 'localhost:9000' }],
+            mountPoints: [
+              {
+                sourceVolume: 'wp-data',
+                containerPath: '/var/www/html',
+                readOnly: false,
+              },
+            ],
+            logConfiguration: {
+              logDriver: 'awslogs',
+              options: {
+                'awslogs-group': logGroup.name,
+                'awslogs-region': logGroup.region,
+                'awslogs-stream-prefix': 'ecs',
+              },
             },
           },
         },
@@ -981,13 +1063,13 @@ for (const website of websites) {
       loadBalancers: [
         {
           targetGroupArn: tg.arn,
-          containerName: 'wp',
+          containerName: 'nginx',
           containerPort: 80,
         },
       ],
       tags: { proj },
     },
-    { dependsOn: [wpImage] },
+    { dependsOn: [wpFpmImage, wpNginxImage] },
   );
 
   // Auto Scaling
@@ -999,6 +1081,7 @@ for (const website of websites) {
       scalableDimension: 'ecs:service:DesiredCount',
       maxCapacity: 3,
       minCapacity: 1,
+      tags: { proj },
     },
   );
   new aws.appautoscaling.Policy(`${website.name}-autoscaling-policy`, {
