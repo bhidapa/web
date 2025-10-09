@@ -36,6 +36,7 @@ services:
       INTERNAL_PROXY_HOST: nginx
       INTERNAL_PROXY_PORT: 80
     healthcheck:
+      # also change the healthcheck in infra/index.ts
       test:
         [
           'CMD-SHELL',
@@ -54,6 +55,7 @@ services:
     environment:
       FASTCGI_PASS: fpm:9000
     healthcheck:
+      # also change the healthcheck in infra/index.ts
       test: ['CMD-SHELL', 'curl -f http://localhost:80 || exit 1']
     ports:
       - 58386:80

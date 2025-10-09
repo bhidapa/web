@@ -981,9 +981,10 @@ for (const website of websites) {
             image: pulumi.interpolate`${wpFpmRepo.repositoryUrl}:latest`,
             essential: true,
             healthCheck: {
+              // also change the healthcheck in compose.yml
               command: [
                 'CMD-SHELL',
-                'SCRIPT_NAME=/index.php SCRIPT_FILENAME=/var/www/html/index.php REQUEST_METHOD=GET cgi-fcgi -bind -connect localhost:9000 | grep -q "X-Powered-By: PHP" || exit 1',
+                'SCRIPT_NAME=/healthcheck.php SCRIPT_FILENAME=/opt/healthcheck.php cgi-fcgi -bind -connect localhost:9000 | grep -q "X-Powered-By: PHP" || exit 1',
               ],
             },
             environment: [
@@ -1024,6 +1025,7 @@ for (const website of websites) {
             ],
             portMappings: [{ containerPort: 80 }],
             healthCheck: {
+              // also change the healthcheck in compose.yml
               command: ['CMD-SHELL', 'curl -f http://localhost:80 || exit 1'],
             },
             environment: [{ name: 'FASTCGI_PASS', value: 'localhost:9000' }],
