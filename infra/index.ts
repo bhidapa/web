@@ -132,6 +132,7 @@ const natGwFlowLogRole = new aws.iam.Role('nat-gw-flow-log-role', {
           Service: 'vpc-flow-logs.amazonaws.com',
         },
         Action: 'sts:AssumeRole',
+        // TODO: add condition only for the specific flow logs
       },
     ],
   },
