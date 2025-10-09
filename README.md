@@ -13,6 +13,16 @@ This codebase manages the following websites:
 - [Congress](https://congress.bhidapa.ba/)
 - [Journal](https://journal.bhidapa.ba/) (not WordPress, managing only infra)
 
+## Gotchas
+
+### The REST API encountered an error
+
+When developing locally with docker compose, your WordPress Site Health Status will show that the REST API is encountering errors.
+
+This is because the check is performed using curl from the `fpm` service on `localhost:58386` trying to reach `nginx`, but it's actually available only on `nginx:80` in Docker's network.
+
+The failing health check can be safely ignore because when the website is deployed, WordPress site URL will be correct and the REST API accessible.
+
 ## Cheatsheet
 
 ### ssh into the wp container
