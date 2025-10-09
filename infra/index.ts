@@ -958,6 +958,10 @@ for (const website of websites) {
       cluster: wpCluster.arn,
       enableExecuteCommand: true, // allows us to "docker exec" into running containers (using aws ecs execute-command)
       taskDefinitionArgs: {
+        logGroup: {
+          // we already created it, see `logGroup` above
+          skip: true,
+        },
         family: name(website.name),
         executionRole: {
           roleArn: taskExecutionRole.arn,
