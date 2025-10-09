@@ -145,7 +145,14 @@ new aws.iam.RolePolicy('nat-gw-flow-log-policy', {
     Statement: [
       {
         Effect: 'Allow',
-        Action: ['logs:CreateLogStream', 'logs:PutLogEvents'],
+        Action: [
+          // as per https://docs.aws.amazon.com/vpc/latest/userguide/flow-logs-iam-role.html
+          'logs:CreateLogGroup',
+          'logs:CreateLogStream',
+          'logs:PutLogEvents',
+          'logs:DescribeLogGroups',
+          'logs:DescribeLogStreams',
+        ],
         Resource: natGwFlowLogGroup.arn,
       },
     ],
