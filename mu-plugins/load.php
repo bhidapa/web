@@ -18,6 +18,7 @@ add_filter('rest_url', function ($url) {
     $internal_proxy_port = getenv('INTERNAL_PROXY_PORT');
     if ($internal_proxy_host || $internal_proxy_port) {
         $parsed_url = wp_parse_url($url);
+        $parsed_url['scheme'] = 'http'; // Internal requests are always http
         if ($internal_proxy_host) {
             $parsed_url['host'] = $internal_proxy_host;
         }
