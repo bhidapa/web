@@ -9,9 +9,13 @@ server {
   # No server tokens (os and version in server header)
   server_tokens off;
 
-  # Trust all private subnets from our AWS VPC (see infra/index.ts)
+  # Trust ALB (private VPC subnets)
   set_real_ip_from 192.168.0.0/16;
+
+  # Use X-Forwarded-For to get the real client IP
+  # This will extract the leftmost IP (original client) from the chain
   real_ip_header X-Forwarded-For;
+  real_ip_recursive on;
 
   root /var/www/html;
   index index.php;
