@@ -9,9 +9,9 @@ server {
   # No server tokens (os and version in server header)
   server_tokens off;
 
-  # Cloudfront often changes IPs so we just rely on any ip. Since
-  # nginx will always be behind Cloudfront and ALB, it's safe to trust
-  # all ips.
+  # Cloudfront often changes IPs so we just rely on any ip. Since nginx
+  # will always be behind Cloudfront and ALB, it's safe to trust all ips.
+  # TODO: Can we restrict this to Cloudfront IPs only?
   set_real_ip_from 0.0.0.0/0;
 
   # Use the left-most X-Forwarded-For to get the real client IP
@@ -30,6 +30,5 @@ server {
     include fastcgi_params;
     fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
     fastcgi_param HTTPS $fastcgi_https;
-    fastcgi_hide_header X-Powered-By;
   }
 }
