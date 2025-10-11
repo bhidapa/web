@@ -831,21 +831,38 @@ for (const website of websites) {
   const allWebsites = [website, ...(website.alternate || [])];
 
   // DNS validation records for CloudFront certificate
-  const cfCertRecords = allWebsites.map(
-    (w, i) =>
-      new aws.route53.Record(`${website.name}-cf-cert-${w.name}-record`, {
-        zoneId: hostedZone.zoneId,
-        name: cfCert.domainValidationOptions[i]!.resourceRecordName,
-        records: [cfCert.domainValidationOptions[i]!.resourceRecordValue],
-        type: cfCert.domainValidationOptions[i]!.resourceRecordType,
-        ttl: 60,
-      }),
+  // Note: domainValidationOptions contains one entry per unique domain in the certificate
+  const cfCertRecords = cfCert.domainValidationOptions.apply((options) =>
+    options.map((option, i) => {
+      // Find which website this validation option corresponds to
+      const domain = option.domainName;
+      const matchingWebsite = allWebsites.find((w) => w.domain === domain)!;
+
+      // Determine the correct hosted zone for this domain
+      const targetHostedZone = aws.route53.getZoneOutput({
+        name: matchingWebsite.hostedZone || website.hostedZone,
+        privateZone: false,
+      });
+
+      return new aws.route53.Record(
+        `${website.name}-cf-cert-${matchingWebsite.name}-record`,
+        {
+          zoneId: targetHostedZone.zoneId,
+          name: option.resourceRecordName,
+          records: [option.resourceRecordValue],
+          type: option.resourceRecordType,
+          ttl: 60,
+        },
+      );
+    }),
   );
   const cfCertsValidation = new aws.acm.CertificateValidation(
     `${website.name}-cf-certs-validation`,
     {
       certificateArn: cfCert.arn,
-      validationRecordFqdns: cfCertRecords.map((r) => r.fqdn),
+      validationRecordFqdns: cfCertRecords.apply((records) =>
+        records.map((r) => r.fqdn),
+      ),
     },
     { provider: cfCertProvider },
   );
@@ -877,9 +894,9 @@ for (const website of websites) {
             originProtocolPolicy: 'http-only',
             originReadTimeout: 60,
             originKeepaliveTimeout: 5,
-            // not used but required by type
-            httpsPort: 0,
-            originSslProtocols: [],
+            // not used but required
+            httpsPort: 443,
+            originSslProtocols: ['TLSv1.2'],
           },
         },
       ],
@@ -910,7 +927,7 @@ for (const website of websites) {
         sslSupportMethod: 'sni-only',
         minimumProtocolVersion: 'TLSv1.2_2021',
       },
-      tags: { proj },
+      tags: { proj, Name: website.name },
     },
     { dependsOn: [cfCertsValidation] },
   );
