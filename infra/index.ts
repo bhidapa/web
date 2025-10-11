@@ -882,7 +882,7 @@ for (const website of websites) {
     {
       enabled: true,
       isIpv6Enabled: true,
-      httpVersion: 'http2and3',
+      httpVersion: 'http2',
       priceClass: 'PriceClass_100', // Use only North America and Europe
       aliases: allWebsites.map((w) => w.domain),
       comment: `CloudFront distribution for ${website.name}`,
