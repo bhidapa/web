@@ -815,20 +815,22 @@ for (const website of websites) {
     privateZone: false,
   });
 
-  // Collect all websites (main + alternates) for CloudFront aliases
-  const allWebsites = [website, ...(website.alternate || [])];
-
   // CloudFront SSL Certificate with all domains as SANs (must be in us-east-1)
   const cfCert = new aws.acm.Certificate(
     `${website.name}-cf-cert`,
     {
       domainName: website.domain,
-      subjectAlternativeNames: allWebsites.map((w) => w.domain),
+      subjectAlternativeNames: website.alternate?.map((w) => w.domain),
       validationMethod: 'DNS',
       tags: { proj, Name: name(`${website.name}-cf-cert`) },
     },
     { provider: cfCertProvider },
   );
+
+  // Collect all websites (main + alternates) for CloudFront aliases
+  const allWebsites = [website, ...(website.alternate || [])];
+
+  // DNS validation records for CloudFront certificate
   const cfCertRecords = allWebsites.map(
     (w, i) =>
       new aws.route53.Record(`${website.name}-cf-cert-${w.name}-record`, {
