@@ -872,7 +872,8 @@ for (const website of websites) {
     name: 'Managed-CachingDisabled',
   });
   const cfOriginRequestPolicy = aws.cloudfront.getOriginRequestPolicyOutput({
-    name: 'Managed-AllViewer',
+    // notably includes x-forwaded-for and cloudfront-forwarded-proto headers
+    name: 'Managed-AllViewerAndCloudFrontHeaders-2022-06',
   });
 
   // CloudFront Distribution

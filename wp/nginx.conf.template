@@ -1,5 +1,5 @@
-map $http_x_forwarded_proto $fastcgi_https {
-  https   on;     # If X-Forwarded-Proto is "https", set to "on"
+map $http_couldfront_forwarded_proto $fastcgi_https {
+  https   on;     # If Cloudfront-Forwarded-Proto is "https", set to "on"
   default $https; # Otherwise, use nginx's $https variable
 }
 
