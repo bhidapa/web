@@ -937,9 +937,10 @@ for (const website of websites) {
             items: [
               'Host',
               'CloudFront-Forwarded-Proto',
-              'CloudFront-Is-Mobile-Viewer',
-              'CloudFront-Is-Tablet-Viewer',
-              'CloudFront-Is-Desktop-Viewer',
+              // NOTE: unnecessary because we use responsive design themes
+              // 'CloudFront-Is-Mobile-Viewer',
+              // 'CloudFront-Is-Tablet-Viewer',
+              // 'CloudFront-Is-Desktop-Viewer',
             ],
           },
         },
@@ -961,18 +962,7 @@ for (const website of websites) {
         queryStringBehavior: 'all',
       },
       headersConfig: {
-        headerBehavior: 'whitelist',
-        headers: {
-          items: [
-            'Host',
-            'CloudFront-Forwarded-Proto',
-            'CloudFront-Is-Mobile-Viewer',
-            'CloudFront-Is-Tablet-Viewer',
-            'CloudFront-Is-Desktop-Viewer',
-            'CloudFront-Viewer-Address',
-            'CloudFront-Viewer-Country',
-          ],
-        },
+        headerBehavior: 'allViewerAndWhitelistCloudFront',
       },
       cookiesConfig: {
         cookieBehavior: 'whitelist',
