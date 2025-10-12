@@ -903,7 +903,11 @@ for (const website of websites) {
         queryStringBehavior: 'all',
       },
       headersConfig: {
-        headerBehavior: 'none',
+        // we need the host header for the alb rules
+        headerBehavior: 'whitelist',
+        headers: {
+          items: ['Host'],
+        },
       },
       cookiesConfig: {
         cookieBehavior: 'none',
