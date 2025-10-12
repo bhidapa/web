@@ -870,6 +870,8 @@ for (const website of websites) {
   // CloudFront Cache Policies for WordPress Best Practices
   // as per https://docs.aws.amazon.com/whitepapers/latest/best-practices-wordpress/cloudfront-distribution-creation.html
 
+  // TODO: wordpress rest wp-json cache policy
+
   // Static Content Cache Policy (wp-content/*, wp-includes/*)
   const cfStaticCachePolicy = new aws.cloudfront.CachePolicy(
     `${website.name}-cf-static-cache-policy`,
@@ -934,14 +936,7 @@ for (const website of websites) {
         headersConfig: {
           headerBehavior: 'whitelist',
           headers: {
-            items: [
-              'Host',
-              'CloudFront-Forwarded-Proto',
-              // NOTE: unnecessary because we use responsive design themes
-              // 'CloudFront-Is-Mobile-Viewer',
-              // 'CloudFront-Is-Tablet-Viewer',
-              // 'CloudFront-Is-Desktop-Viewer',
-            ],
+            items: ['Host', 'CloudFront-Forwarded-Proto'],
           },
         },
         cookiesConfig: {
@@ -962,9 +957,9 @@ for (const website of websites) {
         queryStringBehavior: 'all',
       },
       headersConfig: {
-        headerBehavior: 'allViewerAndWhitelistCloudFront',
+        headerBehavior: 'whitelist',
         headers: {
-          items: ['CloudFront-Forwarded-Proto'],
+          items: ['Host', 'CloudFront-Forwarded-Proto'],
         },
       },
       cookiesConfig: {
