@@ -867,16 +867,128 @@ for (const website of websites) {
     { provider: cfCertProvider },
   );
 
-  // CloudFront Cache Policy for WordPress
-  const cfCacheDisabledPolicy = aws.cloudfront.getCachePolicyOutput({
+  // CloudFront Cache Policies for WordPress Best Practices
+  // as per https://docs.aws.amazon.com/whitepapers/latest/best-practices-wordpress/cloudfront-distribution-creation.html
+
+  // Static Content Cache Policy (wp-content/*, wp-includes/*)
+  const cfStaticCachePolicy = new aws.cloudfront.CachePolicy(
+    `${website.name}-cf-static-cache-policy`,
+    {
+      name: name(`${website.name}-static-cache`),
+      comment: 'Cache policy for WordPress static content',
+      defaultTtl: 86400, // 1 day
+      maxTtl: 31536000, // 1 year
+      minTtl: 0,
+      parametersInCacheKeyAndForwardedToOrigin: {
+        enableAcceptEncodingGzip: true,
+        enableAcceptEncodingBrotli: true,
+        queryStringsConfig: {
+          queryStringBehavior: 'all', // For cache invalidation via query strings
+        },
+        headersConfig: {
+          headerBehavior: 'none', // No headers for static content
+        },
+        cookiesConfig: {
+          cookieBehavior: 'none', // No cookies for static content
+        },
+      },
+    },
+  );
+  const cfStaticOriginRequestPolicy = new aws.cloudfront.OriginRequestPolicy(
+    `${website.name}-cf-static-origin-request-policy`,
+    {
+      name: name(`${website.name}-static-origin`),
+      comment: 'Origin request policy for WordPress static content',
+      queryStringsConfig: {
+        queryStringBehavior: 'all',
+      },
+      headersConfig: {
+        headerBehavior: 'none',
+      },
+      cookiesConfig: {
+        cookieBehavior: 'none',
+      },
+    },
+  );
+
+  // Dynamic Front-End Cache Policy (default behavior)
+  // With cache invalidation plugin, we can cache dynamic content more aggressively
+  const cfDynamicCachePolicy = new aws.cloudfront.CachePolicy(
+    `${website.name}-cf-dynamic-cache-policy`,
+    {
+      name: name(`${website.name}-dynamic-cache`),
+      comment: 'Cache policy for WordPress dynamic front-end with invalidation',
+      defaultTtl: 3600, // 1 hour - cache invalidation plugin will clear when content changes
+      maxTtl: 86400, // 24 hours max
+      minTtl: 0, // Allow immediate cache bypass if needed
+      parametersInCacheKeyAndForwardedToOrigin: {
+        enableAcceptEncodingGzip: true,
+        enableAcceptEncodingBrotli: true,
+        queryStringsConfig: {
+          queryStringBehavior: 'all', // WordPress relies on query strings
+        },
+        headersConfig: {
+          headerBehavior: 'whitelist',
+          headers: {
+            items: [
+              'Host',
+              'CloudFront-Forwarded-Proto',
+              'CloudFront-Is-Mobile-Viewer',
+              'CloudFront-Is-Tablet-Viewer',
+              'CloudFront-Is-Desktop-Viewer',
+            ],
+          },
+        },
+        cookiesConfig: {
+          cookieBehavior: 'whitelist',
+          cookies: {
+            items: ['comment_*', 'wordpress_*', 'wp-settings-*'],
+          },
+        },
+      },
+    },
+  );
+  const cfDynamicOriginRequestPolicy = new aws.cloudfront.OriginRequestPolicy(
+    `${website.name}-cf-dynamic-origin-request-policy`,
+    {
+      name: name(`${website.name}-dynamic-origin`),
+      comment: 'Origin request policy for WordPress dynamic front-end',
+      queryStringsConfig: {
+        queryStringBehavior: 'all',
+      },
+      headersConfig: {
+        headerBehavior: 'whitelist',
+        headers: {
+          items: [
+            'Host',
+            'CloudFront-Forwarded-Proto',
+            'CloudFront-Is-Mobile-Viewer',
+            'CloudFront-Is-Tablet-Viewer',
+            'CloudFront-Is-Desktop-Viewer',
+            'CloudFront-Viewer-Address',
+            'CloudFront-Viewer-Country',
+          ],
+        },
+      },
+      cookiesConfig: {
+        cookieBehavior: 'whitelist',
+        cookies: {
+          items: ['comment_*', 'wordpress_*', 'wp-settings-*'],
+        },
+      },
+    },
+  );
+
+  // Admin/Login - Use Managed Policies (pass everything through)
+  const cfAdminCachePolicy = aws.cloudfront.getCachePolicyOutput({
     name: 'Managed-CachingDisabled',
   });
-  const cfOriginRequestPolicy = aws.cloudfront.getOriginRequestPolicyOutput({
-    // notably includes x-forwaded-for and cloudfront-forwarded-proto headers
-    name: 'Managed-AllViewerAndCloudFrontHeaders-2022-06',
-  });
+  const cfAdminOriginRequestPolicy =
+    aws.cloudfront.getOriginRequestPolicyOutput({
+      name: 'Managed-AllViewerAndCloudFrontHeaders-2022-06',
+    });
 
-  // CloudFront Distribution
+  // CloudFront Distribution with WordPress Best Practices
   const cfDistribution = new aws.cloudfront.Distribution(
     `${website.name}-cf-distribution`,
     {
@@ -901,6 +1013,7 @@ for (const website of websites) {
           },
         },
       ],
+      // Default behavior: Dynamic front-end content
       defaultCacheBehavior: {
         targetOriginId: 'alb',
         viewerProtocolPolicy: 'redirect-to-https',
@@ -914,10 +1027,73 @@ for (const website of websites) {
           'DELETE',
         ],
         cachedMethods: ['GET', 'HEAD', 'OPTIONS'],
-        cachePolicyId: cfCacheDisabledPolicy.apply((p) => p.id!),
-        originRequestPolicyId: cfOriginRequestPolicy.apply((p) => p.id!),
+        cachePolicyId: cfDynamicCachePolicy.id,
+        originRequestPolicyId: cfDynamicOriginRequestPolicy.id,
         compress: true,
       },
+      // Ordered cache behaviors (evaluated in order, first match wins)
+      orderedCacheBehaviors: [
+        // 1. WordPress Admin Dashboard - HTTPS only, pass everything
+        {
+          pathPattern: 'wp-admin/*',
+          targetOriginId: 'alb',
+          viewerProtocolPolicy: 'https-only',
+          allowedMethods: [
+            'GET',
+            'HEAD',
+            'OPTIONS',
+            'PUT',
+            'POST',
+            'PATCH',
+            'DELETE',
+          ],
+          cachedMethods: ['GET', 'HEAD', 'OPTIONS'],
+          cachePolicyId: cfAdminCachePolicy.apply((p) => p.id!),
+          originRequestPolicyId: cfAdminOriginRequestPolicy.apply((p) => p.id!),
+          compress: true,
+        },
+        // 2. WordPress Login Page - HTTPS only, pass everything
+        {
+          pathPattern: 'wp-login.php',
+          targetOriginId: 'alb',
+          viewerProtocolPolicy: 'https-only',
+          allowedMethods: [
+            'GET',
+            'HEAD',
+            'OPTIONS',
+            'PUT',
+            'POST',
+            'PATCH',
+            'DELETE',
+          ],
+          cachedMethods: ['GET', 'HEAD', 'OPTIONS'],
+          cachePolicyId: cfAdminCachePolicy.apply((p) => p.id!),
+          originRequestPolicyId: cfAdminOriginRequestPolicy.apply((p) => p.id!),
+          compress: true,
+        },
+        // 3. Static Content - wp-content (uploads, themes, plugins)
+        {
+          pathPattern: 'wp-content/*',
+          targetOriginId: 'alb',
+          viewerProtocolPolicy: 'redirect-to-https',
+          allowedMethods: ['GET', 'HEAD', 'OPTIONS'],
+          cachedMethods: ['GET', 'HEAD', 'OPTIONS'],
+          cachePolicyId: cfStaticCachePolicy.id,
+          originRequestPolicyId: cfStaticOriginRequestPolicy.id,
+          compress: true,
+        },
+        // 4. Static Content - wp-includes (core WordPress static files)
+        {
+          pathPattern: 'wp-includes/*',
+          targetOriginId: 'alb',
+          viewerProtocolPolicy: 'redirect-to-https',
+          allowedMethods: ['GET', 'HEAD', 'OPTIONS'],
+          cachedMethods: ['GET', 'HEAD', 'OPTIONS'],
+          cachePolicyId: cfStaticCachePolicy.id,
+          originRequestPolicyId: cfStaticOriginRequestPolicy.id,
+          compress: true,
+        },
+      ],
       restrictions: {
         geoRestriction: {
           restrictionType: 'none',
