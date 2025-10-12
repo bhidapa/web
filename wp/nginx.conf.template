@@ -1,5 +1,5 @@
-map $http_x_forwarded_proto $fastcgi_https {
-  https   on;     # If X-Forwarded-Proto is "https", set to "on"
+map $http_cloudfront_forwarded_proto $fastcgi_https {
+  https   on;     # If Cloudfront-Forwarded-Proto is "https", set to "on"
   default $https; # Otherwise, use nginx's $https variable
 }
 
@@ -9,9 +9,14 @@ server {
   # No server tokens (os and version in server header)
   server_tokens off;
 
-  # Trust all private subnets from our AWS VPC (see infra/index.ts)
-  set_real_ip_from 192.168.0.0/16;
+  # Cloudfront often changes IPs so we just rely on any ip. Since nginx
+  # will always be behind Cloudfront and ALB, it's safe to trust all ips.
+  # TODO: Can we restrict this to Cloudfront IPs only?
+  set_real_ip_from 0.0.0.0/0;
+
+  # Use the left-most X-Forwarded-For to get the real client IP
   real_ip_header X-Forwarded-For;
+  real_ip_recursive on;
 
   root /var/www/html;
   index index.php;
@@ -25,6 +30,5 @@ server {
     include fastcgi_params;
     fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
     fastcgi_param HTTPS $fastcgi_https;
-    fastcgi_hide_header X-Powered-By;
   }
 }

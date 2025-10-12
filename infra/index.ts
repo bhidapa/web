@@ -193,13 +193,28 @@ new aws.ec2.MainRouteTableAssociation('main-route-table-association', {
 });
 
 // Security Groups
+const cfPrefixList = aws.ec2.getManagedPrefixListOutput({
+  filters: [
+    {
+      // CloudFront managed prefix list for allowed IPs
+      name: 'prefix-list-name',
+      values: ['com.amazonaws.global.cloudfront.origin-facing'],
+    },
+  ],
+});
 const lbSecurityGroup = new aws.ec2.SecurityGroup('lb-sg', {
   name: name('lb-sg'),
   vpcId: vpc.id,
   description: 'Security group for Application Load Balancer',
   ingress: [
-    { protocol: 'tcp', fromPort: 80, toPort: 80, cidrBlocks: ['0.0.0.0/0'] },
-    { protocol: 'tcp', fromPort: 443, toPort: 443, cidrBlocks: ['0.0.0.0/0'] },
+    {
+      protocol: 'tcp',
+      fromPort: 80,
+      toPort: 80,
+      prefixListIds: [cfPrefixList.id],
+      description: 'Decrypted HTTP from CloudFront',
+    },
+    // TODO: should we allow HTTP from Jump Server for testing?
   ],
   egress: [
     { protocol: '-1', fromPort: 0, toPort: 0, cidrBlocks: ['0.0.0.0/0'] },
@@ -730,7 +745,7 @@ new aws.iam.RolePolicyAttachment('wp-service-task-role-ssm-policy', {
   policyArn: 'arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore',
 });
 
-// Application Load Balancer
+// Application Load Balancer (HTTP only - CloudFront handles SSL)
 const lb = new awsx.lb.ApplicationLoadBalancer('lb', {
   name: name('lb'),
   securityGroups: [lbSecurityGroup.id],
@@ -738,52 +753,6 @@ const lb = new awsx.lb.ApplicationLoadBalancer('lb', {
   listener: {
     port: 80,
     protocol: 'HTTP',
-    defaultActions: [
-      {
-        type: 'redirect',
-        redirect: {
-          port: '443',
-          protocol: 'HTTPS',
-          statusCode: 'HTTP_301',
-        },
-      },
-    ],
-    tags: { proj },
-  },
-  tags: { proj },
-});
-
-// Default SSL Certificate for the Application Load Balancer under the domain lb.bhidapa.ba
-// TODO: do we need to point the lb.bhidapa.ba domain to the load balancer too?
-const lbCert = new aws.acm.Certificate('lb-cert', {
-  domainName: 'lb.bhidapa.ba',
-  validationMethod: 'DNS',
-  tags: { proj, Name: name('lb-cert') },
-});
-const lbCertRecord = new aws.route53.Record('lb-cert-validation-record', {
-  zoneId: aws.route53.getZoneOutput({
-    name: 'bhidapa.ba',
-    privateZone: false,
-  }).zoneId,
-  name: lbCert.domainValidationOptions[0]!.resourceRecordName,
-  records: [lbCert.domainValidationOptions[0]!.resourceRecordValue],
-  type: lbCert.domainValidationOptions[0]!.resourceRecordType,
-  ttl: 60,
-});
-const lbCertValidation = new aws.acm.CertificateValidation(
-  'lb-cert-validation',
-  {
-    certificateArn: lbCert.arn,
-    validationRecordFqdns: [lbCertRecord.fqdn],
-  },
-);
-const lbHttps = new aws.lb.Listener(
-  'lb-https-listener',
-  {
-    loadBalancerArn: lb.loadBalancer.arn,
-    port: 443,
-    protocol: 'HTTPS',
-    certificateArn: lbCert.arn,
     defaultActions: [
       {
         type: 'fixed-response',
@@ -794,9 +763,16 @@ const lbHttps = new aws.lb.Listener(
         },
       },
     ],
+    tags: { proj },
   },
-  { dependsOn: [lbCertValidation] },
-);
+  tags: { proj },
+});
+const lbHttp = lb.listeners.apply((l) => l![0]);
+
+// CloudFront Provider for us-east-1 (required for CloudFront certificates)
+const cfCertProvider = new aws.Provider('us-east-1-provider', {
+  region: 'us-east-1',
+});
 
 // For Each Website
 for (const website of websites) {
@@ -815,7 +791,8 @@ for (const website of websites) {
     },
   });
   new aws.lb.ListenerRule(`${website.name}-lb-rule`, {
-    listenerArn: lbHttps.arn,
+    listenerArn: lbHttp.arn,
+    priority: 10 + websites.indexOf(website),
     conditions: [
       {
         hostHeader: {
@@ -832,99 +809,356 @@ for (const website of websites) {
     tags: { proj },
   });
 
-  // SSL Certificate
+  // Hosted Zone for DNS
   const hostedZone = aws.route53.getZoneOutput({
     name: website.hostedZone,
     privateZone: false,
   });
-  const cert = new aws.acm.Certificate(`${website.name}-cert`, {
-    domainName: website.domain,
-    validationMethod: 'DNS',
-    tags: { proj, Name: name(`${website.name}-cert`) }, // not up
-  });
-  const certRecord = new aws.route53.Record(
-    `${website.name}-cert-validation-record`,
+
+  // CloudFront SSL Certificate with all domains as SANs (must be in us-east-1)
+  const cfCert = new aws.acm.Certificate(
+    `${website.name}-cf-cert`,
     {
-      zoneId: hostedZone.zoneId,
-      name: cert.domainValidationOptions[0]!.resourceRecordName,
-      records: [cert.domainValidationOptions[0]!.resourceRecordValue],
-      type: cert.domainValidationOptions[0]!.resourceRecordType,
-      ttl: 60,
+      domainName: website.domain,
+      subjectAlternativeNames: website.alternate?.map((w) => w.domain),
+      validationMethod: 'DNS',
+      tags: { proj, Name: name(`${website.name}-cf-cert`) },
     },
-  );
-  const certValidation = new aws.acm.CertificateValidation(
-    `${website.name}-cert-validation`,
-    {
-      certificateArn: cert.arn,
-      validationRecordFqdns: [certRecord.fqdn],
-    },
-  );
-  new aws.lb.ListenerCertificate(
-    `${website.name}-lb-https-listener-cert-attachment`,
-    {
-      listenerArn: lbHttps.arn,
-      certificateArn: cert.arn,
-    },
-    { dependsOn: [certValidation] },
+    { provider: cfCertProvider },
   );
 
-  // Point domain DNS to Load Balancer
+  // Collect all websites (main + alternates) for CloudFront aliases
+  const allWebsites = [website, ...(website.alternate || [])];
+
+  // DNS validation records for CloudFront certificate
+  // Note: domainValidationOptions contains one entry per unique domain in the certificate
+  const cfCertRecords = cfCert.domainValidationOptions.apply((options) =>
+    options.map((option, i) => {
+      // Find which website this validation option corresponds to
+      const domain = option.domainName;
+      const matchingWebsite = allWebsites.find((w) => w.domain === domain)!;
+
+      // Determine the correct hosted zone for this domain
+      const targetHostedZone = aws.route53.getZoneOutput({
+        name: matchingWebsite.hostedZone || website.hostedZone,
+        privateZone: false,
+      });
+
+      return new aws.route53.Record(
+        `${website.name}-cf-cert-${matchingWebsite.name}-record`,
+        {
+          zoneId: targetHostedZone.zoneId,
+          name: option.resourceRecordName,
+          records: [option.resourceRecordValue],
+          type: option.resourceRecordType,
+          ttl: 60,
+        },
+      );
+    }),
+  );
+  const cfCertsValidation = new aws.acm.CertificateValidation(
+    `${website.name}-cf-certs-validation`,
+    {
+      certificateArn: cfCert.arn,
+      validationRecordFqdns: cfCertRecords.apply((records) =>
+        records.map((r) => r.fqdn),
+      ),
+    },
+    { provider: cfCertProvider },
+  );
+
+  // CloudFront Cache Policies for WordPress Best Practices
+  // as per https://docs.aws.amazon.com/whitepapers/latest/best-practices-wordpress/cloudfront-distribution-creation.html
+
+  // Static Content Cache Policy (wp-content/*, wp-includes/*)
+  const cfStaticCachePolicy = new aws.cloudfront.CachePolicy(
+    `${website.name}-cf-static-cache-policy`,
+    {
+      name: name(`${website.name}-static-cache`),
+      comment: 'Cache policy for WordPress static content',
+      defaultTtl: 86400, // 1 day
+      maxTtl: 31536000, // 1 year
+      minTtl: 0,
+      parametersInCacheKeyAndForwardedToOrigin: {
+        enableAcceptEncodingGzip: true,
+        enableAcceptEncodingBrotli: true,
+        queryStringsConfig: {
+          queryStringBehavior: 'all', // For cache invalidation via query strings
+        },
+        headersConfig: {
+          headerBehavior: 'none', // No headers for static content
+        },
+        cookiesConfig: {
+          cookieBehavior: 'none', // No cookies for static content
+        },
+      },
+    },
+  );
+  const cfStaticOriginRequestPolicy = new aws.cloudfront.OriginRequestPolicy(
+    `${website.name}-cf-static-origin-request-policy`,
+    {
+      name: name(`${website.name}-static-origin`),
+      comment: 'Origin request policy for WordPress static content',
+      queryStringsConfig: {
+        queryStringBehavior: 'all',
+      },
+      headersConfig: {
+        // we need the host header for the alb rules
+        headerBehavior: 'whitelist',
+        headers: {
+          items: ['Host'],
+        },
+      },
+      cookiesConfig: {
+        cookieBehavior: 'none',
+      },
+    },
+  );
+
+  // Dynamic Front-End Cache Policy (default behavior)
+  // With cache invalidation plugin, we can cache dynamic content more aggressively
+  const cfDynamicCachePolicy = new aws.cloudfront.CachePolicy(
+    `${website.name}-cf-dynamic-cache-policy`,
+    {
+      name: name(`${website.name}-dynamic-cache`),
+      comment: 'Cache policy for WordPress dynamic front-end with invalidation',
+      defaultTtl: 3600, // 1 hour - cache invalidation plugin will clear when content changes
+      maxTtl: 86400, // 24 hours max
+      minTtl: 0, // Allow immediate cache bypass if needed
+      parametersInCacheKeyAndForwardedToOrigin: {
+        enableAcceptEncodingGzip: true,
+        enableAcceptEncodingBrotli: true,
+        queryStringsConfig: {
+          queryStringBehavior: 'all', // WordPress relies on query strings
+        },
+        headersConfig: {
+          headerBehavior: 'whitelist',
+          headers: {
+            items: [
+              'Host',
+              'CloudFront-Forwarded-Proto',
+              // NOTE: unnecessary because we use responsive design themes
+              // 'CloudFront-Is-Mobile-Viewer',
+              // 'CloudFront-Is-Tablet-Viewer',
+              // 'CloudFront-Is-Desktop-Viewer',
+            ],
+          },
+        },
+        cookiesConfig: {
+          cookieBehavior: 'whitelist',
+          cookies: {
+            items: ['comment_*', 'wordpress_*', 'wp-settings-*'],
+          },
+        },
+      },
+    },
+  );
+  const cfDynamicOriginRequestPolicy = new aws.cloudfront.OriginRequestPolicy(
+    `${website.name}-cf-dynamic-origin-request-policy`,
+    {
+      name: name(`${website.name}-dynamic-origin`),
+      comment: 'Origin request policy for WordPress dynamic front-end',
+      queryStringsConfig: {
+        queryStringBehavior: 'all',
+      },
+      headersConfig: {
+        headerBehavior: 'allViewerAndWhitelistCloudFront',
+        headers: {
+          items: ['CloudFront-Forwarded-Proto'],
+        },
+      },
+      cookiesConfig: {
+        cookieBehavior: 'whitelist',
+        cookies: {
+          items: ['comment_*', 'wordpress_*', 'wp-settings-*'],
+        },
+      },
+    },
+  );
+
+  // Admin/Login - Use Managed Policies (pass everything through)
+  const cfAdminCachePolicy = aws.cloudfront.getCachePolicyOutput({
+    name: 'Managed-CachingDisabled',
+  });
+  const cfAdminOriginRequestPolicy =
+    aws.cloudfront.getOriginRequestPolicyOutput({
+      name: 'Managed-AllViewerAndCloudFrontHeaders-2022-06',
+    });
+
+  // CloudFront Distribution with WordPress Best Practices
+  const cfDistribution = new aws.cloudfront.Distribution(
+    `${website.name}-cf-distribution`,
+    {
+      enabled: true,
+      isIpv6Enabled: true,
+      httpVersion: 'http2',
+      priceClass: 'PriceClass_100', // Use only North America and Europe
+      aliases: allWebsites.map((w) => w.domain),
+      comment: `CloudFront distribution for ${website.name}`,
+      origins: [
+        {
+          domainName: lb.loadBalancer.dnsName,
+          originId: 'alb',
+          customOriginConfig: {
+            httpPort: 80,
+            originProtocolPolicy: 'http-only',
+            originReadTimeout: 60,
+            originKeepaliveTimeout: 5,
+            // not used but required
+            httpsPort: 443,
+            originSslProtocols: ['TLSv1.2'],
+          },
+        },
+      ],
+      // Default behavior: Dynamic front-end content
+      defaultCacheBehavior: {
+        targetOriginId: 'alb',
+        viewerProtocolPolicy: 'redirect-to-https',
+        allowedMethods: [
+          'GET',
+          'HEAD',
+          'OPTIONS',
+          'PUT',
+          'POST',
+          'PATCH',
+          'DELETE',
+        ],
+        cachedMethods: ['GET', 'HEAD', 'OPTIONS'],
+        cachePolicyId: cfDynamicCachePolicy.id,
+        originRequestPolicyId: cfDynamicOriginRequestPolicy.id,
+        compress: true,
+      },
+      // Ordered cache behaviors (evaluated in order, first match wins)
+      orderedCacheBehaviors: [
+        // 1. WordPress Admin Dashboard - HTTPS only, pass everything
+        {
+          pathPattern: 'wp-admin/*',
+          targetOriginId: 'alb',
+          viewerProtocolPolicy: 'https-only',
+          allowedMethods: [
+            'GET',
+            'HEAD',
+            'OPTIONS',
+            'PUT',
+            'POST',
+            'PATCH',
+            'DELETE',
+          ],
+          cachedMethods: ['GET', 'HEAD', 'OPTIONS'],
+          cachePolicyId: cfAdminCachePolicy.apply((p) => p.id!),
+          originRequestPolicyId: cfAdminOriginRequestPolicy.apply((p) => p.id!),
+          compress: true,
+        },
+        // 2. WordPress Login Page - HTTPS only, pass everything
+        {
+          pathPattern: 'wp-login.php',
+          targetOriginId: 'alb',
+          viewerProtocolPolicy: 'https-only',
+          allowedMethods: [
+            'GET',
+            'HEAD',
+            'OPTIONS',
+            'PUT',
+            'POST',
+            'PATCH',
+            'DELETE',
+          ],
+          cachedMethods: ['GET', 'HEAD', 'OPTIONS'],
+          cachePolicyId: cfAdminCachePolicy.apply((p) => p.id!),
+          originRequestPolicyId: cfAdminOriginRequestPolicy.apply((p) => p.id!),
+          compress: true,
+        },
+        // 3. Static Content - wp-content (uploads, themes, plugins)
+        {
+          pathPattern: 'wp-content/*',
+          targetOriginId: 'alb',
+          viewerProtocolPolicy: 'redirect-to-https',
+          allowedMethods: ['GET', 'HEAD', 'OPTIONS'],
+          cachedMethods: ['GET', 'HEAD', 'OPTIONS'],
+          cachePolicyId: cfStaticCachePolicy.id,
+          originRequestPolicyId: cfStaticOriginRequestPolicy.id,
+          compress: true,
+        },
+        // 4. Static Content - wp-includes (core WordPress static files)
+        {
+          pathPattern: 'wp-includes/*',
+          targetOriginId: 'alb',
+          viewerProtocolPolicy: 'redirect-to-https',
+          allowedMethods: ['GET', 'HEAD', 'OPTIONS'],
+          cachedMethods: ['GET', 'HEAD', 'OPTIONS'],
+          cachePolicyId: cfStaticCachePolicy.id,
+          originRequestPolicyId: cfStaticOriginRequestPolicy.id,
+          compress: true,
+        },
+      ],
+      restrictions: {
+        geoRestriction: {
+          restrictionType: 'none',
+        },
+      },
+      viewerCertificate: {
+        acmCertificateArn: cfCert.arn,
+        sslSupportMethod: 'sni-only',
+        minimumProtocolVersion: 'TLSv1.2_2021',
+      },
+      tags: { proj, Name: website.name },
+    },
+    { dependsOn: [cfCertsValidation] },
+  );
+
+  // Point domain DNS to CloudFront
   new aws.route53.Record(`${website.name}-dns-a`, {
     zoneId: hostedZone.zoneId,
     name: website.domain,
     type: 'A',
     aliases: [
       {
-        name: lb.loadBalancer.dnsName,
-        zoneId: lb.loadBalancer.zoneId,
-        evaluateTargetHealth: true,
+        name: cfDistribution.domainName,
+        zoneId: cfDistribution.hostedZoneId,
+        evaluateTargetHealth: false,
       },
     ],
   });
 
-  // Redirect any alternate domains to the main domain
+  // DNS for alternate domains pointing to main
   for (const alt of website.alternate || []) {
-    const i = website.alternate!.indexOf(alt);
-    // SSL Certificate
     const hostedZone = aws.route53.getZoneOutput({
       name: alt.hostedZone || website.hostedZone,
       privateZone: false,
     });
-    const cert = new aws.acm.Certificate(`${alt.name}-${website.name}-cert`, {
-      domainName: alt.domain,
-      validationMethod: 'DNS',
-      tags: { proj, Name: name(`${alt.name}-${website.name}-cert`) }, // not up
-    });
-    const certRecord = new aws.route53.Record(
-      `${alt.name}-${website.name}-cert-validation-record`,
-      {
-        zoneId: hostedZone.zoneId,
-        name: cert.domainValidationOptions[0]!.resourceRecordName,
-        records: [cert.domainValidationOptions[0]!.resourceRecordValue],
-        type: cert.domainValidationOptions[0]!.resourceRecordType,
-        ttl: 60,
-      },
-    );
-    const certValidation = new aws.acm.CertificateValidation(
-      `${alt.name}-${website.name}-cert-validation`,
-      {
-        certificateArn: cert.arn,
-        validationRecordFqdns: [certRecord.fqdn],
-      },
-    );
-    new aws.lb.ListenerCertificate(
-      `${alt.name}-${website.name}-lb-https-listener-cert-attachment`,
-      {
-        listenerArn: lbHttps.arn,
-        certificateArn: cert.arn,
-      },
-      { dependsOn: [certValidation] },
-    );
+    const pulumiRecordName = `${website.name}-to-${alt.name}-dns-record`;
+    switch (alt.recordType) {
+      case 'A':
+        new aws.route53.Record(pulumiRecordName, {
+          zoneId: hostedZone.zoneId,
+          name: alt.domain,
+          type: 'A',
+          aliases: [
+            {
+              name: cfDistribution.domainName,
+              zoneId: cfDistribution.hostedZoneId,
+              evaluateTargetHealth: false,
+            },
+          ],
+        });
+        break;
+      case 'CNAME':
+      default:
+        new aws.route53.Record(pulumiRecordName, {
+          zoneId: hostedZone.zoneId,
+          name: alt.domain,
+          type: 'CNAME',
+          records: [website.domain],
+          ttl: 300,
+        });
+    }
+  }
 
-    // Redirect rule
-    new aws.lb.ListenerRule(`${alt.name}-${website.name}-lb-redirect-rule`, {
-      listenerArn: lbHttps.arn,
-      priority: 50 + i,
+  // ALB redirect rules for alternate domains
+  for (const alt of website.alternate || []) {
+    new aws.lb.ListenerRule(`${website.name}-to-${alt.name}-redirect-lb-rule`, {
+      listenerArn: lbHttp.arn,
+      priority: 50 + website.alternate!.indexOf(alt),
       conditions: [
         {
           hostHeader: {
@@ -947,35 +1181,6 @@ for (const website of websites) {
       ],
       tags: { proj },
     });
-
-    // Point alternative domain DNS to main domain using CNAME
-    const pulumiRecordName = `${alt.name}-${website.name}-dns-record`;
-    switch (alt.recordType) {
-      case 'A':
-        new aws.route53.Record(pulumiRecordName, {
-          zoneId: hostedZone.zoneId,
-          name: alt.domain,
-          type: 'A',
-          aliases: [
-            {
-              name: lb.loadBalancer.dnsName,
-              zoneId: lb.loadBalancer.zoneId,
-              evaluateTargetHealth: true,
-            },
-          ],
-        });
-        break;
-      case 'CNAME':
-      default:
-        new aws.route53.Record(pulumiRecordName, {
-          zoneId: hostedZone.zoneId,
-          name: alt.domain,
-          type: 'CNAME',
-          records: [website.domain],
-          ttl: 300,
-        });
-        break;
-    }
   }
 
   // Securely Mount EFS to Fargate Under an Isolated Path
