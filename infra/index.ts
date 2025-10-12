@@ -963,6 +963,9 @@ for (const website of websites) {
       },
       headersConfig: {
         headerBehavior: 'allViewerAndWhitelistCloudFront',
+        headers: {
+          items: ['CloudFront-Forwarded-Proto'],
+        },
       },
       cookiesConfig: {
         cookieBehavior: 'whitelist',
