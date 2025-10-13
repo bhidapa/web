@@ -767,7 +767,7 @@ const lb = new awsx.lb.ApplicationLoadBalancer('lb', {
   },
   tags: { proj },
 });
-const lbHttp = lb.listeners.apply((l) => l![0]);
+const lbHttp = lb.listeners.apply((l) => l![0]!);
 
 // CloudFront Provider for us-east-1 (required for CloudFront certificates)
 const cfCertProvider = new aws.Provider('us-east-1-provider', {
@@ -791,7 +791,7 @@ for (const website of websites) {
     },
   });
   new aws.lb.ListenerRule(`${website.name}-lb-rule`, {
-    listenerArn: lbHttp.arn,
+    listenerArn: lbHttp.apply((l) => l.arn),
     priority: 10 + websites.indexOf(website),
     conditions: [
       {
@@ -820,7 +820,9 @@ for (const website of websites) {
     `${website.name}-cf-cert`,
     {
       domainName: website.domain,
-      subjectAlternativeNames: website.alternate?.map((w) => w.domain),
+      ...(website.alternate
+        ? { subjectAlternativeNames: website.alternate!.map((w) => w.domain) }
+        : {}),
       validationMethod: 'DNS',
       tags: { proj, Name: name(`${website.name}-cf-cert`) },
     },
@@ -833,7 +835,7 @@ for (const website of websites) {
   // DNS validation records for CloudFront certificate
   // Note: domainValidationOptions contains one entry per unique domain in the certificate
   const cfCertRecords = cfCert.domainValidationOptions.apply((options) =>
-    options.map((option, i) => {
+    options.map((option) => {
       // Find which website this validation option corresponds to
       const domain = option.domainName;
       const matchingWebsite = allWebsites.find((w) => w.domain === domain)!;

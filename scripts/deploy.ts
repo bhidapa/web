@@ -1,11 +1,11 @@
 import { $ } from 'bun';
 
-const endpoint = Bun.env.ENDPOINT;
+const endpoint = Bun.env['ENDPOINT'];
 if (!endpoint) {
   throw new Error('ENDPOINT is not set');
 }
 
-const website = Bun.env.WEBSITE;
+const website = Bun.env['WEBSITE'];
 if (!website) {
   throw new Error('WEBSITE is not set');
 }
