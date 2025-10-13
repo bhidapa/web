@@ -1083,6 +1083,7 @@ for (const website of websites) {
           cachedMethods: ['GET', 'HEAD', 'OPTIONS'],
           cachePolicyId: cfCacheDisabledPolicy.apply((p) => p.id!),
           originRequestPolicyId: cfForwardAllRequestPolicy.apply((p) => p.id!),
+          compress: false, // no need to compress REST API
         },
         // 4. Static Content - wp-content (uploads, themes, plugins)
         {
