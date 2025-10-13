@@ -23,7 +23,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - uses: oven-sh/setup-bun@v2
-      - run: bun i
+      - run: bun ci
       - run: bun check:${{ matrix.check }}
 
   infra:
@@ -46,7 +46,7 @@ jobs:
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
           aws-region: eu-central-1
-      - run: bun i
+      - run: bun ci
       - uses: pulumi/actions@v6
         id: infra
         with:
@@ -75,7 +75,7 @@ jobs:
           echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H ${{ secrets.SSH_ENDPOINT }} >> ~/.ssh/known_hosts
-      - run: bun i
+      - run: bun ci
       - run: bun blocks:build
       - env:
           ENDPOINT: 'ec2-user@${{ secrets.SSH_ENDPOINT }}'
