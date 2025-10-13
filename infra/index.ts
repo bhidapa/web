@@ -944,6 +944,7 @@ for (const website of websites) {
         cookiesConfig: {
           cookieBehavior: 'whitelist',
           cookies: {
+            // because of the cookies in cache key, no logged-in user content (like the e-library) is cached
             items: ['comment_*', 'wordpress_*', 'wp-settings-*'],
           },
         },
@@ -967,6 +968,7 @@ for (const website of websites) {
       cookiesConfig: {
         cookieBehavior: 'whitelist',
         cookies: {
+          // because of the cookies forwarding, no logged-in user content (like the e-library) is cached
           items: ['comment_*', 'wordpress_*', 'wp-settings-*'],
         },
       },
