@@ -974,13 +974,14 @@ for (const website of websites) {
   );
 
   // Admin/Login - Use Managed Policies (pass everything through)
-  const cfAdminCachePolicy = aws.cloudfront.getCachePolicyOutput({
+  const cfCacheDisabledPolicy = aws.cloudfront.getCachePolicyOutput({
     name: 'Managed-CachingDisabled',
   });
-  const cfAdminOriginRequestPolicy =
-    aws.cloudfront.getOriginRequestPolicyOutput({
+  const cfForwardAllRequestPolicy = aws.cloudfront.getOriginRequestPolicyOutput(
+    {
       name: 'Managed-AllViewerAndCloudFrontHeaders-2022-06',
-    });
+    },
+  );
 
   // CloudFront Distribution with WordPress Best Practices
   const cfDistribution = new aws.cloudfront.Distribution(
@@ -1042,8 +1043,8 @@ for (const website of websites) {
             'DELETE',
           ],
           cachedMethods: ['GET', 'HEAD', 'OPTIONS'],
-          cachePolicyId: cfAdminCachePolicy.apply((p) => p.id!),
-          originRequestPolicyId: cfAdminOriginRequestPolicy.apply((p) => p.id!),
+          cachePolicyId: cfCacheDisabledPolicy.apply((p) => p.id!),
+          originRequestPolicyId: cfForwardAllRequestPolicy.apply((p) => p.id!),
           compress: true,
         },
         // 2. WordPress Login Page - HTTPS only, pass everything
@@ -1061,11 +1062,29 @@ for (const website of websites) {
             'DELETE',
           ],
           cachedMethods: ['GET', 'HEAD', 'OPTIONS'],
-          cachePolicyId: cfAdminCachePolicy.apply((p) => p.id!),
-          originRequestPolicyId: cfAdminOriginRequestPolicy.apply((p) => p.id!),
+          cachePolicyId: cfCacheDisabledPolicy.apply((p) => p.id!),
+          originRequestPolicyId: cfForwardAllRequestPolicy.apply((p) => p.id!),
           compress: true,
         },
-        // 3. Static Content - wp-content (uploads, themes, plugins)
+        // 3. WordPress REST API - HTTPS only, pass everything
+        {
+          pathPattern: 'wp-json/*',
+          targetOriginId: 'alb',
+          viewerProtocolPolicy: 'https-only',
+          allowedMethods: [
+            'GET',
+            'HEAD',
+            'OPTIONS',
+            'PUT',
+            'POST',
+            'PATCH',
+            'DELETE',
+          ],
+          cachedMethods: ['GET', 'HEAD', 'OPTIONS'],
+          cachePolicyId: cfCacheDisabledPolicy.apply((p) => p.id!),
+          originRequestPolicyId: cfForwardAllRequestPolicy.apply((p) => p.id!),
+        },
+        // 4. Static Content - wp-content (uploads, themes, plugins)
         {
           pathPattern: 'wp-content/*',
           targetOriginId: 'alb',
@@ -1076,7 +1095,7 @@ for (const website of websites) {
           originRequestPolicyId: cfStaticOriginRequestPolicy.id,
           compress: true,
         },
-        // 4. Static Content - wp-includes (core WordPress static files)
+        // 5. Static Content - wp-includes (core WordPress static files)
         {
           pathPattern: 'wp-includes/*',
           targetOriginId: 'alb',
