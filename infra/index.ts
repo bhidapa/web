@@ -872,29 +872,22 @@ for (const website of websites) {
   // CloudFront Cache Policies for WordPress Best Practices
   // as per https://docs.aws.amazon.com/whitepapers/latest/best-practices-wordpress/cloudfront-distribution-creation.html
 
-  // TODO: wordpress rest wp-json cache policy
+  // NOTE: we want to manually invalidate the cache and therefore can set high TTLs
 
-  // Static Content Cache Policy (wp-content/*, wp-includes/*)
+  // Static Assets Cache Policy (wp-content/*, wp-includes/*)
   const cfStaticCachePolicy = new aws.cloudfront.CachePolicy(
     `${website.name}-cf-static-cache-policy`,
     {
       name: name(`${website.name}-static-cache`),
-      comment: 'Cache policy for WordPress static content',
-      defaultTtl: 86400, // 1 day
-      maxTtl: 31536000, // 1 year
+      defaultTtl: 604800, // 1 week
       minTtl: 0,
+      maxTtl: 31536000, // 1 year
       parametersInCacheKeyAndForwardedToOrigin: {
         enableAcceptEncodingGzip: true,
         enableAcceptEncodingBrotli: true,
-        queryStringsConfig: {
-          queryStringBehavior: 'all', // For cache invalidation via query strings
-        },
-        headersConfig: {
-          headerBehavior: 'none', // No headers for static content
-        },
-        cookiesConfig: {
-          cookieBehavior: 'none', // No cookies for static content
-        },
+        queryStringsConfig: { queryStringBehavior: 'all' },
+        headersConfig: { headerBehavior: 'none' },
+        cookiesConfig: { cookieBehavior: 'none' },
       },
     },
   );
@@ -902,44 +895,31 @@ for (const website of websites) {
     `${website.name}-cf-static-origin-request-policy`,
     {
       name: name(`${website.name}-static-origin`),
-      comment: 'Origin request policy for WordPress static content',
-      queryStringsConfig: {
-        queryStringBehavior: 'all',
-      },
+      queryStringsConfig: { queryStringBehavior: 'all' },
       headersConfig: {
         // we need the host header for the alb rules
         headerBehavior: 'whitelist',
-        headers: {
-          items: ['Host'],
-        },
+        headers: { items: ['Host', 'CloudFront-Forwarded-Proto'] },
       },
-      cookiesConfig: {
-        cookieBehavior: 'none',
-      },
+      cookiesConfig: { cookieBehavior: 'none' },
     },
   );
 
-  // Dynamic Front-End Cache Policy (default behavior)
-  // With cache invalidation plugin, we can cache dynamic content more aggressively
+  // Dynamic Pages Cache Policy (default behavior)
   const cfDynamicCachePolicy = new aws.cloudfront.CachePolicy(
     `${website.name}-cf-dynamic-cache-policy`,
     {
       name: name(`${website.name}-dynamic-cache`),
-      comment: 'Cache policy for WordPress dynamic front-end with invalidation',
-      defaultTtl: 3600, // 1 hour - cache invalidation plugin will clear when content changes
-      maxTtl: 86400, // 24 hours max
-      minTtl: 0, // Allow immediate cache bypass if needed
+      defaultTtl: 604800, // 1 week
+      minTtl: 0,
+      maxTtl: 31536000, // 1 year
       parametersInCacheKeyAndForwardedToOrigin: {
         enableAcceptEncodingGzip: true,
         enableAcceptEncodingBrotli: true,
-        queryStringsConfig: {
-          queryStringBehavior: 'all', // WordPress relies on query strings
-        },
+        queryStringsConfig: { queryStringBehavior: 'all' },
         headersConfig: {
           headerBehavior: 'whitelist',
-          headers: {
-            items: ['Host', 'CloudFront-Forwarded-Proto'],
-          },
+          headers: { items: ['Host', 'CloudFront-Forwarded-Proto'] },
         },
         cookiesConfig: {
           cookieBehavior: 'whitelist',
@@ -955,15 +935,10 @@ for (const website of websites) {
     `${website.name}-cf-dynamic-origin-request-policy`,
     {
       name: name(`${website.name}-dynamic-origin`),
-      comment: 'Origin request policy for WordPress dynamic front-end',
-      queryStringsConfig: {
-        queryStringBehavior: 'all',
-      },
+      queryStringsConfig: { queryStringBehavior: 'all' },
       headersConfig: {
         headerBehavior: 'whitelist',
-        headers: {
-          items: ['Host', 'CloudFront-Forwarded-Proto'],
-        },
+        headers: { items: ['Host', 'CloudFront-Forwarded-Proto'] },
       },
       cookiesConfig: {
         cookieBehavior: 'whitelist',
@@ -975,7 +950,7 @@ for (const website of websites) {
     },
   );
 
-  // Admin/Login - Use Managed Policies (pass everything through)
+  // AWS Managed Policies
   const cfCacheDisabledPolicy = aws.cloudfront.getCachePolicyOutput({
     name: 'Managed-CachingDisabled',
   });
@@ -985,7 +960,7 @@ for (const website of websites) {
     },
   );
 
-  // CloudFront Distribution with WordPress Best Practices
+  // CloudFront Distribution
   const cfDistribution = new aws.cloudfront.Distribution(
     `${website.name}-cf-distribution`,
     {
