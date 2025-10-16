@@ -17,6 +17,10 @@ interface Website {
     /** @default 'CNAME' */
     recordType?: 'CNAME' | 'A';
   }[];
+  /** WordPress version to use for this website. @default '6.8' */
+  wordpressVersion?: string;
+  /** PHP version to use for this website. @default '8.3' */
+  phpVersion?: string;
 }
 
 const websites: Website[] = [
@@ -36,6 +40,9 @@ const websites: Website[] = [
         recordType: 'A', // because we have TXT records for this domain
       },
     ],
+    // Optional: Specify WordPress and PHP versions for this website
+    // wordpressVersion: '6.8',
+    // phpVersion: '8.3',
   },
 ];
 export const websiteNames = websites.map((w) => w.name);
@@ -608,62 +615,6 @@ new aws.ecr.LifecyclePolicy('wp-nginx-repo-lifecycle-policy', {
   policy: wpReposLifecyclePolicy,
 });
 
-// Build and Push Images
-const wpFpmImage = new docker_build.Image('wp-fpm-image', {
-  context: { location: '../wp' },
-  dockerfile: { location: '../wp/fpm.Dockerfile' },
-  platforms: ['linux/arm64'],
-  push: true,
-  cacheFrom: [
-    { registry: { ref: pulumi.interpolate`${wpFpmRepo.repositoryUrl}:cache` } },
-  ],
-  cacheTo: [
-    {
-      registry: {
-        imageManifest: true,
-        ociMediaTypes: true,
-        ref: pulumi.interpolate`${wpFpmRepo.repositoryUrl}:cache`,
-      },
-    },
-  ],
-  registries: [
-    {
-      address: wpFpmRepo.repositoryUrl,
-      username: wpFpmRepoAuthToken.userName,
-      password: wpFpmRepoAuthToken.password,
-    },
-  ],
-  tags: [pulumi.interpolate`${wpFpmRepo.repositoryUrl}:latest`],
-});
-const wpNginxImage = new docker_build.Image('wp-nginx-image', {
-  context: { location: '../wp' },
-  dockerfile: { location: '../wp/nginx.Dockerfile' },
-  platforms: ['linux/arm64'],
-  push: true,
-  cacheFrom: [
-    {
-      registry: { ref: pulumi.interpolate`${wpNginxRepo.repositoryUrl}:cache` },
-    },
-  ],
-  cacheTo: [
-    {
-      registry: {
-        imageManifest: true,
-        ociMediaTypes: true,
-        ref: pulumi.interpolate`${wpNginxRepo.repositoryUrl}:cache`,
-      },
-    },
-  ],
-  registries: [
-    {
-      address: wpNginxRepo.repositoryUrl,
-      username: wpNginxRepoAuthToken.userName,
-      password: wpNginxRepoAuthToken.password,
-    },
-  ],
-  tags: [pulumi.interpolate`${wpNginxRepo.repositoryUrl}:latest`],
-});
-
 // ECS Cluster and Roles
 const wpCluster = new aws.ecs.Cluster('wp-cluster', {
   name: name('wp'),
@@ -776,6 +727,79 @@ const cfCertProvider = new aws.Provider('us-east-1-provider', {
 
 // For Each Website
 for (const website of websites) {
+  // Get WordPress and PHP versions (with defaults)
+  const wordpressVersion = website.wordpressVersion || '6.8';
+  const phpVersion = website.phpVersion || '8.3';
+
+  // Build and Push Images for this website
+  const wpFpmImage = new docker_build.Image(`${website.name}-wp-fpm-image`, {
+    context: { location: '../wp' },
+    dockerfile: { location: '../wp/fpm.Dockerfile' },
+    platforms: ['linux/arm64'],
+    push: true,
+    buildArgs: {
+      WORDPRESS_VERSION: wordpressVersion,
+      PHP_VERSION: phpVersion,
+    },
+    cacheFrom: [
+      {
+        registry: {
+          ref: pulumi.interpolate`${wpFpmRepo.repositoryUrl}:${website.name}-cache`,
+        },
+      },
+    ],
+    cacheTo: [
+      {
+        registry: {
+          imageManifest: true,
+          ociMediaTypes: true,
+          ref: pulumi.interpolate`${wpFpmRepo.repositoryUrl}:${website.name}-cache`,
+        },
+      },
+    ],
+    registries: [
+      {
+        address: wpFpmRepo.repositoryUrl,
+        username: wpFpmRepoAuthToken.userName,
+        password: wpFpmRepoAuthToken.password,
+      },
+    ],
+    tags: [pulumi.interpolate`${wpFpmRepo.repositoryUrl}:${website.name}`],
+  });
+  const wpNginxImage = new docker_build.Image(
+    `${website.name}-wp-nginx-image`,
+    {
+      context: { location: '../wp' },
+      dockerfile: { location: '../wp/nginx.Dockerfile' },
+      platforms: ['linux/arm64'],
+      push: true,
+      cacheFrom: [
+        {
+          registry: {
+            ref: pulumi.interpolate`${wpNginxRepo.repositoryUrl}:${website.name}-cache`,
+          },
+        },
+      ],
+      cacheTo: [
+        {
+          registry: {
+            imageManifest: true,
+            ociMediaTypes: true,
+            ref: pulumi.interpolate`${wpNginxRepo.repositoryUrl}:${website.name}-cache`,
+          },
+        },
+      ],
+      registries: [
+        {
+          address: wpNginxRepo.repositoryUrl,
+          username: wpNginxRepoAuthToken.userName,
+          password: wpNginxRepoAuthToken.password,
+        },
+      ],
+      tags: [pulumi.interpolate`${wpNginxRepo.repositoryUrl}:${website.name}`],
+    },
+  );
+
   // Use Application Load Balancer
   const tg = new aws.lb.TargetGroup(`${website.name}-lb-tg`, {
     name: name(`${website.name}-lb-tg`),
@@ -1231,7 +1255,7 @@ for (const website of websites) {
         containers: {
           fpm: {
             name: 'fpm',
-            image: pulumi.interpolate`${wpFpmRepo.repositoryUrl}:latest`,
+            image: pulumi.interpolate`${wpFpmRepo.repositoryUrl}:${website.name}`,
             essential: true,
             healthCheck: {
               // also change the healthcheck in compose.yml
@@ -1268,7 +1292,7 @@ for (const website of websites) {
           },
           nginx: {
             name: 'nginx',
-            image: pulumi.interpolate`${wpNginxRepo.repositoryUrl}:latest`,
+            image: pulumi.interpolate`${wpNginxRepo.repositoryUrl}:${website.name}`,
             essential: true,
             dependsOn: [
               {
