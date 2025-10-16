@@ -1,4 +1,7 @@
-FROM wordpress:6.8-php8.3-fpm
+ARG WORDPRESS_VERSION=6.8
+ARG PHP_VERSION=8.3
+
+FROM wordpress:${WORDPRESS_VERSION}-php${PHP_VERSION}-fpm
 
 # Install fcgi for healthcheck
 RUN apt-get update && apt-get install -y libfcgi-bin
