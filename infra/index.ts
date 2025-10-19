@@ -1016,7 +1016,7 @@ for (const website of websites) {
       },
       // Ordered cache behaviors (evaluated in order, first match wins)
       orderedCacheBehaviors: [
-        // 1. WordPress Admin Dashboard - HTTPS only, pass everything
+        // WordPress Admin Dashboard - HTTPS only, pass everything
         {
           pathPattern: 'wp-admin/*',
           targetOriginId: 'alb',
@@ -1030,50 +1030,49 @@ for (const website of websites) {
             'PATCH',
             'DELETE',
           ],
-          cachedMethods: ['GET', 'HEAD', 'OPTIONS'],
+          cachedMethods: [],
           cachePolicyId: cfCacheDisabledPolicy.apply((p) => p.id!),
           originRequestPolicyId: cfForwardAllRequestPolicy.apply((p) => p.id!),
-          compress: true,
         },
-        // 2. WordPress Login Page - HTTPS only, pass everything
+        // WordPress Login Page - HTTPS only, pass everything
         {
           pathPattern: 'wp-login.php',
           targetOriginId: 'alb',
           viewerProtocolPolicy: 'https-only',
-          allowedMethods: [
-            'GET',
-            'HEAD',
-            'OPTIONS',
-            'PUT',
-            'POST',
-            'PATCH',
-            'DELETE',
-          ],
-          cachedMethods: ['GET', 'HEAD', 'OPTIONS'],
+          allowedMethods: ['GET', 'POST'],
+          cachedMethods: [],
           cachePolicyId: cfCacheDisabledPolicy.apply((p) => p.id!),
           originRequestPolicyId: cfForwardAllRequestPolicy.apply((p) => p.id!),
-          compress: true,
         },
-        // 3. WordPress REST API - HTTPS only, pass everything
+        // WordPress API - HTTPS only, pass everything
         {
           pathPattern: 'wp-json/*',
           targetOriginId: 'alb',
           viewerProtocolPolicy: 'https-only',
-          allowedMethods: [
-            'GET',
-            'HEAD',
-            'OPTIONS',
-            'PUT',
-            'POST',
-            'PATCH',
-            'DELETE',
-          ],
-          cachedMethods: ['GET', 'HEAD', 'OPTIONS'],
+          allowedMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+          cachedMethods: [],
           cachePolicyId: cfCacheDisabledPolicy.apply((p) => p.id!),
           originRequestPolicyId: cfForwardAllRequestPolicy.apply((p) => p.id!),
-          compress: false, // no need to compress REST API
         },
-        // 4. Static Content - wp-content (uploads, themes, plugins)
+        {
+          pathPattern: 'xmlrpc.php',
+          targetOriginId: 'alb',
+          viewerProtocolPolicy: 'https-only',
+          allowedMethods: ['POST'],
+          cachedMethods: [],
+          cachePolicyId: cfCacheDisabledPolicy.apply((p) => p.id!),
+          originRequestPolicyId: cfForwardAllRequestPolicy.apply((p) => p.id!),
+        },
+        {
+          pathPattern: 'wp-cron.php',
+          targetOriginId: 'alb',
+          viewerProtocolPolicy: 'https-only',
+          allowedMethods: ['GET', 'POST'],
+          cachedMethods: [],
+          cachePolicyId: cfCacheDisabledPolicy.apply((p) => p.id!),
+          originRequestPolicyId: cfForwardAllRequestPolicy.apply((p) => p.id!),
+        },
+        // Static Content (core WordPress static files, uploads, themes, plugins)
         {
           pathPattern: 'wp-content/*',
           targetOriginId: 'alb',
@@ -1084,7 +1083,6 @@ for (const website of websites) {
           originRequestPolicyId: cfStaticOriginRequestPolicy.id,
           compress: true,
         },
-        // 5. Static Content - wp-includes (core WordPress static files)
         {
           pathPattern: 'wp-includes/*',
           targetOriginId: 'alb',
