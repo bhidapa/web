@@ -112,67 +112,59 @@ new aws.ec2.RouteTableAssociation('public-route-table-association-b', {
   routeTableId: publicRouteTable.id,
 });
 
-// NAT Gateway and Flow Logs
-const eip = new aws.ec2.Eip('nat-gw-eip', {
+// Security Group for NAT Instance
+const natSecurityGroup = new aws.ec2.SecurityGroup('nat-instance-sg', {
+  name: name('nat-instance-sg'),
+  vpcId: vpc.id,
+  description: 'Security group for NAT instance',
+  ingress: [
+    { protocol: '-1', fromPort: 0, toPort: 0, cidrBlocks: [vpc.cidrBlock] },
+  ],
+  egress: [
+    { protocol: '-1', fromPort: 0, toPort: 0, cidrBlocks: ['0.0.0.0/0'] },
+  ],
+  tags: { proj, Name: name('nat-instance-sg') },
+});
+
+// Elastic IP for NAT Instance
+const eip = new aws.ec2.Eip('nat-instance-eip', {
   domain: 'vpc',
-  tags: { proj, Name: name('nat-gw-eip') },
+  tags: { proj, Name: name('nat-instance-eip') },
 });
-const natgw = new aws.ec2.NatGateway('nat-gw', {
-  subnetId: publicSubnetA.id,
-  allocationId: eip.id,
-  tags: { proj, Name: name('nat-gw') },
-});
-const natGwFlowLogGroup = new aws.cloudwatch.LogGroup('nat-gw-flow-log-group', {
-  name: `/vpc/flowlogs/${name('nat-gw')}`,
-  retentionInDays: 7,
-  tags: { proj },
-});
-const natGwFlowLogRole = new aws.iam.Role('nat-gw-flow-log-role', {
-  name: name('nat-gw-flow-log-role'),
-  assumeRolePolicy: {
-    Version: '2012-10-17',
-    Statement: [
-      {
-        Effect: 'Allow',
-        Principal: {
-          Service: 'vpc-flow-logs.amazonaws.com',
+
+// NAT Instance
+const natInstance = new aws.ec2.Instance(
+  'nat-instance',
+  {
+    // NAT Instance (fck-nat)
+    // https://fck-nat.dev/
+    ami: aws.ec2.getAmiOutput({
+      mostRecent: true,
+      owners: ['568608671756'],
+      filters: [
+        {
+          name: 'name',
+          values: ['fck-nat-al2023-*-arm64-ebs'],
         },
-        Action: 'sts:AssumeRole',
-        // TODO: add condition only for the specific flow logs
-      },
-    ],
+        {
+          name: 'architecture',
+          values: ['arm64'],
+        },
+      ],
+    }).id,
+    instanceType: 't4g.nano',
+    subnetId: publicSubnetA.id,
+    vpcSecurityGroupIds: [natSecurityGroup.id],
+    sourceDestCheck: false,
+    tags: { proj, Name: name('nat-instance') },
   },
-  tags: { proj },
-});
-new aws.iam.RolePolicy('nat-gw-flow-log-policy', {
-  name: name('nat-gw-flow-log-policy'),
-  role: natGwFlowLogRole.id,
-  policy: {
-    // as per https://docs.aws.amazon.com/vpc/latest/userguide/flow-logs-iam-role.html
-    Version: '2012-10-17',
-    Statement: [
-      {
-        Effect: 'Allow',
-        Action: [
-          'logs:CreateLogGroup',
-          'logs:CreateLogStream',
-          'logs:PutLogEvents',
-          'logs:DescribeLogGroups',
-          'logs:DescribeLogStreams',
-        ],
-        Resource: '*',
-      },
-    ],
-  },
-});
-new aws.ec2.FlowLog('nat-gw-flow-log', {
-  logDestinationType: 'cloud-watch-logs',
-  logDestination: natGwFlowLogGroup.arn,
-  iamRoleArn: natGwFlowLogRole.arn,
-  trafficType: 'ALL',
-  eniId: natgw.networkInterfaceId,
-  maxAggregationInterval: 60,
-  tags: { proj, Name: name('nat-gw-flow-log') },
+  { ignoreChanges: ['ami'] },
+);
+
+// Associate EIP with NAT Instance
+new aws.ec2.EipAssociation('nat-instance-eip-assoc', {
+  instanceId: natInstance.id,
+  allocationId: eip.id,
 });
 
 // Private Subnet
@@ -183,7 +175,7 @@ const privateRouteTable = new aws.ec2.RouteTable('private-route-table', {
 new aws.ec2.Route('private-route', {
   routeTableId: privateRouteTable.id,
   destinationCidrBlock: '0.0.0.0/0',
-  natGatewayId: natgw.id,
+  networkInterfaceId: natInstance.primaryNetworkInterfaceId,
 });
 new aws.ec2.RouteTableAssociation('private-route-table-association-a', {
   subnetId: privateSubnetA.id,
