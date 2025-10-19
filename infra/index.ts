@@ -3,6 +3,7 @@ import * as aws from '@pulumi/aws';
 import * as awsx from '@pulumi/awsx';
 import * as aws_native from '@pulumi/aws-native';
 import * as docker_build from '@pulumi/docker-build';
+import * as docker from '@pulumi/docker';
 
 interface Website {
   name: string;
@@ -635,6 +636,11 @@ const wpFpmImage = new docker_build.Image('wp-fpm-image', {
   ],
   tags: [pulumi.interpolate`${wpFpmRepo.repositoryUrl}:latest`],
 });
+const wpFpmImageTag = wpFpmImage.digest.apply((d) => d.substring(0, 7)); // shortsha
+new docker.Tag('wp-fpm-image-tag', {
+  sourceImage: wpFpmImage.digest,
+  targetImage: pulumi.interpolate`${wpFpmRepo.repositoryUrl}:${wpFpmImageTag}`,
+});
 const wpNginxImage = new docker_build.Image('wp-nginx-image', {
   context: { location: '../wp' },
   dockerfile: { location: '../wp/nginx.Dockerfile' },
@@ -662,6 +668,11 @@ const wpNginxImage = new docker_build.Image('wp-nginx-image', {
     },
   ],
   tags: [pulumi.interpolate`${wpNginxRepo.repositoryUrl}:latest`],
+});
+const wpNginxImageTag = wpNginxImage.digest.apply((d) => d.substring(0, 7)); // shortsha
+new docker.Tag('wp-nginx-image-tag', {
+  sourceImage: wpNginxImage.digest,
+  targetImage: pulumi.interpolate`${wpNginxRepo.repositoryUrl}:${wpNginxImageTag}`,
 });
 
 // ECS Cluster and Roles
@@ -1231,7 +1242,7 @@ for (const website of websites) {
         containers: {
           fpm: {
             name: 'fpm',
-            image: pulumi.interpolate`${wpFpmRepo.repositoryUrl}:latest`,
+            image: pulumi.interpolate`${wpFpmRepo.repositoryUrl}:${wpFpmImageTag}`,
             essential: true,
             healthCheck: {
               // also change the healthcheck in compose.yml
@@ -1268,7 +1279,7 @@ for (const website of websites) {
           },
           nginx: {
             name: 'nginx',
-            image: pulumi.interpolate`${wpNginxRepo.repositoryUrl}:latest`,
+            image: pulumi.interpolate`${wpNginxRepo.repositoryUrl}:${wpNginxImageTag}`,
             essential: true,
             dependsOn: [
               {
