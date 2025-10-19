@@ -128,59 +128,6 @@ const natAmi = aws.ec2.getAmiOutput({
   ],
 });
 
-// IAM Role and Instance Profile for NAT Instance
-const natInstanceRole = new aws.iam.Role('nat-instance-role', {
-  name: name('nat-instance-role'),
-  assumeRolePolicy: {
-    Version: '2012-10-17',
-    Statement: [
-      {
-        Action: 'sts:AssumeRole',
-        Effect: 'Allow',
-        Principal: {
-          Service: 'ec2.amazonaws.com',
-        },
-      },
-    ],
-  },
-  tags: { proj },
-});
-new aws.iam.RolePolicy('nat-instance-eni-policy', {
-  name: name('nat-instance-eni-policy'),
-  role: natInstanceRole.id,
-  policy: {
-    Version: '2012-10-17',
-    Statement: [
-      {
-        Effect: 'Allow',
-        Action: [
-          'ec2:AttachNetworkInterface',
-          'ec2:ModifyNetworkInterfaceAttribute',
-        ],
-        Resource: '*',
-      },
-    ],
-  },
-});
-new aws.iam.RolePolicy('nat-instance-eip-policy', {
-  name: name('nat-instance-eip-policy'),
-  role: natInstanceRole.id,
-  policy: {
-    Version: '2012-10-17',
-    Statement: [
-      {
-        Effect: 'Allow',
-        Action: ['ec2:AssociateAddress', 'ec2:DisassociateAddress'],
-        Resource: '*',
-      },
-    ],
-  },
-});
-const natInstanceProfile = new aws.iam.InstanceProfile('nat-instance-profile', {
-  name: name('nat-instance-profile'),
-  role: natInstanceRole.name,
-});
-
 // Security Group for NAT Instance
 const natSecurityGroup = new aws.ec2.SecurityGroup('nat-instance-sg', {
   name: name('nat-instance-sg'),
@@ -206,9 +153,8 @@ const natInstance = new aws.ec2.Instance('nat-instance', {
   ami: natAmi.id,
   instanceType: 't4g.nano',
   subnetId: publicSubnetA.id,
-  associatePublicIpAddress: true,
+  associatePublicIpAddress: false,
   vpcSecurityGroupIds: [natSecurityGroup.id],
-  iamInstanceProfile: natInstanceProfile.name,
   sourceDestCheck: false,
   tags: { proj, Name: name('nat-instance') },
 });
