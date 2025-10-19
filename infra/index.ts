@@ -1341,7 +1341,11 @@ for (const website of websites) {
       ],
       tags: { proj },
     },
-    { dependsOn: [wpFpmImage, wpNginxImage] },
+    {
+      dependsOn: [wpFpmImage, wpNginxImage],
+      // no need to update the desired count because we have auto-scaling set up
+      ignoreChanges: ['desiredCount'],
+    },
   );
 
   // Auto Scaling
