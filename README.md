@@ -35,8 +35,8 @@ aws ecs execute-command \
   --region eu-central-1 \
   --cluster <project>-<stack>-wp \
   --task <task-id> \
-  --container wp \
-  --command 'su -l www-data -s /bin/bash' \
+  --container nginx \
+  --command bash \
   --interactive
 ```
 
