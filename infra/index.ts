@@ -4,6 +4,7 @@ import * as awsx from '@pulumi/awsx';
 import * as aws_native from '@pulumi/aws-native';
 import * as docker_build from '@pulumi/docker-build';
 import * as docker from '@pulumi/docker';
+import * as command from '@pulumi/command';
 
 interface Website {
   name: string;
@@ -50,6 +51,11 @@ function name(suffix?: string) {
   }
   return `${proj}-${stack}-${suffix}`;
 }
+
+// Get current git commit short SHA and use it as the deployment ID
+export const deploymentId = new command.local.Command('git-short-sha', {
+  create: 'git rev-parse --short HEAD',
+}).stdout.apply((stdout) => stdout.trim());
 
 // VPC
 const vpc = new aws.ec2.Vpc('vpc', {
@@ -638,12 +644,10 @@ const wpFpmImage = new docker_build.Image('wp-fpm-image', {
       password: wpFpmRepoAuthToken.password,
     },
   ],
-  tags: [pulumi.interpolate`${wpFpmRepo.repositoryUrl}:latest`],
-});
-const wpFpmImageTag = wpFpmImage.digest.apply((d) => d.substring(7, 14)); // sha256:<shortsha>
-new docker.Tag('wp-fpm-image-tag', {
-  sourceImage: wpFpmImage.ref,
-  targetImage: pulumi.interpolate`${wpFpmRepo.repositoryUrl}:${wpFpmImageTag}`,
+  tags: [
+    pulumi.interpolate`${wpFpmRepo.repositoryUrl}:latest`,
+    pulumi.interpolate`${wpFpmRepo.repositoryUrl}:${deploymentId}`,
+  ],
 });
 const wpNginxImage = new docker_build.Image('wp-nginx-image', {
   context: { location: '../wp' },
@@ -671,12 +675,10 @@ const wpNginxImage = new docker_build.Image('wp-nginx-image', {
       password: wpNginxRepoAuthToken.password,
     },
   ],
-  tags: [pulumi.interpolate`${wpNginxRepo.repositoryUrl}:latest`],
-});
-const wpNginxImageTag = wpNginxImage.digest.apply((d) => d.substring(7, 14)); // sha256:<shortsha>
-new docker.Tag('wp-nginx-image-tag', {
-  sourceImage: wpNginxImage.ref,
-  targetImage: pulumi.interpolate`${wpNginxRepo.repositoryUrl}:${wpNginxImageTag}`,
+  tags: [
+    pulumi.interpolate`${wpNginxRepo.repositoryUrl}:latest`,
+    pulumi.interpolate`${wpNginxRepo.repositoryUrl}:${deploymentId}`,
+  ],
 });
 
 // ECS Cluster and Roles
@@ -1244,7 +1246,7 @@ for (const website of websites) {
         containers: {
           fpm: {
             name: 'fpm',
-            image: pulumi.interpolate`${wpFpmRepo.repositoryUrl}:${wpFpmImageTag}`,
+            image: pulumi.interpolate`${wpFpmRepo.repositoryUrl}:${deploymentId}`,
             essential: true,
             healthCheck: {
               // also change the healthcheck in compose.yml
@@ -1281,7 +1283,7 @@ for (const website of websites) {
           },
           nginx: {
             name: 'nginx',
-            image: pulumi.interpolate`${wpNginxRepo.repositoryUrl}:${wpNginxImageTag}`,
+            image: pulumi.interpolate`${wpNginxRepo.repositoryUrl}:${deploymentId}`,
             essential: true,
             dependsOn: [
               {
