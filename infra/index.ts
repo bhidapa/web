@@ -973,6 +973,7 @@ for (const website of websites) {
     `${website.name}-cf-static-cache-policy`,
     {
       name: name(`${website.name}-static-cache`),
+      comment: 'Cache policy for WordPress static content',
       defaultTtl: 604800, // 1 week
       minTtl: 0,
       maxTtl: 31536000, // 1 year
@@ -989,6 +990,7 @@ for (const website of websites) {
     `${website.name}-cf-static-origin-request-policy`,
     {
       name: name(`${website.name}-static-origin`),
+      comment: 'Origin request policy for WordPress static content',
       queryStringsConfig: { queryStringBehavior: 'all' },
       headersConfig: {
         // we need the host header for the alb rules
@@ -1004,6 +1006,7 @@ for (const website of websites) {
     `${website.name}-cf-dynamic-cache-policy`,
     {
       name: name(`${website.name}-dynamic-cache`),
+      comment: 'Cache policy for WordPress dynamic front-end with invalidation',
       defaultTtl: 604800, // 1 week
       minTtl: 0,
       maxTtl: 31536000, // 1 year
@@ -1029,6 +1032,7 @@ for (const website of websites) {
     `${website.name}-cf-dynamic-origin-request-policy`,
     {
       name: name(`${website.name}-dynamic-origin`),
+      comment: 'Origin request policy for WordPress dynamic front-end',
       queryStringsConfig: { queryStringBehavior: 'all' },
       headersConfig: {
         headerBehavior: 'whitelist',
