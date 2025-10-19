@@ -642,7 +642,7 @@ const wpFpmImage = new docker_build.Image('wp-fpm-image', {
 });
 const wpFpmImageTag = wpFpmImage.digest.apply((d) => d.substring(7, 14)); // sha256:<shortsha>
 new docker.Tag('wp-fpm-image-tag', {
-  sourceImage: wpFpmImage.digest,
+  sourceImage: wpFpmImage.ref,
   targetImage: pulumi.interpolate`${wpFpmRepo.repositoryUrl}:${wpFpmImageTag}`,
 });
 const wpNginxImage = new docker_build.Image('wp-nginx-image', {
@@ -675,7 +675,7 @@ const wpNginxImage = new docker_build.Image('wp-nginx-image', {
 });
 const wpNginxImageTag = wpNginxImage.digest.apply((d) => d.substring(7, 14)); // sha256:<shortsha>
 new docker.Tag('wp-nginx-image-tag', {
-  sourceImage: wpNginxImage.digest,
+  sourceImage: wpNginxImage.ref,
   targetImage: pulumi.interpolate`${wpNginxRepo.repositoryUrl}:${wpNginxImageTag}`,
 });
 
