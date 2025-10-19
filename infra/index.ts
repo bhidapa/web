@@ -496,33 +496,35 @@ const jumpServerFsAccessPoint = new aws.efs.AccessPoint('jump-server-fs-ap', {
   },
   tags: { proj },
 });
-const jumpServer = new aws.ec2.Instance('jump-server', {
-  ami: aws.ec2.getAmiOutput({
-    mostRecent: true,
-    owners: ['amazon'],
-    filters: [
-      {
-        name: 'name',
-        values: ['al2023-ami-*-arm64'],
-      },
-      {
-        name: 'architecture',
-        values: ['arm64'],
-      },
-      {
-        name: 'virtualization-type',
-        values: ['hvm'],
-      },
-    ],
-  }).id,
-  instanceType: 't4g.nano',
-  subnetId: publicSubnetA.id,
-  keyName: 'jump-server',
-  vpcSecurityGroupIds: [jumpServerSecurityGroup.id],
-  iamInstanceProfile: jumpServerInstanceProfile.name,
-  tags: { proj, Name: name('jump-server') },
-  // TODO: the efs must be in a ready and mountable state before this user data script runs
-  userData: pulumi.interpolate`#!/bin/bash
+const jumpServer = new aws.ec2.Instance(
+  'jump-server',
+  {
+    ami: aws.ec2.getAmiOutput({
+      mostRecent: true,
+      owners: ['amazon'],
+      filters: [
+        {
+          name: 'name',
+          values: ['al2023-ami-*-arm64'],
+        },
+        {
+          name: 'architecture',
+          values: ['arm64'],
+        },
+        {
+          name: 'virtualization-type',
+          values: ['hvm'],
+        },
+      ],
+    }).id,
+    instanceType: 't4g.nano',
+    subnetId: publicSubnetA.id,
+    keyName: 'jump-server',
+    vpcSecurityGroupIds: [jumpServerSecurityGroup.id],
+    iamInstanceProfile: jumpServerInstanceProfile.name,
+    tags: { proj, Name: name('jump-server') },
+    // TODO: the efs must be in a ready and mountable state before this user data script runs
+    userData: pulumi.interpolate`#!/bin/bash
 set -e
 
 # Update system
@@ -552,7 +554,9 @@ chmod +x /usr/local/bin/wp-mysql
 
 echo "OK"
 `,
-});
+  },
+  { ignoreChanges: ['ami'] },
+);
 new aws.ec2.EipAssociation('jump-server-eip-assoc', {
   instanceId: jumpServer.id,
   allocationId: jumpServerEip.id,
