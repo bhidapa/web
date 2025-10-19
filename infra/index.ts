@@ -1301,7 +1301,7 @@ for (const website of websites) {
 
   // Fargate Service
   // TODO: new service should be deployed after the image gets recreated
-  const service = new awsx.ecs.FargateService(
+  new awsx.ecs.FargateService(
     `${website.name}-service`,
     {
       name: website.name,
@@ -1427,36 +1427,6 @@ for (const website of websites) {
     },
     {
       dependsOn: [wpFpmImage, wpNginxImage],
-      // no need to update the desired count because we have auto-scaling set up
-      ignoreChanges: ['desiredCount'],
     },
   );
-
-  // Auto Scaling
-  const autoScalingTarget = new aws.appautoscaling.Target(
-    `${website.name}-autoscaling-target`,
-    {
-      serviceNamespace: 'ecs',
-      resourceId: pulumi.interpolate`service/${wpCluster.name}/${service.service.name}`,
-      scalableDimension: 'ecs:service:DesiredCount',
-      maxCapacity: 3,
-      minCapacity: 1,
-      tags: { proj },
-    },
-  );
-  new aws.appautoscaling.Policy(`${website.name}-autoscaling-policy`, {
-    name: name(`${website.name}-policy`),
-    policyType: 'TargetTrackingScaling',
-    resourceId: autoScalingTarget.resourceId,
-    scalableDimension: autoScalingTarget.scalableDimension,
-    serviceNamespace: autoScalingTarget.serviceNamespace,
-    targetTrackingScalingPolicyConfiguration: {
-      predefinedMetricSpecification: {
-        predefinedMetricType: 'ECSServiceAverageCPUUtilization',
-      },
-      targetValue: 70.0,
-      scaleInCooldown: 300,
-      scaleOutCooldown: 300,
-    },
-  });
 }
