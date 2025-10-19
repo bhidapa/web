@@ -395,6 +395,7 @@ const dbInstance = new aws.rds.Instance('db-instance', {
 // EFS File System
 const efs = new aws.efs.FileSystem('fs', {
   creationToken: name('fs'),
+  throughputMode: 'elastic',
   tags: { proj, Name: name('fs') },
 });
 new aws.efs.MountTarget('fs-mount-target-a', {
