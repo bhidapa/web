@@ -1,10 +1,9 @@
-import * as pulumi from '@pulumi/pulumi';
 import * as aws from '@pulumi/aws';
-import * as awsx from '@pulumi/awsx';
 import * as aws_native from '@pulumi/aws-native';
-import * as docker_build from '@pulumi/docker-build';
-import * as docker from '@pulumi/docker';
+import * as awsx from '@pulumi/awsx';
 import * as command from '@pulumi/command';
+import * as docker_build from '@pulumi/docker-build';
+import * as pulumi from '@pulumi/pulumi';
 
 interface Website {
   name: string;
