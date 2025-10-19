@@ -25,6 +25,12 @@ server {
     try_files $uri $uri/ /index.php?$args;
   }
 
+  location = /xmlrpc.php {
+    # Deny XML-RPC calls. This mitigates a common WordPress attacks.
+    # We don't really use it so it it's ok.
+    return 403;
+  }
+
   location ~ \.php$ {
     fastcgi_pass ${FASTCGI_PASS};
     include fastcgi_params;
