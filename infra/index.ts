@@ -113,6 +113,7 @@ new aws.ec2.RouteTableAssociation('public-route-table-association-b', {
 });
 
 // NAT Instance (fck-nat)
+// https://fck-nat.dev/
 const natAmi = aws.ec2.getAmiOutput({
   mostRecent: true,
   owners: ['568608671756'],
