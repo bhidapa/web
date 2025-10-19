@@ -829,7 +829,7 @@ const wafWebAcl = new aws.wafv2.WebAcl(
                   // Match wp-login.php path
                   {
                     byteMatchStatement: {
-                      searchString: '/wp-login.php',
+                      searchString: 'wp-login.php',
                       fieldToMatch: {
                         uriPath: {},
                       },
@@ -839,7 +839,8 @@ const wafWebAcl = new aws.wafv2.WebAcl(
                           type: 'NONE',
                         },
                       ],
-                      positionalConstraint: 'STARTS_WITH',
+                      // we use ENDS_WITH because there can be multiple slashes in front of the path
+                      positionalConstraint: 'ENDS_WITH',
                     },
                   },
                 ],
