@@ -112,23 +112,6 @@ new aws.ec2.RouteTableAssociation('public-route-table-association-b', {
   routeTableId: publicRouteTable.id,
 });
 
-// NAT Instance (fck-nat)
-// https://fck-nat.dev/
-const natAmi = aws.ec2.getAmiOutput({
-  mostRecent: true,
-  owners: ['568608671756'],
-  filters: [
-    {
-      name: 'name',
-      values: ['fck-nat-al2023-*-arm64-ebs'],
-    },
-    {
-      name: 'architecture',
-      values: ['arm64'],
-    },
-  ],
-});
-
 // Security Group for NAT Instance
 const natSecurityGroup = new aws.ec2.SecurityGroup('nat-instance-sg', {
   name: name('nat-instance-sg'),
@@ -151,7 +134,22 @@ const eip = new aws.ec2.Eip('nat-instance-eip', {
 
 // NAT Instance
 const natInstance = new aws.ec2.Instance('nat-instance', {
-  ami: natAmi.id,
+  // NAT Instance (fck-nat)
+  // https://fck-nat.dev/
+  ami: aws.ec2.getAmiOutput({
+    mostRecent: true,
+    owners: ['568608671756'],
+    filters: [
+      {
+        name: 'name',
+        values: ['fck-nat-al2023-*-arm64-ebs'],
+      },
+      {
+        name: 'architecture',
+        values: ['arm64'],
+      },
+    ],
+  }).id,
   instanceType: 't4g.nano',
   subnetId: publicSubnetA.id,
   vpcSecurityGroupIds: [natSecurityGroup.id],
