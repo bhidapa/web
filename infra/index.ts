@@ -786,9 +786,86 @@ const lb = new awsx.lb.ApplicationLoadBalancer('lb', {
 const lbHttp = lb.listeners.apply((l) => l![0]!);
 
 // CloudFront Provider for us-east-1 (required for CloudFront certificates)
-const cfCertProvider = new aws.Provider('us-east-1-provider', {
+const usEast1Provider = new aws.Provider('us-east-1-provider', {
   region: 'us-east-1',
 });
+
+// WAF Web ACL for rate limiting wp-login.php POST requests (must be in us-east-1 for CloudFront)
+const wafWebAcl = new aws.wafv2.WebAcl(
+  'cf-waf-webacl',
+  {
+    name: name('cf-waf'),
+    scope: 'CLOUDFRONT', // CLOUDFRONT scope requires us-east-1
+    defaultAction: {
+      allow: {},
+    },
+    rules: [
+      {
+        name: 'RateLimitWpLogin',
+        priority: 1,
+        statement: {
+          rateBasedStatement: {
+            limit: 10, // Allow 10 requests per 5 minutes per IP
+            aggregateKeyType: 'IP',
+            scopeDownStatement: {
+              andStatement: {
+                statements: [
+                  // Match POST requests
+                  {
+                    byteMatchStatement: {
+                      searchString: 'POST',
+                      fieldToMatch: {
+                        method: {},
+                      },
+                      textTransformations: [
+                        {
+                          priority: 0,
+                          type: 'NONE',
+                        },
+                      ],
+                      positionalConstraint: 'EXACTLY',
+                    },
+                  },
+                  // Match wp-login.php path
+                  {
+                    byteMatchStatement: {
+                      searchString: '/wp-login.php',
+                      fieldToMatch: {
+                        uriPath: {},
+                      },
+                      textTransformations: [
+                        {
+                          priority: 0,
+                          type: 'NONE',
+                        },
+                      ],
+                      positionalConstraint: 'STARTS_WITH',
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        },
+        action: {
+          block: {},
+        },
+        visibilityConfig: {
+          sampledRequestsEnabled: true,
+          cloudwatchMetricsEnabled: true,
+          metricName: name('rate-limit-wp-login'),
+        },
+      },
+    ],
+    visibilityConfig: {
+      sampledRequestsEnabled: true,
+      cloudwatchMetricsEnabled: true,
+      metricName: name('cf-waf'),
+    },
+    tags: { proj },
+  },
+  { provider: usEast1Provider },
+);
 
 // For Each Website
 for (const website of websites) {
@@ -842,7 +919,7 @@ for (const website of websites) {
       validationMethod: 'DNS',
       tags: { proj, Name: name(`${website.name}-cf-cert`) },
     },
-    { provider: cfCertProvider },
+    { provider: usEast1Provider },
   );
 
   // Collect all websites (main + alternates) for CloudFront aliases
@@ -882,7 +959,7 @@ for (const website of websites) {
         records.map((r) => r.fqdn),
       ),
     },
-    { provider: cfCertProvider },
+    { provider: usEast1Provider },
   );
 
   // CloudFront Cache Policies for WordPress Best Practices
@@ -1010,6 +1087,7 @@ for (const website of websites) {
       priceClass: 'PriceClass_100', // Use only North America and Europe
       aliases: allWebsites.map((w) => w.domain),
       comment: `CloudFront distribution for ${website.name}`,
+      webAclId: wafWebAcl.arn,
       origins: [
         {
           domainName: lb.loadBalancer.dnsName,
