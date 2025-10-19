@@ -133,29 +133,33 @@ const eip = new aws.ec2.Eip('nat-instance-eip', {
 });
 
 // NAT Instance
-const natInstance = new aws.ec2.Instance('nat-instance', {
-  // NAT Instance (fck-nat)
-  // https://fck-nat.dev/
-  ami: aws.ec2.getAmiOutput({
-    mostRecent: true,
-    owners: ['568608671756'],
-    filters: [
-      {
-        name: 'name',
-        values: ['fck-nat-al2023-*-arm64-ebs'],
-      },
-      {
-        name: 'architecture',
-        values: ['arm64'],
-      },
-    ],
-  }).id,
-  instanceType: 't4g.nano',
-  subnetId: publicSubnetA.id,
-  vpcSecurityGroupIds: [natSecurityGroup.id],
-  sourceDestCheck: false,
-  tags: { proj, Name: name('nat-instance') },
-});
+const natInstance = new aws.ec2.Instance(
+  'nat-instance',
+  {
+    // NAT Instance (fck-nat)
+    // https://fck-nat.dev/
+    ami: aws.ec2.getAmiOutput({
+      mostRecent: true,
+      owners: ['568608671756'],
+      filters: [
+        {
+          name: 'name',
+          values: ['fck-nat-al2023-*-arm64-ebs'],
+        },
+        {
+          name: 'architecture',
+          values: ['arm64'],
+        },
+      ],
+    }).id,
+    instanceType: 't4g.nano',
+    subnetId: publicSubnetA.id,
+    vpcSecurityGroupIds: [natSecurityGroup.id],
+    sourceDestCheck: false,
+    tags: { proj, Name: name('nat-instance') },
+  },
+  { ignoreChanges: ['ami'] },
+);
 
 // Associate EIP with NAT Instance
 new aws.ec2.EipAssociation('nat-instance-eip-assoc', {
