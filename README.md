@@ -25,32 +25,15 @@ The failing health check can be safely ignore because when the website is deploy
 
 ## Cheatsheet
 
-### ssh into the wp container
-
-> [!TIP]
-> Has [wp-cli](https://wp-cli.org/) installed. Note that you have to set the `WORDPRESS_DB_*` variables for the desired website.
-
-```sh
-aws ecs execute-command \
-  --region eu-central-1 \
-  --cluster <project>-<stack>-wp \
-  --task <task-id> \
-  --container nginx \
-  --command bash \
-  --interactive
-```
-
 ### ssh into the jump server
 
 > [!TIP]
 > Use `wp-mysql` to connect to the RDS database.
+>
+> Use `WEBSITE=<name> wp-cli` to start a WordPress container with [WP-CLI](https://wp-cli.org/) installed and set up to use with the `$WEBSITE`.
 >
 > The EFS drive is mounted under `/mnt/efs`.
 
 ```sh
 ssh -i jump-server.pem ec2-user@<jump-server-endpoint>
 ```
-
-### useful queries for inspecting nat gateway traffic
-
-https://repost.aws/knowledge-center/vpc-find-traffic-sources-nat-gateway

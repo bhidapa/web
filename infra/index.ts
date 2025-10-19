@@ -549,6 +549,29 @@ mysql -h ${dbInstance.address} -P ${dbInstance.port} -u ${dbInstance.username} -
 EOF
 chmod +x /usr/local/bin/wp-mysql
 
+# Ready the wp-cli helper container script
+cat > /usr/local/bin/wp-cli << 'EOF'
+#!/bin/bash
+if [ -z "$WEBSITE" ]; then
+  echo "WEBSITE environment variable is not set" >&2
+  exit 1
+fi
+if [ ! -d "/mnt/efs/$WEBSITE" ]; then
+  echo "Directory /mnt/efs/$WEBSITE does not exist" >&2
+  exit 1
+fi
+DB_PASSWORD=$(aws secretsmanager get-secret-value --secret-id ${dbPassword.id} --region ${region} --query SecretString --output text)
+docker run -it --rm \
+  -v /mnt/efs/$WEBSITE:/var/www/html \
+  -e WORDPRESS_DB_HOST=${dbInstance.endpoint} \
+  -e WORDPRESS_DB_USER=${dbInstance.username} \
+  -e WORDPRESS_DB_NAME=$WEBSITE \
+  -e WORDPRESS_DB_PASSWORD="$DB_PASSWORD" \
+  --entrypoint bash \
+  wordpress:cli
+EOF
+chmod +x /usr/local/bin/wp-cli
+
 echo "OK"
 `,
   },
