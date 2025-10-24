@@ -514,7 +514,7 @@ const jumpServer = new aws.ec2.Instance(
         },
       ],
     }).id,
-    instanceType: 't4g.nano',
+    instanceType: 't4g.small', // t4g.nano is just too slow
     subnetId: publicSubnetA.id,
     keyName: 'jump-server',
     vpcSecurityGroupIds: [jumpServerSecurityGroup.id],
