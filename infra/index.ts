@@ -1446,3 +1446,80 @@ for (const website of websites) {
     },
   );
 }
+
+// Wordpress Cloudfront Invalidation plugin and WP Offlad Media
+// https://wordpress.org/plugins/c3-cloudfront-clear-cache/
+// https://deliciousbrains.com/wp-offload-media/
+
+// S3 Bucket for Media Storage
+const mediaBucket = new aws.s3.Bucket('media-bucket', {
+  bucket: 'media-bhidapa-web',
+  tags: { proj },
+});
+
+// IAM Policy for CloudFront Invalidation and S3 Media Access
+const mediaAndCfPolicy = new aws.iam.Policy('media-and-cf-policy', {
+  name: name('media-and-cf-policy'),
+  description: 'Policy for CloudFront invalidation and S3 media bucket access',
+  policy: {
+    Version: '2012-10-17',
+    Statement: [
+      // CloudFront permissions
+      {
+        Effect: 'Allow',
+        Action: [
+          'cloudfront:GetDistribution',
+          'cloudfront:ListInvalidations',
+          'cloudfront:GetStreamingDistribution',
+          'cloudfront:GetDistributionConfig',
+          'cloudfront:GetInvalidation',
+          'cloudfront:CreateInvalidation',
+        ],
+        Resource: '*',
+      },
+      // S3 Object-level permissions (restricted to media bucket)
+      {
+        Sid: 'ObjectLevel',
+        Effect: 'Allow',
+        Action: ['s3:PutObject', 's3:GetObject', 's3:DeleteObject'],
+        Resource: pulumi.interpolate`${mediaBucket.arn}/*`,
+      },
+      // S3 Bucket-level permissions (restricted to media bucket)
+      {
+        Sid: 'BucketLevel',
+        Effect: 'Allow',
+        Action: [
+          's3:GetBucketPublicAccessBlock',
+          's3:GetBucketOwnershipControls',
+          's3:ListBucket',
+          's3:GetBucketLocation',
+        ],
+        Resource: mediaBucket.arn,
+      },
+    ],
+  },
+  tags: { proj },
+});
+
+// IAM User for WordPress plugins (C3 CloudFront Clear Cache and WP Offload Media)
+const mediaAndCfUser = new aws.iam.User('media-and-cf-user', {
+  name: name('media-and-cf-user'),
+  tags: { proj },
+});
+
+new aws.iam.UserPolicyAttachment('media-and-cf-user-policy-attachment', {
+  user: mediaAndCfUser.name,
+  policyArn: mediaAndCfPolicy.arn,
+});
+
+// Create access key for the user
+const mediaAndCfAccessKey = new aws.iam.AccessKey('media-and-cf-access-key', {
+  user: mediaAndCfUser.name,
+});
+
+// Export the bucket name and user credentials
+export const mediaBucketName = mediaBucket.bucket;
+export const mediaAndCfUserAccessKeyId = mediaAndCfAccessKey.id;
+export const mediaAndCfUserSecretAccessKey = mediaAndCfAccessKey.secret.apply(
+  (s) => s,
+);
