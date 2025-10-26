@@ -190,6 +190,12 @@ new aws.ec2.MainRouteTableAssociation('main-route-table-association', {
   routeTableId: privateRouteTable.id,
 });
 
+// Jump Server static public IP
+const jumpServerEip = new aws.ec2.Eip('jump-server-eip', {
+  domain: 'vpc',
+  tags: { proj, Name: name('jump-server-eip') },
+});
+
 // Security Groups
 const cfPrefixList = aws.ec2.getManagedPrefixListOutput({
   filters: [
@@ -199,6 +205,24 @@ const cfPrefixList = aws.ec2.getManagedPrefixListOutput({
       values: ['com.amazonaws.global.cloudfront.origin-facing'],
     },
   ],
+});
+const jumpServerSecurityGroup = new aws.ec2.SecurityGroup('jump-server-sg', {
+  name: name('jump-server-sg'),
+  vpcId: vpc.id,
+  description: 'Security group for Jump Server EC2 instance',
+  ingress: [
+    {
+      protocol: 'tcp',
+      fromPort: 22,
+      toPort: 22,
+      cidrBlocks: ['0.0.0.0/0'],
+      description: 'SSH access',
+    },
+  ],
+  egress: [
+    { protocol: '-1', fromPort: 0, toPort: 0, cidrBlocks: ['0.0.0.0/0'] },
+  ],
+  tags: { proj, Name: name('jump-server-sg') },
 });
 const lbSecurityGroup = new aws.ec2.SecurityGroup('lb-sg', {
   name: name('lb-sg'),
@@ -212,7 +236,13 @@ const lbSecurityGroup = new aws.ec2.SecurityGroup('lb-sg', {
       prefixListIds: [cfPrefixList.id],
       description: 'Decrypted HTTP from CloudFront',
     },
-    // TODO: should we allow HTTP from Jump Server for testing?
+    {
+      protocol: 'tcp',
+      fromPort: 80,
+      toPort: 80,
+      cidrBlocks: [pulumi.interpolate`${jumpServerEip.publicIp}/32`],
+      description: 'Direct HTTP access from Jump Server from the outside',
+    },
   ],
   egress: [
     { protocol: '-1', fromPort: 0, toPort: 0, cidrBlocks: ['0.0.0.0/0'] },
@@ -235,24 +265,6 @@ const wpSecurityGroup = new aws.ec2.SecurityGroup('wp-sg', {
     { protocol: '-1', fromPort: 0, toPort: 0, cidrBlocks: ['0.0.0.0/0'] },
   ],
   tags: { proj, Name: name('wp-sg') },
-});
-const jumpServerSecurityGroup = new aws.ec2.SecurityGroup('jump-server-sg', {
-  name: name('jump-server-sg'),
-  vpcId: vpc.id,
-  description: 'Security group for Jump Server EC2 instance',
-  ingress: [
-    {
-      protocol: 'tcp',
-      fromPort: 22,
-      toPort: 22,
-      cidrBlocks: ['0.0.0.0/0'],
-      description: 'SSH access',
-    },
-  ],
-  egress: [
-    { protocol: '-1', fromPort: 0, toPort: 0, cidrBlocks: ['0.0.0.0/0'] },
-  ],
-  tags: { proj, Name: name('jump-server-sg') },
 });
 const dbSecurityGroup = new aws.ec2.SecurityGroup('db-sg', {
   name: name('db-sg'),
@@ -474,10 +486,6 @@ const jumpServerInstanceProfile = new aws.iam.InstanceProfile(
     role: jumpServerRole.name,
   },
 );
-const jumpServerEip = new aws.ec2.Eip('jump-server-eip', {
-  domain: 'vpc',
-  tags: { proj, Name: name('jump-server-eip') },
-});
 const jumpServerFsAccessPoint = new aws.efs.AccessPoint('jump-server-fs-ap', {
   fileSystemId: efs.id,
   posixUser: {
