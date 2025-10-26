@@ -1457,6 +1457,32 @@ const mediaBucket = new aws.s3.Bucket('media-bucket', {
   tags: { proj },
 });
 
+// Allow public access to the bucket
+new aws.s3.BucketPublicAccessBlock('media-bucket-public-access', {
+  bucket: mediaBucket.id,
+  blockPublicAcls: false,
+  blockPublicPolicy: false,
+  ignorePublicAcls: false,
+  restrictPublicBuckets: false,
+});
+
+// Bucket policy to allow public read access
+new aws.s3.BucketPolicy('media-bucket-policy', {
+  bucket: mediaBucket.id,
+  policy: {
+    Version: '2012-10-17',
+    Statement: [
+      {
+        Sid: 'PublicReadGetObject',
+        Effect: 'Allow',
+        Principal: '*',
+        Action: 's3:GetObject',
+        Resource: pulumi.interpolate`${mediaBucket.arn}/*`,
+      },
+    ],
+  },
+});
+
 // IAM Policy for CloudFront Invalidation and S3 Media Access
 const mediaAndCfPolicy = new aws.iam.Policy('media-and-cf-policy', {
   name: name('media-and-cf-policy'),
