@@ -1457,6 +1457,14 @@ const mediaBucket = new aws.s3.Bucket('media-bucket', {
   tags: { proj },
 });
 
+// Disable object ownership enforcement to allow ACLs
+new aws.s3.BucketOwnershipControls('media-bucket-ownership', {
+  bucket: mediaBucket.id,
+  rule: {
+    objectOwnership: 'BucketOwnerPreferred',
+  },
+});
+
 // Allow public access to the bucket
 new aws.s3.BucketPublicAccessBlock('media-bucket-public-access', {
   bucket: mediaBucket.id,
