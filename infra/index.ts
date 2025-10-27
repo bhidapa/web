@@ -320,8 +320,8 @@ const dbSubnetGroup = new aws.rds.SubnetGroup('db-subnet-group', {
   description: 'Subnet group for MariaDB database',
   tags: { proj },
 });
-const enhancedMonitoringRole = new aws.iam.Role('db-enhanced-monitoring-role', {
-  name: name('db-enhanced-monitoring-role'),
+const monitoringRole = new aws.iam.Role('db-monitoring-role', {
+  name: name('db-monitoring-role'),
   assumeRolePolicy: {
     Version: '2012-10-17',
     Statement: [
@@ -335,8 +335,8 @@ const enhancedMonitoringRole = new aws.iam.Role('db-enhanced-monitoring-role', {
     ],
   },
 });
-new aws.iam.RolePolicyAttachment('rds-enhanced-monitoring-policy', {
-  role: enhancedMonitoringRole.name,
+new aws.iam.RolePolicyAttachment('rds-monitoring-policy', {
+  role: monitoringRole.name,
   policyArn:
     'arn:aws:iam::aws:policy/service-role/AmazonRDSEnhancedMonitoringRole',
 });
@@ -390,7 +390,7 @@ const dbInstance = new aws.rds.Instance('db-instance', {
   backupWindow: '03:00-04:00',
   maintenanceWindow: 'mon:04:00-mon:05:00',
   skipFinalSnapshot: true,
-  monitoringRoleArn: enhancedMonitoringRole.arn,
+  monitoringRoleArn: monitoringRole.arn,
   monitoringInterval: 60, // 60 seconds - free tier
   parameterGroupName: dbParameterGroup.name,
   publiclyAccessible: false,
@@ -438,10 +438,6 @@ const jumpServerRole = new aws.iam.Role('jump-server-role', {
     ],
   },
   tags: { proj },
-});
-new aws.iam.RolePolicyAttachment('jump-server-ssm-policy', {
-  role: jumpServerRole.name,
-  policyArn: 'arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore',
 });
 new aws.iam.RolePolicy('jump-server-secrets-policy', {
   name: name('jump-server-secrets-policy'),
@@ -697,10 +693,7 @@ export const wpServiceDeploymentId = new command.local.Command(
 ).stdout.apply((stdout) => stdout.trim());
 
 // ECS Cluster and Roles
-const wpCluster = new aws.ecs.Cluster('wp-cluster', {
-  name: name('wp'),
-  settings: [{ name: 'containerInsights', value: 'enhanced' }],
-});
+const wpCluster = new aws.ecs.Cluster('wp-cluster', { name: name('wp') });
 const taskExecutionRole = new aws.iam.Role('wp-service-task-exec-role', {
   name: name('wp-service'),
   assumeRolePolicy: {
@@ -753,28 +746,6 @@ new aws.iam.RolePolicy('wp-service-task-exec-role-fs-mount-policy', {
       },
     ],
   },
-});
-
-// Task Role for ECS Execute Command (SSM)
-const taskRole = new aws.iam.Role('wp-service-task-role', {
-  name: name('wp-service-task-role'),
-  assumeRolePolicy: {
-    Version: '2012-10-17',
-    Statement: [
-      {
-        Action: 'sts:AssumeRole',
-        Effect: 'Allow',
-        Principal: {
-          Service: 'ecs-tasks.amazonaws.com',
-        },
-      },
-    ],
-  },
-  tags: { proj },
-});
-new aws.iam.RolePolicyAttachment('wp-service-task-role-ssm-policy', {
-  role: taskRole.name,
-  policyArn: 'arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore',
 });
 
 // Application Load Balancer (HTTP only - CloudFront handles SSL)
@@ -1322,7 +1293,6 @@ for (const website of websites) {
     {
       name: website.name,
       cluster: wpCluster.arn,
-      enableExecuteCommand: true, // allows us to "docker exec" into running containers (using aws ecs execute-command)
       taskDefinitionArgs: {
         logGroup: {
           // we already created it, see `logGroup` above
@@ -1331,9 +1301,6 @@ for (const website of websites) {
         family: name(website.name),
         executionRole: {
           roleArn: taskExecutionRole.arn,
-        },
-        taskRole: {
-          roleArn: taskRole.arn,
         },
         cpu: '1024', // 1 vCPU
         memory: '2048', // 2 GB
