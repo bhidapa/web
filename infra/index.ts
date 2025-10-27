@@ -51,11 +51,6 @@ function name(suffix?: string) {
   return `${proj}-${stack}-${suffix}`;
 }
 
-// Get current git commit short SHA and use it as the deployment ID
-export const deploymentId = new command.local.Command('git-short-sha', {
-  create: 'git rev-parse --short HEAD',
-}).stdout.apply((stdout) => stdout.trim());
-
 // VPC
 const vpc = new aws.ec2.Vpc('vpc', {
   cidrBlock: '192.168.0.0/16',
@@ -593,116 +588,113 @@ new aws.ec2.EipAssociation('jump-server-eip-assoc', {
 export const jumpServerUsername = 'ec2-user';
 export const jumpServerEndpoint = jumpServerEip.publicDns;
 
-// WordPress Containers Image Repository
-const wpFpmRepo = new aws.ecr.Repository('wp-fpm-repo', {
-  name: name('wp-fpm'),
-  forceDelete: true,
-  imageScanningConfiguration: {
-    scanOnPush: true,
+// WordPress Containers inside the ECR Repository
+const wpServiceNames = ['fpm', 'nginx'] as const;
+const wpService = wpServiceNames.reduce(
+  (acc, service) => {
+    const repo = new aws.ecr.Repository(`wp-${service}-repo`, {
+      name: name(`wp-${service}`),
+      forceDelete: true,
+      imageScanningConfiguration: {
+        scanOnPush: true,
+      },
+      tags: { proj },
+    });
+    new aws.ecr.LifecyclePolicy(`wp-${service}-repo-lifecycle-policy`, {
+      repository: repo.name,
+      policy: {
+        rules: [
+          {
+            rulePriority: 1,
+            description: 'Delete untagged images after 1 day',
+            selection: {
+              tagStatus: 'untagged',
+              countType: 'sinceImagePushed',
+              countUnit: 'days',
+              countNumber: 1,
+            },
+            action: {
+              type: 'expire',
+            },
+          },
+        ],
+      },
+    });
+    const authToken = aws.ecr.getAuthorizationTokenOutput({
+      registryId: repo.registryId,
+    });
+    const imageArgs: docker_build.ImageArgs = {
+      push: false, // will be overriden when ready to push necessary
+      context: { location: '../wp' },
+      dockerfile: { location: `../wp/${service}.Dockerfile` },
+      platforms: ['linux/arm64'],
+      cacheFrom: [
+        {
+          registry: {
+            ref: pulumi.interpolate`${repo.repositoryUrl}:cache`,
+          },
+        },
+      ],
+      registries: [
+        {
+          address: repo.repositoryUrl,
+          username: authToken.userName,
+          password: authToken.password,
+        },
+      ],
+    };
+    return {
+      ...acc,
+      [service]: {
+        imageArgs,
+        repositoryUrl: repo.repositoryUrl,
+        userName: authToken.userName,
+        password: authToken.password,
+        digest: new docker_build.Image(
+          `wp-${service}-image-checksum`,
+          imageArgs,
+        ).digest,
+        push(deploymentId: pulumi.Output<string>) {
+          return new docker_build.Image(`wp-${service}-image`, {
+            ...imageArgs,
+            push: true,
+            cacheTo: [
+              {
+                registry: {
+                  imageManifest: true,
+                  ociMediaTypes: true,
+                  ref: pulumi.interpolate`${repo.repositoryUrl}:cache`,
+                },
+              },
+            ],
+            tags: [
+              pulumi.interpolate`${repo.repositoryUrl}:latest`,
+              pulumi.interpolate`${repo.repositoryUrl}:${deploymentId}`,
+            ],
+          });
+        },
+      },
+    };
   },
-  tags: { proj },
-});
-const wpFpmRepoAuthToken = aws.ecr.getAuthorizationTokenOutput({
-  registryId: wpFpmRepo.registryId,
-});
-const wpNginxRepo = new aws.ecr.Repository('wp-nginx-repo', {
-  name: name('wp-nginx'),
-  forceDelete: true,
-  imageScanningConfiguration: {
-    scanOnPush: true,
+  {} as {
+    [service in (typeof wpServiceNames)[number]]: {
+      imageArgs: docker_build.ImageArgs;
+      repositoryUrl: pulumi.Output<string>;
+      userName: pulumi.Output<string>;
+      password: pulumi.Output<string>;
+      digest: pulumi.Output<string>;
+      push(deploymentId: pulumi.Output<string>): docker_build.Image;
+    };
   },
-  tags: { proj },
-});
-const wpNginxRepoAuthToken = aws.ecr.getAuthorizationTokenOutput({
-  registryId: wpNginxRepo.registryId,
-});
-const wpReposLifecyclePolicy: aws.types.input.ecr.LifecyclePolicyDocument = {
-  rules: [
-    {
-      rulePriority: 1,
-      description: 'Delete untagged images after 1 day',
-      selection: {
-        tagStatus: 'untagged',
-        countType: 'sinceImagePushed',
-        countUnit: 'days',
-        countNumber: 1,
-      },
-      action: {
-        type: 'expire',
-      },
-    },
-  ],
-};
-new aws.ecr.LifecyclePolicy('wp-fpm-repo-lifecycle-policy', {
-  repository: wpFpmRepo.name,
-  policy: wpReposLifecyclePolicy,
-});
-new aws.ecr.LifecyclePolicy('wp-nginx-repo-lifecycle-policy', {
-  repository: wpNginxRepo.name,
-  policy: wpReposLifecyclePolicy,
-});
-
-// Build and Push Images
-const wpFpmImage = new docker_build.Image('wp-fpm-image', {
-  context: { location: '../wp' },
-  dockerfile: { location: '../wp/fpm.Dockerfile' },
-  platforms: ['linux/arm64'],
-  push: true,
-  cacheFrom: [
-    { registry: { ref: pulumi.interpolate`${wpFpmRepo.repositoryUrl}:cache` } },
-  ],
-  cacheTo: [
-    {
-      registry: {
-        imageManifest: true,
-        ociMediaTypes: true,
-        ref: pulumi.interpolate`${wpFpmRepo.repositoryUrl}:cache`,
-      },
-    },
-  ],
-  registries: [
-    {
-      address: wpFpmRepo.repositoryUrl,
-      username: wpFpmRepoAuthToken.userName,
-      password: wpFpmRepoAuthToken.password,
-    },
-  ],
-  tags: [
-    pulumi.interpolate`${wpFpmRepo.repositoryUrl}:latest`,
-    pulumi.interpolate`${wpFpmRepo.repositoryUrl}:${deploymentId}`,
-  ],
-});
-const wpNginxImage = new docker_build.Image('wp-nginx-image', {
-  context: { location: '../wp' },
-  dockerfile: { location: '../wp/nginx.Dockerfile' },
-  platforms: ['linux/arm64'],
-  push: true,
-  cacheFrom: [
-    {
-      registry: { ref: pulumi.interpolate`${wpNginxRepo.repositoryUrl}:cache` },
-    },
-  ],
-  cacheTo: [
-    {
-      registry: {
-        imageManifest: true,
-        ociMediaTypes: true,
-        ref: pulumi.interpolate`${wpNginxRepo.repositoryUrl}:cache`,
-      },
-    },
-  ],
-  registries: [
-    {
-      address: wpNginxRepo.repositoryUrl,
-      username: wpNginxRepoAuthToken.userName,
-      password: wpNginxRepoAuthToken.password,
-    },
-  ],
-  tags: [
-    pulumi.interpolate`${wpNginxRepo.repositoryUrl}:latest`,
-    pulumi.interpolate`${wpNginxRepo.repositoryUrl}:${deploymentId}`,
-  ],
-});
+);
+// Get current git commit short SHA on image checksum change and use it as the deployment ID
+export const wpServiceDeploymentId = new command.local.Command(
+  'wp-service-deployment-id',
+  {
+    create: 'git rev-parse --short HEAD',
+    triggers: Object.values(wpService).map((s) => s.digest),
+  },
+).stdout.apply((stdout) => stdout.trim());
 
 // ECS Cluster and Roles
 const wpCluster = new aws.ecs.Cluster('wp-cluster', {
@@ -1352,7 +1344,7 @@ for (const website of websites) {
         containers: {
           fpm: {
             name: 'fpm',
-            image: pulumi.interpolate`${wpFpmRepo.repositoryUrl}:${deploymentId}`,
+            image: pulumi.interpolate`${wpService.fpm.repositoryUrl}:${wpServiceDeploymentId}`,
             essential: true,
             healthCheck: {
               // also change the healthcheck in compose.yml
@@ -1389,7 +1381,7 @@ for (const website of websites) {
           },
           nginx: {
             name: 'nginx',
-            image: pulumi.interpolate`${wpNginxRepo.repositoryUrl}:${deploymentId}`,
+            image: pulumi.interpolate`${wpService.nginx.repositoryUrl}:${wpServiceDeploymentId}`,
             essential: true,
             dependsOn: [
               {
@@ -1450,7 +1442,10 @@ for (const website of websites) {
       tags: { proj },
     },
     {
-      dependsOn: [wpFpmImage, wpNginxImage],
+      dependsOn: [
+        wpService.fpm.push(wpServiceDeploymentId),
+        wpService.nginx.push(wpServiceDeploymentId),
+      ],
     },
   );
 }
