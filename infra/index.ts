@@ -693,7 +693,15 @@ export const wpServiceDeploymentId = new command.local.Command(
 ).stdout.apply((stdout) => stdout.trim());
 
 // ECS Cluster and Roles
-const wpCluster = new aws.ecs.Cluster('wp-cluster', { name: name('wp') });
+const wpCluster = new aws.ecs.Cluster('wp-cluster', {
+  name: name('wp'),
+  settings: [
+    {
+      name: 'containerInsights',
+      value: 'enabled',
+    },
+  ],
+});
 const taskExecutionRole = new aws.iam.Role('wp-service-task-exec-role', {
   name: name('wp-service'),
   assumeRolePolicy: {
