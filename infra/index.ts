@@ -1425,58 +1425,19 @@ for (const website of websites) {
   );
 }
 
-// Wordpress Cloudfront Invalidation plugin and WP Offlad Media
+// Wordpress Cloudfront Invalidation plugin and other needs for an installation
 // https://wordpress.org/plugins/c3-cloudfront-clear-cache/
-// https://deliciousbrains.com/wp-offload-media/
 
-// S3 Bucket for Media Storage
-const mediaBucket = new aws.s3.Bucket('media-bucket', {
-  bucket: 'media-bhidapa-web',
-  tags: { proj },
-});
-
-// Disable object ownership enforcement to allow ACLs
-new aws.s3.BucketOwnershipControls('media-bucket-ownership', {
-  bucket: mediaBucket.id,
-  rule: {
-    objectOwnership: 'BucketOwnerPreferred',
-  },
-});
-
-// Allow public access to the bucket
-new aws.s3.BucketPublicAccessBlock('media-bucket-public-access', {
-  bucket: mediaBucket.id,
-  blockPublicAcls: false,
-  blockPublicPolicy: false,
-  ignorePublicAcls: false,
-  restrictPublicBuckets: false,
-});
-
-// Bucket policy to allow public read access
-new aws.s3.BucketPolicy('media-bucket-policy', {
-  bucket: mediaBucket.id,
-  policy: {
-    Version: '2012-10-17',
-    Statement: [
-      {
-        Sid: 'PublicReadGetObject',
-        Effect: 'Allow',
-        Principal: '*',
-        Action: 's3:GetObject',
-        Resource: pulumi.interpolate`${mediaBucket.arn}/*`,
-      },
-    ],
-  },
-});
+// TODO: SES account/policy for email sending
 
 // IAM Policy for CloudFront Invalidation and S3 Media Access
-const mediaAndCfPolicy = new aws.iam.Policy('media-and-cf-policy', {
-  name: name('media-and-cf-policy'),
-  description: 'Policy for CloudFront invalidation and S3 media bucket access',
+const wpUserPolicy = new aws.iam.Policy('wp-user-policy', {
+  name: name('wp-user-policy'),
+  description:
+    'Policy for WordPress installations. At the moment only for CloudFront invalidation',
   policy: {
     Version: '2012-10-17',
     Statement: [
-      // CloudFront permissions
       {
         Effect: 'Allow',
         Action: [
@@ -1489,49 +1450,27 @@ const mediaAndCfPolicy = new aws.iam.Policy('media-and-cf-policy', {
         ],
         Resource: '*',
       },
-      // S3 Object-level permissions (restricted to media bucket)
-      {
-        Sid: 'ObjectLevel',
-        Effect: 'Allow',
-        Action: ['s3:PutObject', 's3:GetObject', 's3:DeleteObject'],
-        Resource: pulumi.interpolate`${mediaBucket.arn}/*`,
-      },
-      // S3 Bucket-level permissions (restricted to media bucket)
-      {
-        Sid: 'BucketLevel',
-        Effect: 'Allow',
-        Action: [
-          's3:GetBucketPublicAccessBlock',
-          's3:GetBucketOwnershipControls',
-          's3:ListBucket',
-          's3:GetBucketLocation',
-        ],
-        Resource: mediaBucket.arn,
-      },
     ],
   },
   tags: { proj },
 });
 
 // IAM User for WordPress plugins (C3 CloudFront Clear Cache and WP Offload Media)
-const mediaAndCfUser = new aws.iam.User('media-and-cf-user', {
-  name: name('media-and-cf-user'),
+const wpUser = new aws.iam.User('wp-user', {
+  name: name('wp-user'),
   tags: { proj },
 });
 
-new aws.iam.UserPolicyAttachment('media-and-cf-user-policy-attachment', {
-  user: mediaAndCfUser.name,
-  policyArn: mediaAndCfPolicy.arn,
+new aws.iam.UserPolicyAttachment('wp-user-policy-attachment', {
+  user: wpUser.name,
+  policyArn: wpUserPolicy.arn,
 });
 
 // Create access key for the user
-const mediaAndCfAccessKey = new aws.iam.AccessKey('media-and-cf-access-key', {
-  user: mediaAndCfUser.name,
+const mediaAndCfAccessKey = new aws.iam.AccessKey('wp-user-access-key', {
+  user: wpUser.name,
 });
 
 // Export the bucket name and user credentials
-export const mediaBucketName = mediaBucket.bucket;
-export const mediaAndCfUserAccessKeyId = mediaAndCfAccessKey.id;
-export const mediaAndCfUserSecretAccessKey = mediaAndCfAccessKey.secret.apply(
-  (s) => s,
-);
+export const wpUserAccessKeyId = mediaAndCfAccessKey.id;
+export const wpUserSecretAccessKey = mediaAndCfAccessKey.secret.apply((s) => s);
