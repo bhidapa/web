@@ -42,5 +42,5 @@ services:
     volumes:
       - akp-wp-data:/var/www/html
       - ./mu-plugins:/var/www/html/wp-content/mu-plugins
-      - ./wp-plugins/e-library:/var/www/html/wp-content/plugins/e-library
+      - ./plugins/e-library:/var/www/html/wp-content/plugins/e-library
       - ./themes/azp:/var/www/html/wp-content/themes/azp

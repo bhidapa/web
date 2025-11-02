@@ -10,7 +10,7 @@ if (!website) {
   throw new Error('WEBSITE is not set');
 }
 
-const bundles = ['mu-plugins', 'themes/azp', 'wp-plugins/e-library'];
+const bundles = ['mu-plugins', 'themes/azp', 'plugins/e-library'];
 
 console.log(`Pushing to ${website}`);
 for (const bundle of bundles) {
