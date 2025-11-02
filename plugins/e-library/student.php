@@ -1,10 +1,5 @@
 <?php
 
-add_action('init', function () {
-    global $e_library_student;
-    $e_library_student = new E_Library_Student();
-});
-
 class E_Library_Student
 {
     private const IMPORT_STUDENTS_ACTION = 'import-students';
