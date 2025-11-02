@@ -1,8 +1,8 @@
 <?php
 /**
- * Plugin Name:     BHIDAPA
- * Author:          Bosansko-hercegovačka integrativna dječija i adolescentna psihoterapijska Asocijacija
- * Description:     Core plugins, functionalities and blocks for BHIDAPA websites
+ * Plugin Name:     Core
+ * Author:          BHIDAPA
+ * Description:     Shared plugins, functionalities and blocks for BHIDAPA websites
  * Version:         0.0.0
  */
 
