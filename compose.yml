@@ -30,8 +30,8 @@ services:
   # akp.ba
   akp:
     build:
-      context: ./services
-      dockerfile: ./services/wordpress.Dockerfile
+      context: services
+      dockerfile: wordpress.Dockerfile
     depends_on:
       - db
     environment:
