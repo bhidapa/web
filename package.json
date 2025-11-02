@@ -13,6 +13,7 @@
   "scripts": {
     "blocks:build": "bun -F '@blocks/*' build",
     "blocks:start": "bun -F '@blocks/*' start",
+    "check:build": "bun blocks:build",
     "check:format": "bunx --bun prettier -c .",
     "check:types": "bunx --bun tsc --noEmit",
     "format": "bun check:format -w"
