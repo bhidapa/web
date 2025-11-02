@@ -1,9 +1,9 @@
 {
   "$schema": "https://schemas.wp.org/trunk/block.json",
   "apiVersion": 3,
-  "name": "azp/e-library-has-access",
+  "name": "e-library/has-access",
   "version": "0.0.0",
-  "ancestor": ["azp/e-library"],
+  "ancestor": ["e-library/e-library"],
   "title": "Has Access",
   "category": "theme",
   "icon": "block-default",
