@@ -17,7 +17,7 @@ services:
       - 53386:3306
     volumes:
       - db-data:/var/lib/mysql
-      - ./create-dbs.sql:/docker-entrypoint-initdb.d/create-dbs.sql:ro
+      - ./services/create-dbs.sql:/docker-entrypoint-initdb.d/create-dbs.sql:ro
   pma:
     image: phpmyadmin
     environment:
@@ -30,7 +30,8 @@ services:
   # akp.ba
   akp:
     build:
-      dockerfile: wordpress.Dockerfile
+      context: ./services
+      dockerfile: ./services/wordpress.Dockerfile
     depends_on:
       - db
     environment:
@@ -41,4 +42,5 @@ services:
     volumes:
       - akp-wp-data:/var/www/html
       - ./mu-plugins:/var/www/html/wp-content/mu-plugins
+      - ./wp-plugins/e-library:/var/www/html/wp-content/plugins/e-library
       - ./themes/azp:/var/www/html/wp-content/themes/azp

@@ -621,8 +621,8 @@ const wpService = wpServiceNames.reduce(
     });
     const imageArgs: docker_build.ImageArgs = {
       push: false, // will be overriden when ready to push necessary
-      context: { location: '../' },
-      dockerfile: { location: `../${service}.Dockerfile` },
+      context: { location: '../services' },
+      dockerfile: { location: `../services/${service}.Dockerfile` },
       platforms: ['linux/arm64'],
       cacheFrom: [
         {
