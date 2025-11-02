@@ -10,10 +10,7 @@ if (!website) {
   throw new Error('WEBSITE is not set');
 }
 
-const bundles = [
-  'mu-plugins',
-  // 'themes/azp', TODO: website not ready
-];
+const bundles = ['mu-plugins', 'themes/azp'];
 
 console.log(`Pushing to ${website}`);
 for (const bundle of bundles) {
