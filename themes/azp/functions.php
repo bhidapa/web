@@ -62,28 +62,6 @@ add_filter('upload_mimes', function ($mimes) {
     return $mimes;
 });
 
-add_action('init', function () {
-    register_block_type(
-        dirname(__FILE__) . '/inc/blocks/not-logged-in/build/block.json',
-    );
-    register_block_type(
-        dirname(__FILE__) . '/inc/blocks/acf-field/build/block.json',
-    );
-    register_block_type(
-        dirname(__FILE__) . '/inc/blocks/acf-post-object/build/block.json',
-    );
-    register_block_type(
-        dirname(__FILE__) . '/inc/blocks/acf-repeater/build/block.json',
-    );
-    register_block_type(
-        dirname(__FILE__) . '/inc/blocks/acf-repeater-row/build/block.json',
-    );
-    register_block_type(
-        dirname(__FILE__) .
-            '/inc/blocks/acf-repeater-no-results/build/block.json',
-    );
-});
-
 // Disable comments
 add_action('admin_init', function () {
     // Redirect any user trying to access comments page

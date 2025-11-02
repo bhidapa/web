@@ -34,6 +34,24 @@
         "@pulumi/pulumi": "^3.204.0",
       },
     },
+    "mu-plugins/blocks/acf-field": {
+      "name": "@blocks/acf-field",
+    },
+    "mu-plugins/blocks/acf-post-object": {
+      "name": "@blocks/acf-post-object",
+    },
+    "mu-plugins/blocks/acf-repeater": {
+      "name": "@blocks/acf-repeater",
+    },
+    "mu-plugins/blocks/acf-repeater-no-results": {
+      "name": "@blocks/acf-repeater-no-results",
+    },
+    "mu-plugins/blocks/acf-repeater-row": {
+      "name": "@blocks/acf-repeater-row",
+    },
+    "mu-plugins/blocks/not-logged-in": {
+      "name": "@blocks/not-logged-in",
+    },
     "mu-plugins/blocks/post-type": {
       "name": "@blocks/post-type",
     },
@@ -346,11 +364,23 @@
 
     "@bcoe/v8-coverage": ["@bcoe/v8-coverage@0.2.3", "", {}, "sha512-0hYQ8SB4Db5zvZB4axdMHGwEaQjkZzFjQiN9LVYvIFB2nSUHW9tYpxWriPrWDASIxiaXax83REcLxuSdnGPZtw=="],
 
+    "@blocks/acf-field": ["@blocks/acf-field@workspace:mu-plugins/blocks/acf-field"],
+
+    "@blocks/acf-post-object": ["@blocks/acf-post-object@workspace:mu-plugins/blocks/acf-post-object"],
+
+    "@blocks/acf-repeater": ["@blocks/acf-repeater@workspace:mu-plugins/blocks/acf-repeater"],
+
+    "@blocks/acf-repeater-no-results": ["@blocks/acf-repeater-no-results@workspace:mu-plugins/blocks/acf-repeater-no-results"],
+
+    "@blocks/acf-repeater-row": ["@blocks/acf-repeater-row@workspace:mu-plugins/blocks/acf-repeater-row"],
+
     "@blocks/e-library": ["@blocks/e-library@workspace:plugins/e-library/blocks/e-library"],
 
     "@blocks/e-library-has-access": ["@blocks/e-library-has-access@workspace:plugins/e-library/blocks/has-access"],
 
     "@blocks/e-library-no-access": ["@blocks/e-library-no-access@workspace:plugins/e-library/blocks/no-access"],
+
+    "@blocks/not-logged-in": ["@blocks/not-logged-in@workspace:mu-plugins/blocks/not-logged-in"],
 
     "@blocks/post-type": ["@blocks/post-type@workspace:mu-plugins/blocks/post-type"],
 
