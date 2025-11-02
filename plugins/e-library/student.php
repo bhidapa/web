@@ -4,7 +4,7 @@ class E_Library_Student
 {
     private const IMPORT_STUDENTS_ACTION = 'import-students';
     public const USER_ROLE = 'student';
-    public const STUDY_GROUPS_META_KEY = 'azp__e-library__user_study_groups';
+    public const STUDY_GROUPS_META_KEY = 'e-library__user_study_groups';
 
     public function __construct()
     {
