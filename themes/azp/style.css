@@ -314,11 +314,17 @@ ul.acf-checkbox-list li,
     padding: var(--wp--preset--spacing--20) var(--wp--preset--spacing--40);
   }
 
-  form.failed .wpcf7-response-output,
-  .wpcf7 form.unaccepted .wpcf7-response-output,
-  .wpcf7 form.payment-required .wpcf7-response-output {
+  form.failed .wpcf7-response-output {
     border: none;
     background-color: #cc1919;
+    color: white;
+    margin: 0;
+    padding: var(--wp--preset--spacing--20) var(--wp--preset--spacing--40);
+  }
+
+  form.sent .wpcf7-response-output {
+    border: none;
+    background-color: #008e05;
     color: white;
     margin: 0;
     padding: var(--wp--preset--spacing--20) var(--wp--preset--spacing--40);
