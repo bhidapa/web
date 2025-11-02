@@ -3,8 +3,9 @@
   "type": "module",
   "private": true,
   "workspaces": [
+    "infra",
     "mu-plugins/blocks/*",
-    "infra"
+    "plugins/e-library/blocks/*"
   ],
   "engines": {
     "bun": ">=1.2.23",

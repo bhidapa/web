@@ -1,0 +1,8 @@
+{
+  "name": "@blocks/e-library-no-access",
+  "private": true,
+  "scripts": {
+    "build": "wp-scripts build --webpack-copy-php",
+    "start": "wp-scripts start --webpack-copy-php"
+  }
+}

@@ -11,7 +11,6 @@
 require_once 'inc/queries.php';
 require_once 'inc/bindings.php';
 require_once 'inc/forms.php';
-require_once 'inc/e-library/index.php';
 
 // fix some wordpress default translations
 unload_textdomain('default');

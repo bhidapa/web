@@ -1,0 +1,7 @@
+{
+  "name": "@blocks/e-library-has-access",
+  "scripts": {
+    "build": "wp-scripts build --webpack-copy-php",
+    "start": "wp-scripts start --webpack-copy-php"
+  }
+}
