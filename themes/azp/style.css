@@ -257,6 +257,15 @@ ul.acf-checkbox-list li,
     box-sizing: border-box;
   }
 
+  .wpcf7-form-control.wpcf7-checkbox {
+    display: flex;
+    flex-direction: column;
+
+    .wpcf7-list-item {
+      margin-left: 0;
+    }
+  }
+
   .wpcf7-submit {
     cursor: pointer;
     border: none;
