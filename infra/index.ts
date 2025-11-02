@@ -397,7 +397,7 @@ const dbInstance = new aws.rds.Instance('db-instance', {
   multiAz: false, // no need to multi-az
   tags: { proj },
 });
-// TODO: automatically create databases for each website (see wp/create-dbs.sql)
+// TODO: automatically create databases for each website (see create-dbs.sql)
 
 // EFS File System
 const efs = new aws.efs.FileSystem('fs', {
@@ -621,8 +621,8 @@ const wpService = wpServiceNames.reduce(
     });
     const imageArgs: docker_build.ImageArgs = {
       push: false, // will be overriden when ready to push necessary
-      context: { location: '../wp' },
-      dockerfile: { location: `../wp/${service}.Dockerfile` },
+      context: { location: '../' },
+      dockerfile: { location: `../${service}.Dockerfile` },
       platforms: ['linux/arm64'],
       cacheFrom: [
         {

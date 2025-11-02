@@ -18,7 +18,7 @@ server {
   real_ip_header X-Forwarded-For;
   real_ip_recursive on;
 
-  # Matches max post size config from wp/custom.ini
+  # Matches max post size config from custom.ini
   client_max_body_size 1G;
 
   root /var/www/html;
