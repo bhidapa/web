@@ -1,5 +1,5 @@
 <?php
-if (have_rows($block->context['azp/acf-repeater_field'])) {
+if (have_rows($block->context['bhidapa/acf-repeater_field'])) {
     // there are rows in the repeatable, nothing to render (show no results)
     return;
 }

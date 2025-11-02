@@ -1,5 +1,5 @@
 <?php
-$field = $block->context['azp/acf-repeater_field'];
+$field = $block->context['bhidapa/acf-repeater_field'];
 if (!have_rows($field)) {
     return;
 }

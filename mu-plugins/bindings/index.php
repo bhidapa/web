@@ -1,7 +1,7 @@
 <?php
 add_action('init', function () {
-    register_block_bindings_source('azp/acf-field', [
-        'label' => __('ACF Field', 'azp'),
+    register_block_bindings_source('bhidapa/acf-field', [
+        'label' => __('ACF Field', 'bhidapa'),
         'get_value_callback' => function (array $source_args) {
             if ($source_args['sub']) {
                 return get_sub_field($source_args['key']);
@@ -9,8 +9,8 @@ add_action('init', function () {
             return get_field($source_args['key']);
         },
     ]);
-    register_block_bindings_source('azp/login-url-with-return-redirect', [
-        'label' => __('Login URL with return redirect', 'azp'),
+    register_block_bindings_source('bhidapa/login-url-with-return-redirect', [
+        'label' => __('Login URL with return redirect', 'bhidapa'),
         'get_value_callback' => function () {
             $redirect_to = $_GET['redirect_to'] ?? '';
             if (!empty($redirect_to)) {
@@ -21,8 +21,8 @@ add_action('init', function () {
             return wp_login_url($wp->request);
         },
     ]);
-    register_block_bindings_source('azp/post-title', [
-        'label' => __('Post Title', 'azp'),
+    register_block_bindings_source('bhidapa/post-title', [
+        'label' => __('Post Title', 'bhidapa'),
         'get_value_callback' => function (array $source_args) {
             if ($source_args['link']) {
                 return '<a href="' .

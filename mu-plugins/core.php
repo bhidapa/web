@@ -7,6 +7,8 @@
  * Version:     0.0.0
  */
 
+require_once 'bindings/index.php';
+
 add_action('init', function () {
     register_blocks();
 });

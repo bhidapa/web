@@ -1,13 +1,13 @@
 {
   "$schema": "https://schemas.wp.org/trunk/block.json",
   "apiVersion": 3,
-  "name": "azp/acf-repeater-row",
+  "name": "bhidapa/acf-repeater-row",
   "version": "0.0.0",
-  "ancestor": ["azp/acf-repeater"],
+  "ancestor": ["bhidapa/acf-repeater"],
   "title": "Row Template",
   "category": "theme",
   "icon": "block-default",
-  "usesContext": ["azp/acf-repeater_field"],
+  "usesContext": ["bhidapa/acf-repeater_field"],
   "editorScript": "file:./index.tsx",
   "render": "file:./render.php",
   "supports": {
