@@ -287,10 +287,6 @@ ul.acf-checkbox-list li,
     &:hover {
       box-shadow: var(--wp--preset--shadow--elevation-3);
     }
-
-    .has-spinner {
-      display: none;
-    }
   }
 
   .wpcf7-not-valid-tip {
@@ -332,7 +328,7 @@ ul.acf-checkbox-list li,
 
   .wpcf7-spinner {
     display: none;
-    margin: 0;
+    margin: 0 !important;
     background-color: var(--wp--preset--color--secondary);
     opacity: 1;
     margin: calc(0.667em + 2px) 0; /* match button height */
@@ -340,7 +336,7 @@ ul.acf-checkbox-list li,
   form.submitting .wpcf7-spinner {
     display: block;
   }
-  form.submitting .wpcf7-spinner {
-    display: block;
+  form.submitting .wpcf7-submit {
+    display: none;
   }
 }
