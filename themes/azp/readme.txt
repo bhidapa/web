@@ -3,12 +3,13 @@ Contributors: BHIDAPA
 Requires at least: 6.7
 Requires PHP: 8.2
 Tested up to: 6.7.1
-Version: 1.2.0
+Version: 1.2.1
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 Copyright: BHIDAPA
 
 == Changelog ==
+1.2.1 Style improvements
 1.2.0 Style improvements
 1.1.2 Style improvements
 1.1.1 Style improvements
