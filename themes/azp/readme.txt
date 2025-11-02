@@ -9,6 +9,7 @@ License URI: http://www.gnu.org/licenses/gpl-2.0.html
 Copyright: BHIDAPA
 
 == Changelog ==
+1.2.2 Style improvements
 1.2.1 Style improvements
 1.2.0 Style improvements
 1.1.2 Style improvements
