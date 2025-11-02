@@ -245,6 +245,9 @@ ul.acf-checkbox-list li,
   .wpcf7-textarea {
     border: 1px solid var(--wp--preset--color--contrast);
     width: 100%;
+    min-height: calc(
+      var(--wp--preset--spacing--20) + 2em
+    ); /* min height fits text */
     resize: vertical;
     padding: var(--wp--preset--spacing--20);
   }
