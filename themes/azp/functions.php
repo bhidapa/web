@@ -36,6 +36,7 @@ add_action('init', function () {
         'name' => 'naked',
         'label' => __('Naked', 'azp'),
     ]);
+    register_blocks_in_dir(get_template_directory() . '/blocks/');
 });
 
 add_action('admin_init', function () {

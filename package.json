@@ -5,7 +5,8 @@
   "workspaces": [
     "infra",
     "mu-plugins/blocks/*",
-    "plugins/e-library/blocks/*"
+    "plugins/e-library/blocks/*",
+    "themes/azp/blocks/*"
   ],
   "engines": {
     "bun": ">=1.2.23",

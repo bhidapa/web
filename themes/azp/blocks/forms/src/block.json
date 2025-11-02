@@ -1,0 +1,15 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "azp/forms",
+  "version": "0.0.0",
+  "category": "text",
+  "title": "Forms",
+  "icon": "block-default",
+  "attributes": {
+    "name": {
+      "type": "string"
+    }
+  },
+  "editorScript": "file:./index.tsx"
+}

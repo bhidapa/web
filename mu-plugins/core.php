@@ -10,12 +10,16 @@
 require_once 'bindings/index.php';
 
 add_action('init', function () {
-    register_blocks();
+    register_blocks_in_dir(dirname(__FILE__) . '/blocks/');
 });
 
-function register_blocks()
+/**
+ * Register all Gutenberg blocks within the provided directory.
+ * It will register all blocks by appending `/build/block.json`
+ * to every directory inside the provided $path.
+ */
+function register_blocks_in_dir(string $path)
 {
-    $path = dirname(__FILE__) . '/blocks/';
     $dir = @opendir($path);
     if ($dir) {
         while ($file = readdir($dir)) {

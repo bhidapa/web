@@ -22,14 +22,5 @@ function e_library_setup(string $unauthorized_template_id)
         new E_Library_Student(),
         $unauthorized_template_id,
     );
-
-    register_block_type(
-        dirname(__FILE__) . '/blocks/e-library/build/block.json',
-    );
-    register_block_type(
-        dirname(__FILE__) . '/blocks/has-access/build/block.json',
-    );
-    register_block_type(
-        dirname(__FILE__) . '/blocks/no-access/build/block.json',
-    );
+    register_blocks_in_dir(dirname(__FILE__) . '/blocks/');
 }
