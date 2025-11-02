@@ -1,9 +1,10 @@
 <?php
 /**
- * Plugin Name:     Core
- * Author:          BHIDAPA
- * Description:     Shared plugins, functionalities and blocks for BHIDAPA websites
- * Version:         0.0.0
+ * Plugin Name: Core
+ * Author:      BHIDAPA
+ * Author URI:  https://bhidapa.ba/
+ * Description: Shared plugins, functionalities and blocks for BHIDAPA websites
+ * Version:     0.0.0
  */
 
 add_action('init', function () {
