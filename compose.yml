@@ -3,6 +3,8 @@ x-wp-env: &wp-env
   WORDPRESS_DB_USER: root
   WORDPRESS_DB_PASSWORD: supersecret
   WORDPRESS_DEBUG: 1
+  WORDPRESS_CONFIG_EXTRA: |
+    define( 'SCRIPT_DEBUG', true );
 
 volumes:
   db-data:
