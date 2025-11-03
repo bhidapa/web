@@ -1,11 +1,12 @@
 <?php
+/** @var WP_Post */
+global $post;
+
 /**
  * @var array     $attributes
  * @var string    $content
  * @var WP_Block  $block
- * @var WP_Post   $post
  */
-global $attributes, $content, $block, $post;
 
 // NOTE: this block is not rendered with a wrapper div because we want each of the items in the repeater to be rendered as a separate block in the container
 // echo '<div ' . get_block_wrapper_attributes() . '>';
