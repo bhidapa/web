@@ -19,7 +19,7 @@ This codebase manages the following websites:
 
 When developing locally with docker compose, your WordPress Site Health Status will show that the REST API is encountering errors.
 
-This is because the check is performed using curl from the `fpm` service on `localhost:58386` trying to reach `nginx`, but it's actually available only on `nginx:80` in Docker's network.
+This is because the check is performed using curl from the wordpress service trying to reach `localhost:58386`, but wordpress is actually available only on `localhost:80` inside the service.
 
 The failing health check can be safely ignore because when the website is deployed, WordPress site URL will be correct and the REST API accessible.
 
