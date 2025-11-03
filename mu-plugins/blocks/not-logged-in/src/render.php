@@ -4,7 +4,6 @@
  * @var string    $content
  * @var WP_Block  $block
  */
-global $attributes, $content, $block;
 
 if (is_user_logged_in()) {
     return;

@@ -5,7 +5,6 @@
   * @var string    $content
   * @var WP_Block  $block
   */
- global $attributes, $content, $block;
 
  $subField = $attributes['subField'] ?? false;
  $field = $subField

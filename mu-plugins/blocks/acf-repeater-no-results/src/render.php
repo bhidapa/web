@@ -4,7 +4,6 @@
  * @var string    $content
  * @var WP_Block  $block
  */
-global $attributes, $content, $block;
 
 if (have_rows($block->context['bhidapa/acf-repeater_field'])) {
     // there are rows in the repeatable, nothing to render (show no results)

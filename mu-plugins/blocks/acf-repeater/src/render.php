@@ -5,7 +5,6 @@
  * @var string    $content
  * @var WP_Block  $block
  */
-global $attributes, $content, $block;
 
 $inner_blocks_html = '';
 foreach ($block->inner_blocks as $inner_block) {

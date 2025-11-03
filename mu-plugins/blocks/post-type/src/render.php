@@ -5,7 +5,6 @@
      * @var string    $content
      * @var WP_Block  $block
      */
-    global $attributes, $content, $block;
 
     $post_type_object = get_post_type_object(get_post_type());
     if (empty($post_type_object)) {
