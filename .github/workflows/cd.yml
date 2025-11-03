@@ -26,6 +26,8 @@ jobs:
       - uses: actions/checkout@v5
       - uses: oven-sh/setup-bun@v2
       - run: bun ci
+      - if: matrix.check == 'php'
+        uses: php-actions/composer@v6
       - run: bun check:${{ matrix.check }}
 
   infra:
