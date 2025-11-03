@@ -1,5 +1,12 @@
 <p <?php echo get_block_wrapper_attributes(); ?>>
 	<?php
+ /**
+  * @var array     $attributes
+  * @var string    $content
+  * @var WP_Block  $block
+  */
+ global $attributes, $content, $block;
+
  $subField = $attributes['subField'] ?? false;
  $field = $subField
      ? get_sub_field_object($attributes['field'])

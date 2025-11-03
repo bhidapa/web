@@ -177,7 +177,7 @@ add_filter(
             $block_content->add_class('download-icon');
 
             // then go to the anchor and add the download attr
-            $block_content->next_tag('A');
+            $block_content->next_tag(['tag_name' => 'A']);
             $block_content->set_attribute('download', true);
 
             // update html

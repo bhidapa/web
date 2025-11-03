@@ -1,4 +1,11 @@
 <?php
+/**
+ * @var array     $attributes
+ * @var string    $content
+ * @var WP_Block  $block
+ */
+global $attributes, $content, $block;
+
 $field = $block->context['bhidapa/acf-repeater_field'];
 if (!have_rows($field)) {
     return;

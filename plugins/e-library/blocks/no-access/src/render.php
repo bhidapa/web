@@ -1,4 +1,11 @@
 <?php
+/**
+ * @var array     $attributes
+ * @var string    $content
+ * @var WP_Block  $block
+ */
+global $attributes, $content, $block;
+
 if ($attributes['mustBeLoggedIn'] && !is_user_logged_in()) {
     return;
 }

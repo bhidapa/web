@@ -53,9 +53,10 @@ class E_Library_Student
     }
 
     /**
-     * @return null If it's not an import students action at all.
-     * @return true If it's a verified import students action.
-     * @return false If it's not a verified import students action, i.e. the nonce is invalid.
+     * @return null|bool
+     * - Returns `null` if it's not an import students action at all.
+     * - Returns `true` if it's a verified import students action.
+     * - Returns `false` if it's not a verified import students action, i.e. the nonce is invalid.
      */
     private function verify_import_students_action()
     {
@@ -350,7 +351,10 @@ Akademija za psihoterapiju',
                 );
             }
         }
-        if ($errors->has_errors()) {
+
+        /** @phpstan-var bool $hasErrors */
+        $hasErrors = $errors->has_errors();
+        if ($hasErrors) {
             return $errors;
         }
 

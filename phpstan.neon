@@ -4,5 +4,7 @@ parameters:
     - mu-plugins
     - plugins
     - themes
+  excludePaths:
+    - */build/*
   scanDirectories:
     - vendor/php-stubs
