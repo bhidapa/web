@@ -1179,8 +1179,6 @@ for (const website of websites) {
             ],
           },
           environment: [
-            { name: 'INTERNAL_PROXY_HOST', value: 'localhost' },
-            { name: 'INTERNAL_PROXY_PORT', value: '80' },
             { name: 'WORDPRESS_DB_HOST', value: dbInstance.endpoint },
             { name: 'WORDPRESS_DB_NAME', value: website.name },
             { name: 'WORDPRESS_DB_USER', value: dbInstance.username },
