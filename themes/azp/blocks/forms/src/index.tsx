@@ -1,10 +1,24 @@
 import { InspectorControls, useBlockProps } from '@wordpress/block-editor';
 import { registerBlockType } from '@wordpress/blocks';
-import { PanelBody, TextControl } from '@wordpress/components';
-import { __ } from '@wordpress/i18n';
+import { PanelBody, SelectControl } from '@wordpress/components';
 import block from './block.json';
+import * as prijave from './prijave';
 
-registerBlockType<{ name: string }>(block.name, {
+type ImePrijave = keyof typeof prijave;
+
+function Prijava({ imePrijave, ...rest }: { imePrijave: ImePrijave }) {
+  const IzabranaPrijava = prijave[imePrijave];
+  if (!IzabranaPrijava) {
+    return (
+      <p style={{ color: 'orange' }}>
+        ⚠️ Prijava{imePrijave ? `"${imePrijave}" ` : ' '}nije pronađena
+      </p>
+    );
+  }
+  return <IzabranaPrijava {...rest} />;
+}
+
+registerBlockType<{ imePrijave: ImePrijave }>(block.name, {
   title: block.title,
   attributes: block.attributes as any,
   category: block.category,
@@ -12,21 +26,35 @@ registerBlockType<{ name: string }>(block.name, {
     <>
       <InspectorControls>
         <PanelBody>
-          <TextControl
-            required
-            label={__('Form Name', 'azp')}
-            value={attributes.name}
-            onChange={(name) => setAttributes({ name })}
+          <SelectControl
+            label="Prijava"
+            options={[
+              {
+                disabled: true,
+                label: 'Izaberite prijavu...',
+                value: '',
+              },
+              ...Object.keys(prijave).map((prijava) => ({
+                label: prijava,
+                value: prijava,
+              })),
+            ]}
+            value={attributes.imePrijave}
+            onChange={(imePrijave) =>
+              setAttributes({ imePrijave: imePrijave as ImePrijave })
+            }
           />
         </PanelBody>
       </InspectorControls>
       {/*  */}
-      <p {...useBlockProps()}>
-        Rendering form <i>{attributes.name}</i>
-      </p>
+      <div {...useBlockProps()}>
+        <Prijava imePrijave={attributes.imePrijave} />
+      </div>
     </>
   ),
-  save: ({ attributes }) => {
-    return <b>TODO: {attributes.name}</b>;
-  },
+  save: ({ attributes }) => (
+    <div {...useBlockProps.save()} data-wp-interactive="azp/forms">
+      <Prijava imePrijave={attributes.imePrijave} />
+    </div>
+  ),
 });

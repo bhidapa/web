@@ -6,10 +6,15 @@
   "category": "text",
   "title": "Forms",
   "icon": "block-default",
+  "supports": {
+    "interactivity": true
+  },
   "attributes": {
-    "name": {
-      "type": "string"
+    "imePrijave": {
+      "type": "string",
+      "default": "Konkurs"
     }
   },
-  "editorScript": "file:./index.tsx"
+  "editorScript": "file:./index.tsx",
+  "viewScriptModule": "file:./store.ts"
 }
