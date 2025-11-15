@@ -29,7 +29,7 @@ server {
   }
 
   location = /xmlrpc.php {
-    # Deny XML-RPC calls. This mitigates a common WordPress attacks.
+    # Deny XML-RPC calls. This mitigates common WordPress attacks.
     # We don't really use it so it it's ok.
     return 403;
   }
