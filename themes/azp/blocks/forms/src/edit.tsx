@@ -3,22 +3,9 @@ import { registerBlockType } from '@wordpress/blocks';
 import { PanelBody, SelectControl } from '@wordpress/components';
 import block from './block.json';
 import * as prijave from './prijave';
+import { Attributes, ImePrijave } from './attributes';
 
-type ImePrijave = keyof typeof prijave;
-
-function Prijava({ imePrijave, ...rest }: { imePrijave: ImePrijave }) {
-  const IzabranaPrijava = prijave[imePrijave];
-  if (!IzabranaPrijava) {
-    return (
-      <p style={{ color: 'orange' }}>
-        ⚠️ Prijava{imePrijave ? `"${imePrijave}" ` : ' '}nije pronađena
-      </p>
-    );
-  }
-  return <IzabranaPrijava {...rest} />;
-}
-
-registerBlockType<{ imePrijave: ImePrijave }>(block.name, {
+registerBlockType<Attributes>(block.name, {
   title: block.title,
   attributes: block.attributes as any,
   category: block.category,
@@ -48,13 +35,29 @@ registerBlockType<{ imePrijave: ImePrijave }>(block.name, {
       </InspectorControls>
       {/*  */}
       <div {...useBlockProps()}>
-        <Prijava imePrijave={attributes.imePrijave} />
+        {prijave[attributes.imePrijave] ? (
+          <p>
+            ℹ️ Izabrana je prijava "{attributes.imePrijave}". Pregledajte
+            stranicu kako bi vidjeli formu.
+          </p>
+        ) : (
+          <p style={{ color: 'orange' }}>
+            ⚠️ Prijava
+            {attributes.imePrijave ? `"${attributes.imePrijave}" ` : ' '}nije
+            pronađena
+          </p>
+        )}
       </div>
     </>
   ),
   save: ({ attributes }) => (
-    <div {...useBlockProps.save()} data-wp-interactive="azp/forms">
-      <Prijava imePrijave={attributes.imePrijave} />
+    <div
+      {...useBlockProps.save()}
+      data-azp-forms-root
+      data-azp-forms-attributes={JSON.stringify(attributes)}
+    >
+      JavaScript is required to load this form. Please enable JavaScript in your
+      browser settings.
     </div>
   ),
 });

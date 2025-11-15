@@ -3,5 +3,8 @@
   "scripts": {
     "build": "wp-scripts build --webpack-copy-php --experimental-modules",
     "start": "wp-scripts start --webpack-copy-php --experimental-modules"
+  },
+  "dependencies": {
+    "@tanstack/react-form": "^1.25.0"
   }
 }

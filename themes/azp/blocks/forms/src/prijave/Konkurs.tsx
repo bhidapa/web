@@ -1,6 +1,25 @@
+import { useForm } from '@tanstack/react-form';
+
 export function Konkurs() {
+  const form = useForm({
+    defaultValues: {
+      firstName: '',
+      lastName: '',
+    },
+    onSubmit: async ({ value }) => {
+      // Do something with form data
+      console.log(value);
+    },
+  });
+
   return (
-    <div>
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        form.handleSubmit();
+      }}
+    >
       <div className="input">
         <label className="label">
           Titula <b>(obavezeno)</b>
@@ -148,6 +167,6 @@ export function Konkurs() {
         [textarea* clanstva-datumi-uclanjenja]
       </div>
       <div className="submit">[submit "Prijavi se"]</div> */}
-    </div>
+    </form>
   );
 }
