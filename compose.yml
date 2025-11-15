@@ -19,7 +19,7 @@ services:
       - 53386:3306
     volumes:
       - db-data:/var/lib/mysql
-      - ./services/create-dbs.sql:/docker-entrypoint-initdb.d/create-dbs.sql:ro
+      - ./images/create-dbs.sql:/docker-entrypoint-initdb.d/create-dbs.sql:ro
   pma:
     image: phpmyadmin
     environment:
@@ -32,7 +32,7 @@ services:
   # akp.ba
   akp:
     build:
-      context: services
+      context: images
       dockerfile: wordpress.Dockerfile
     depends_on:
       - db

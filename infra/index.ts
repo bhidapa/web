@@ -1,55 +1,9 @@
 import * as aws from '@pulumi/aws';
 import * as aws_native from '@pulumi/aws-native';
 import * as awsx from '@pulumi/awsx';
-import * as command from '@pulumi/command';
-import * as docker_build from '@pulumi/docker-build';
 import * as pulumi from '@pulumi/pulumi';
-
-interface Website {
-  name: string;
-  hostedZone: string;
-  domain: string;
-  /** Alternative domains that all redirect back to the {@link domain main domain}. */
-  alternate?: {
-    name: string;
-    domain: string;
-    /** If the hosted zone is different from the main website, set it. */
-    hostedZone?: string;
-    /** @default 'CNAME' */
-    recordType?: 'CNAME' | 'A';
-  }[];
-}
-
-const websites: Website[] = [
-  {
-    name: 'akp',
-    hostedZone: 'akp.ba',
-    domain: 'akp.ba',
-    alternate: [
-      {
-        name: 'www',
-        domain: 'www.akp.ba',
-      },
-      {
-        name: 'academy-bhidapa',
-        domain: 'academy.bhidapa.ba',
-        hostedZone: 'bhidapa.ba',
-        recordType: 'A', // because we have TXT records for this domain
-      },
-    ],
-  },
-];
-export const websiteNames = websites.map((w) => w.name);
-
-const region = aws.config.region!;
-const proj = pulumi.getProject();
-const stack = pulumi.getStack();
-function name(suffix?: string) {
-  if (!suffix) {
-    return `${proj}-${stack}`;
-  }
-  return `${proj}-${stack}-${suffix}`;
-}
+import { name, proj, region, websites } from './defs.ts';
+import { newImage } from './image.ts';
 
 // VPC
 const vpc = new aws.ec2.Vpc('vpc', {
@@ -584,112 +538,8 @@ export const jumpServerUsername = 'ec2-user';
 export const jumpServerEndpoint = jumpServerEip.publicDns;
 
 // WordPress Containers inside the ECR Repository
-const wpServiceNames = ['fpm', 'nginx'] as const;
-const wpService = wpServiceNames.reduce(
-  (acc, service) => {
-    const repo = new aws.ecr.Repository(`wp-${service}-repo`, {
-      name: name(`wp-${service}`),
-      forceDelete: true,
-      imageScanningConfiguration: {
-        scanOnPush: true,
-      },
-      tags: { proj },
-    });
-    new aws.ecr.LifecyclePolicy(`wp-${service}-repo-lifecycle-policy`, {
-      repository: repo.name,
-      policy: {
-        rules: [
-          {
-            rulePriority: 1,
-            description: 'Delete untagged images after 1 day',
-            selection: {
-              tagStatus: 'untagged',
-              countType: 'sinceImagePushed',
-              countUnit: 'days',
-              countNumber: 1,
-            },
-            action: {
-              type: 'expire',
-            },
-          },
-        ],
-      },
-    });
-    const authToken = aws.ecr.getAuthorizationTokenOutput({
-      registryId: repo.registryId,
-    });
-    const imageArgs: docker_build.ImageArgs = {
-      push: false, // will be overriden when ready to push necessary
-      context: { location: '../services' },
-      dockerfile: { location: `../services/${service}.Dockerfile` },
-      platforms: ['linux/arm64'],
-      cacheFrom: [
-        {
-          registry: {
-            ref: pulumi.interpolate`${repo.repositoryUrl}:cache`,
-          },
-        },
-      ],
-      registries: [
-        {
-          address: repo.repositoryUrl,
-          username: authToken.userName,
-          password: authToken.password,
-        },
-      ],
-    };
-    return {
-      ...acc,
-      [service]: {
-        imageArgs,
-        repositoryUrl: repo.repositoryUrl,
-        userName: authToken.userName,
-        password: authToken.password,
-        digest: new docker_build.Image(
-          `wp-${service}-image-checksum`,
-          imageArgs,
-        ).digest,
-        push(deploymentId: pulumi.Output<string>) {
-          return new docker_build.Image(`wp-${service}-image`, {
-            ...imageArgs,
-            push: true,
-            cacheTo: [
-              {
-                registry: {
-                  imageManifest: true,
-                  ociMediaTypes: true,
-                  ref: pulumi.interpolate`${repo.repositoryUrl}:cache`,
-                },
-              },
-            ],
-            tags: [
-              pulumi.interpolate`${repo.repositoryUrl}:latest`,
-              pulumi.interpolate`${repo.repositoryUrl}:${deploymentId}`,
-            ],
-          });
-        },
-      },
-    };
-  },
-  {} as {
-    [service in (typeof wpServiceNames)[number]]: {
-      imageArgs: docker_build.ImageArgs;
-      repositoryUrl: pulumi.Output<string>;
-      userName: pulumi.Output<string>;
-      password: pulumi.Output<string>;
-      digest: pulumi.Output<string>;
-      push(deploymentId: pulumi.Output<string>): docker_build.Image;
-    };
-  },
-);
-// Get current git commit short SHA on image checksum change and use it as the deployment ID
-export const wpServiceDeploymentId = new command.local.Command(
-  'wp-service-deployment-id',
-  {
-    create: 'git rev-parse --short HEAD',
-    triggers: Object.values(wpService).map((s) => s.digest),
-  },
-).stdout.apply((stdout) => stdout.trim());
+const fpmImage = newImage({ name: 'fpm' });
+const nginxImage = newImage({ name: 'nginx' });
 
 // ECS Cluster and Roles
 const wpCluster = new aws.ecs.Cluster('wp-cluster', {
@@ -861,6 +711,9 @@ const wafWebAcl = new aws.wafv2.WebAcl(
   },
   { provider: usEast1Provider },
 );
+
+// Export website names
+export const websiteNames = websites.map((w) => w.name);
 
 // For Each Website
 for (const website of websites) {
@@ -1295,133 +1148,124 @@ for (const website of websites) {
 
   // Fargate Service
   // TODO: new service should be deployed after the image gets recreated
-  new awsx.ecs.FargateService(
-    `${website.name}-service`,
-    {
-      name: website.name,
-      cluster: wpCluster.arn,
-      taskDefinitionArgs: {
-        logGroup: {
-          // we already created it, see `logGroup` above
-          skip: true,
-        },
-        family: name(website.name),
-        executionRole: {
-          roleArn: taskExecutionRole.arn,
-        },
-        cpu: '1024', // 1 vCPU
-        memory: '2048', // 2 GB
-        runtimePlatform: {
-          operatingSystemFamily: 'LINUX',
-          cpuArchitecture: 'ARM64',
-        },
-        containers: {
-          fpm: {
-            name: 'fpm',
-            image: pulumi.interpolate`${wpService.fpm.repositoryUrl}:${wpServiceDeploymentId}`,
-            essential: true,
-            healthCheck: {
-              // also change the healthcheck in compose.yml
-              command: [
-                'CMD-SHELL',
-                'SCRIPT_NAME=/healthcheck.php SCRIPT_FILENAME=/opt/healthcheck.php cgi-fcgi -bind -connect localhost:9000 | grep -q "X-Powered-By: PHP" || exit 1',
-              ],
-            },
-            environment: [
-              { name: 'INTERNAL_PROXY_HOST', value: 'localhost' },
-              { name: 'INTERNAL_PROXY_PORT', value: '80' },
-              { name: 'WORDPRESS_DB_HOST', value: dbInstance.endpoint },
-              { name: 'WORDPRESS_DB_NAME', value: website.name },
-              { name: 'WORDPRESS_DB_USER', value: dbInstance.username },
-            ],
-            secrets: [
-              { name: 'WORDPRESS_DB_PASSWORD', valueFrom: dbPassword.id },
-            ],
-            mountPoints: [
-              {
-                sourceVolume: 'wp-data',
-                containerPath: '/var/www/html',
-                readOnly: false,
-              },
-            ],
-            logConfiguration: {
-              logDriver: 'awslogs',
-              options: {
-                'awslogs-group': logGroup.name,
-                'awslogs-region': logGroup.region,
-                'awslogs-stream-prefix': 'ecs',
-              },
-            },
-          },
-          nginx: {
-            name: 'nginx',
-            image: pulumi.interpolate`${wpService.nginx.repositoryUrl}:${wpServiceDeploymentId}`,
-            essential: true,
-            dependsOn: [
-              {
-                containerName: 'fpm',
-                condition: 'HEALTHY',
-              },
-            ],
-            portMappings: [{ containerPort: 80 }],
-            healthCheck: {
-              // also change the healthcheck in compose.yml
-              command: ['CMD-SHELL', 'curl -f http://localhost:80 || exit 1'],
-            },
-            environment: [{ name: 'FASTCGI_PASS', value: 'localhost:9000' }],
-            mountPoints: [
-              {
-                sourceVolume: 'wp-data',
-                containerPath: '/var/www/html',
-                readOnly: false,
-              },
-            ],
-            logConfiguration: {
-              logDriver: 'awslogs',
-              options: {
-                'awslogs-group': logGroup.name,
-                'awslogs-region': logGroup.region,
-                'awslogs-stream-prefix': 'ecs',
-              },
-            },
-          },
-        },
-        volumes: [
-          {
-            name: 'wp-data',
-            efsVolumeConfiguration: {
-              rootDirectory: '/',
-              fileSystemId: efs.id,
-              transitEncryption: 'ENABLED',
-              authorizationConfig: {
-                accessPointId: fsAccessPoint.id,
-              },
-            },
-          },
-        ],
+  new awsx.ecs.FargateService(`${website.name}-service`, {
+    name: website.name,
+    cluster: wpCluster.arn,
+    taskDefinitionArgs: {
+      logGroup: {
+        // we already created it, see `logGroup` above
+        skip: true,
       },
-      desiredCount: 1,
-      networkConfiguration: {
-        subnets: [privateSubnetA.id, privateSubnetB.id],
-        securityGroups: [wpSecurityGroup.id],
-        assignPublicIp: false,
+      family: name(website.name),
+      executionRole: {
+        roleArn: taskExecutionRole.arn,
       },
-      loadBalancers: [
+      cpu: '1024', // 1 vCPU
+      memory: '2048', // 2 GB
+      runtimePlatform: {
+        operatingSystemFamily: 'LINUX',
+        cpuArchitecture: 'ARM64',
+      },
+      containers: {
+        fpm: {
+          name: 'fpm',
+          image: fpmImage.imageUri,
+          essential: true,
+          healthCheck: {
+            // also change the healthcheck in compose.yml
+            command: [
+              'CMD-SHELL',
+              'SCRIPT_NAME=/healthcheck.php SCRIPT_FILENAME=/opt/healthcheck.php cgi-fcgi -bind -connect localhost:9000 | grep -q "X-Powered-By: PHP" || exit 1',
+            ],
+          },
+          environment: [
+            { name: 'INTERNAL_PROXY_HOST', value: 'localhost' },
+            { name: 'INTERNAL_PROXY_PORT', value: '80' },
+            { name: 'WORDPRESS_DB_HOST', value: dbInstance.endpoint },
+            { name: 'WORDPRESS_DB_NAME', value: website.name },
+            { name: 'WORDPRESS_DB_USER', value: dbInstance.username },
+          ],
+          secrets: [
+            { name: 'WORDPRESS_DB_PASSWORD', valueFrom: dbPassword.id },
+          ],
+          mountPoints: [
+            {
+              sourceVolume: 'wp-data',
+              containerPath: '/var/www/html',
+              readOnly: false,
+            },
+          ],
+          logConfiguration: {
+            logDriver: 'awslogs',
+            options: {
+              'awslogs-group': logGroup.name,
+              'awslogs-region': logGroup.region,
+              'awslogs-stream-prefix': 'ecs',
+            },
+          },
+        },
+        nginx: {
+          name: 'nginx',
+          image: nginxImage.imageUri,
+          essential: true,
+          dependsOn: [
+            {
+              containerName: 'fpm',
+              condition: 'HEALTHY',
+            },
+          ],
+          portMappings: [{ containerPort: 80 }],
+          healthCheck: {
+            // also change the healthcheck in compose.yml
+            command: ['CMD-SHELL', 'curl -f http://localhost:80 || exit 1'],
+          },
+          environment: [{ name: 'FASTCGI_PASS', value: 'localhost:9000' }],
+          mountPoints: [
+            {
+              sourceVolume: 'wp-data',
+              containerPath: '/var/www/html',
+              readOnly: false,
+            },
+          ],
+          logConfiguration: {
+            logDriver: 'awslogs',
+            options: {
+              'awslogs-group': logGroup.name,
+              'awslogs-region': logGroup.region,
+              'awslogs-stream-prefix': 'ecs',
+            },
+          },
+        },
+      },
+      volumes: [
         {
-          targetGroupArn: tg.arn,
-          containerName: 'nginx',
-          containerPort: 80,
+          name: 'wp-data',
+          efsVolumeConfiguration: {
+            rootDirectory: '/',
+            fileSystemId: efs.id,
+            transitEncryption: 'ENABLED',
+            authorizationConfig: {
+              accessPointId: fsAccessPoint.id,
+            },
+          },
         },
       ],
-      tags: { proj },
     },
-    {
-      dependsOn: [
-        wpService.fpm.push(wpServiceDeploymentId),
-        wpService.nginx.push(wpServiceDeploymentId),
-      ],
+    desiredCount: 1,
+    networkConfiguration: {
+      subnets: [privateSubnetA.id, privateSubnetB.id],
+      securityGroups: [wpSecurityGroup.id],
+      assignPublicIp: false,
     },
-  );
+    loadBalancers: [
+      {
+        targetGroupArn: tg.arn,
+        containerName: 'nginx',
+        containerPort: 80,
+      },
+    ],
+    tags: { proj },
+  });
 }
 
 // Wordpress Cloudfront Invalidation plugin and other needs for an installation
