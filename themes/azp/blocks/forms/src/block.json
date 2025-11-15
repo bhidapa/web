@@ -16,5 +16,7 @@
     }
   },
   "editorScript": "file:./edit.tsx",
-  "viewScriptModule": "file:./store.ts"
+  "viewScriptModule": "file:./store.ts",
+  "script": "file:./index.ts",
+  "style": "file:./style-index.css"
 }
