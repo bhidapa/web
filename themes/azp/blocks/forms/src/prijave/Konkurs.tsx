@@ -1,5 +1,6 @@
 import { useForm } from '@tanstack/react-form';
-import { Button } from '@wordpress/components';
+import { Button, Flex, FlexItem, TextControl } from '@wordpress/components';
+import { DataForm } from '@wordpress/dataviews';
 
 export function Konkurs() {
   const form = useForm({
@@ -21,14 +22,54 @@ export function Konkurs() {
         form.handleSubmit();
       }}
     >
-      <div className="input">
-        <label className="label">
-          Titula <b>(obavezeno)</b>
-        </label>
-        <input required type="text" />
-      </div>
+      <Flex direction="column">
+        <FlexItem>
+          <form.Field
+            name="firstName"
+            children={(field) => (
+              <TextControl
+                __next40pxDefaultSize
+                __nextHasNoMarginBottom
+                label="First Name"
+                required
+                name={field.name}
+                value={field.state.value}
+                onBlur={field.handleBlur}
+                onChange={field.handleChange}
+              />
+            )}
+          />
+        </FlexItem>
 
-      <Button>Click Me!</Button>
+        <Flex justify="flex-end">
+          <FlexItem>
+            <Button type="submit" variant="primary">
+              Submit
+            </Button>
+          </FlexItem>
+        </Flex>
+      </Flex>
+
+      <DataForm
+        data={{ firstName: 'Denga' }}
+        fields={[
+          {
+            id: 'firstName',
+            label: 'First Name',
+            type: 'text',
+          },
+        ]}
+        form={{
+          layout: {
+            labelPosition: undefined,
+            type: 'regular',
+          },
+          fields: ['firstName'],
+        }}
+        onChange={(value) => {
+          console.log(value);
+        }}
+      />
 
       {/* [radio edukacija-za-prijavu default:1"Edukacija iz Integrativne
       psihoterapije djece i adolescenata" "Edukacija iz Integrativne
