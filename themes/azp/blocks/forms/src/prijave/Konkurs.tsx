@@ -1,4 +1,5 @@
 import { useForm } from '@tanstack/react-form';
+import { Button } from '@wordpress/components';
 
 export function Konkurs() {
   const form = useForm({
@@ -27,7 +28,7 @@ export function Konkurs() {
         <input required type="text" />
       </div>
 
-      <button data-wp-on--click="actions.logTime">Click Me!</button>
+      <Button>Click Me!</Button>
 
       {/* [radio edukacija-za-prijavu default:1"Edukacija iz Integrativne
       psihoterapije djece i adolescenata" "Edukacija iz Integrativne

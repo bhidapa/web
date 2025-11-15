@@ -17,5 +17,6 @@
   },
   "editorScript": "file:./edit.tsx",
   "viewScript": "file:./view.tsx",
-  "viewStyle": "file:./view.css"
+  "viewStyle": "file:./view.css",
+  "render": "file:./render.php"
 }
