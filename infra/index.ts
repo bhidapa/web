@@ -1005,7 +1005,7 @@ for (const website of websites) {
           pathPattern: 'wp-cron.php',
           targetOriginId: 'alb',
           viewerProtocolPolicy: 'https-only',
-          ...cfCacheBehaviorMethods.onlyGet,
+          ...cfCacheBehaviorMethods.all, // we need both GET and POST because of loopback requests
           cachePolicyId: cfCacheDisabledPolicy.apply((p) => p.id!),
           originRequestPolicyId: cfForwardAllRequestPolicy.apply((p) => p.id!),
         },
