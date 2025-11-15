@@ -2,7 +2,7 @@
 // this is why we need to `"style": "file:./view.css"` in block.json
 import './view.css';
 
-import { createRoot } from 'react-dom/client';
+import { createRoot } from '@wordpress/element';
 import domReady from '@wordpress/dom-ready';
 import { Attributes } from './attributes';
 import * as prijave from './prijave';
