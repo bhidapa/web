@@ -10,3 +10,6 @@ RUN curl -O https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli
 
 # install dev tools
 RUN apt-get update && apt-get install -y less vim htop wget curl
+
+# set Apache LimitRequestBody to 5GB
+RUN echo "LimitRequestBody 5368709120" >> /etc/apache2/apache2.conf
