@@ -56,8 +56,7 @@ registerBlockType<Attributes>(block.name, {
       data-azp-forms-root
       data-azp-forms-attributes={JSON.stringify(attributes)}
     >
-      JavaScript is required to load this form. Please enable JavaScript in your
-      browser settings.
+      Aplikaciona forma se učitava. Molimo pričekajte...
     </div>
   ),
 });
