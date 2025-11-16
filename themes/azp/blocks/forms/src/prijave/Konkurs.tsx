@@ -93,7 +93,7 @@ export function Konkurs() {
         <Flex justify="flex-end">
           <FlexItem>
             <Button type="submit" variant="primary">
-              Submit
+              Pošalji prijavu
             </Button>
           </FlexItem>
         </Flex>
