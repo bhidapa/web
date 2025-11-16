@@ -38,7 +38,7 @@ registerBlockType<Attributes>(block.name, {
         {prijave[attributes.imePrijave] ? (
           <p>
             ℹ️ Izabrana je prijava "{attributes.imePrijave}". Pregledajte
-            stranicu kako bi vidjeli formu.
+            stranicu kako bi vidjeli prijavu.
           </p>
         ) : (
           <p style={{ color: 'orange' }}>
