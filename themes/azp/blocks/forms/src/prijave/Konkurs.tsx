@@ -1,12 +1,15 @@
 import { useForm } from '@tanstack/react-form';
-import { Button, Flex, FlexItem, TextControl } from '@wordpress/components';
-import { DataForm } from '@wordpress/dataviews';
+import { Button, Flex, FlexBlock, FlexItem } from '@wordpress/components';
+import { RadioControl, TextControl } from './FormControl';
 
 export function Konkurs() {
   const form = useForm({
     defaultValues: {
-      firstName: '',
-      lastName: '',
+      edukacijskiProgram: '',
+      titula: '',
+      ime: '',
+      prezime: '',
+      profesija: '',
     },
     onSubmit: async ({ value }) => {
       // Do something with form data
@@ -22,24 +25,70 @@ export function Konkurs() {
         form.handleSubmit();
       }}
     >
-      <Flex direction="column">
+      <Flex direction="column" gap={4}>
         <FlexItem>
           <form.Field
-            name="firstName"
+            name="edukacijskiProgram"
             children={(field) => (
-              <TextControl
-                __next40pxDefaultSize
-                __nextHasNoMarginBottom
-                label="First Name"
+              <RadioControl
+                field={field}
+                label="Edukacijski program za koji se prijavljujete"
                 required
-                name={field.name}
-                value={field.state.value}
-                onBlur={field.handleBlur}
-                onChange={field.handleChange}
+                options={[
+                  {
+                    label: 'Integrativna psihoterapija djece i adolescenata',
+                    value: 'IDAP',
+                  },
+                  {
+                    label: 'Integrativna psihoterapija',
+                    value: 'IP',
+                  },
+                  {
+                    label:
+                      'Specijalistička edukacija iz seksualnog zdravlja, terapije i savjetovanja',
+                    value: 'STS',
+                  },
+                ]}
               />
             )}
           />
         </FlexItem>
+
+        <Flex direction={['column', 'row']}>
+          <FlexItem>
+            <form.Field
+              name="titula"
+              children={(field) => (
+                <TextControl field={field} label="Titula" required />
+              )}
+            />
+          </FlexItem>
+          <FlexBlock>
+            <form.Field
+              name="ime"
+              children={(field) => (
+                <TextControl field={field} label="Ime" required />
+              )}
+            />
+          </FlexBlock>
+          <FlexBlock>
+            <form.Field
+              name="prezime"
+              children={(field) => (
+                <TextControl field={field} label="Prezime" required />
+              )}
+            />
+          </FlexBlock>
+        </Flex>
+
+        <FlexBlock>
+          <form.Field
+            name="profesija"
+            children={(field) => (
+              <TextControl field={field} label="Profesija" required />
+            )}
+          />
+        </FlexBlock>
 
         <Flex justify="flex-end">
           <FlexItem>
@@ -49,166 +98,6 @@ export function Konkurs() {
           </FlexItem>
         </Flex>
       </Flex>
-
-      <DataForm
-        data={{ firstName: 'Denga' }}
-        fields={[
-          {
-            id: 'firstName',
-            label: 'First Name',
-            type: 'text',
-          },
-        ]}
-        form={{
-          layout: {
-            labelPosition: undefined,
-            type: 'regular',
-          },
-          fields: ['firstName'],
-        }}
-        onChange={(value) => {
-          console.log(value);
-        }}
-      />
-
-      {/* [radio edukacija-za-prijavu default:1"Edukacija iz Integrativne
-      psihoterapije djece i adolescenata" "Edukacija iz Integrativne
-      psihoterapije" "Specijalistička znanja iz seksualnog zdravlja, terapije i
-      savjetovanja"]
-      <br />
-      <h4>Opšte informacije</h4>
-      <div className="input">
-        <label className="label">
-          Ime i prezime <cite>(obavezeno)</cite>
-        </label>
-        [text* ime-prezime]
-      </div>
-      <div className="input">
-        <label className="label">
-          Titula <cite>(obavezeno)</cite>
-        </label>
-        [text* titula]
-      </div>
-      <div className="input">
-        <label className="label">
-          Profesija <cite>(obavezeno)</cite>
-        </label>
-        [text* profesija]
-      </div>
-      <div className="input">
-        <label className="label">
-          Datum rođenja <cite>(obavezeno)</cite>
-        </label>
-        [date* datum-rodjenja placeholder "yyyy-mm-dd"]
-      </div>
-      <div className="input">
-        <label className="label">
-          Adresa stanovanja <cite>(obavezeno)</cite>
-        </label>
-        [text* adresa-stanovanja]
-      </div>
-      <div className="input">
-        <label className="label">
-          Telefon <cite>(obavezeno)</cite>
-        </label>
-        [text* telefon]
-      </div>
-      <div className="input">
-        <label className="label">
-          E-Mail <cite>(obavezeno)</cite>
-        </label>
-        [email* email]
-      </div>
-      <div className="input">
-        <label className="label">JMBG</label>
-        [text jmbg]
-      </div>
-      <br />
-      <h4>Obrazovanje</h4>
-      <div className="input">
-        <label className="label">
-          Zavrešena visoka škola/fakultet <cite>(obavezeno)</cite>
-        </label>
-        [text* zavrsena-visoka-skola]
-      </div>
-      <div className="input">
-        <label className="label">
-          Godina završetka <cite>(obavezeno)</cite>
-        </label>
-        [text* godina-zavrsetka]
-      </div>
-      <div className="input">
-        <label className="label">
-          Daljnje obrazovanje (fakultetsko, npr postdiplomski ili doktorski
-          studij)
-          <cite>(obavezeno)</cite>
-        </label>
-        [text* daljnje-obrazovanje]
-      </div>
-      <br />
-      <h4>Naobrazba iz psihoterapije / savjetovanja</h4>
-      <div className="input">
-        <label className="label">
-          Institucija <cite>(obavezeno)</cite>
-        </label>
-        [text* institucija]
-      </div>
-      <div className="input">
-        <label className="label">
-          Edukacija <cite>(obavezeno)</cite>
-        </label>
-        [text* edukacija]
-      </div>
-      <div className="input">
-        <label className="label">
-          Datumi početka i završetka edukacije <cite>(obavezeno)</cite>
-        </label>
-        [text* datumi-pocetka-zavrsetka-edukacije]
-      </div>
-      <div className="input">
-        <label className="label">
-          Kvalifikacija / Certifikat / Diploma <cite>(obavezeno)</cite>
-        </label>
-        [textarea* kvalifikacija]
-      </div>
-      <br />
-      <h4>Preporuke</h4>
-      <div className="input">
-        <label className="label">Ime i prezime, adresa, E-mail, telefon</label>
-        [text preporuka-1]
-      </div>
-      <div className="input">
-        <label className="label">Ime i prezime, adresa, E-mail, telefon</label>
-        [text preporuka-2]
-      </div>
-      <br />
-      <h4>Zaposlenje</h4>
-      <div className="input">
-        <label className="label">
-          Trenutno zaposlenje <cite>(obavezeno)</cite>
-        </label>
-        [text* trenutno-zaposlenje]
-      </div>
-      <div className="input">
-        <label className="label">
-          Funkcija <cite>(obavezeno)</cite>
-        </label>
-        [text* funkcija]
-      </div>
-      <div className="input">
-        <label className="label">
-          Prethodna zaposlenja i funkcije (molimo navesti od najnovijih){' '}
-          <cite>(obavezeno)</cite>
-        </label>
-        [textarea* prethodna-zposlenja]
-      </div>
-      <div className="input">
-        <label className="label">
-          Navesti članstva i datume učlanjenja <cite>(obavezeno)</cite>
-        </label>
-        [textarea* clanstva-datumi-uclanjenja]
-      </div>
-      <div className="submit">[submit "Prijavi se"]</div> */}
     </form>
   );
 }
