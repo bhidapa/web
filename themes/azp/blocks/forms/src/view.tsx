@@ -1,6 +1,6 @@
 // wp-scripts will build and output a css file to build/style-index.css
 // this is why we need to `"style": "file:./view.css"` in block.json
-import './view.scss';
+import './view.css';
 
 import { createRoot } from 'react-dom/client';
 import domReady from '@wordpress/dom-ready';

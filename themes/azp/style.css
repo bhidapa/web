@@ -340,3 +340,49 @@ ul.acf-checkbox-list li,
     display: none;
   }
 }
+
+/* wp components in frontend */
+:root {
+  --wp-admin-theme-color: #019bbe; /* var(--wp--preset--color--secondary) */
+  --wp-admin-theme-color--rgb: 1, 155, 190;
+  --wp-admin-theme-color-darker-10: #018bab;
+  --wp-admin-theme-color-darker-10--rgb: 1, 139, 171;
+  --wp-admin-theme-color-darker-20: #017c98;
+  --wp-admin-theme-color-darker-20--rgb: 1, 124, 152;
+  --wp-admin-border-width-focus: 2px;
+  /* TODO: unchanged */
+  --wp-block-synced-color: #7a00df;
+  --wp-block-synced-color--rgb: 122, 0, 223;
+  --wp-bound-block-color: var(--wp-block-synced-color);
+}
+
+.components-text-control__input,
+.components-text-control__input[type='color'],
+.components-text-control__input[type='date'],
+.components-text-control__input[type='datetime-local'],
+.components-text-control__input[type='datetime'],
+.components-text-control__input[type='email'],
+.components-text-control__input[type='month'],
+.components-text-control__input[type='number'],
+.components-text-control__input[type='password'],
+.components-text-control__input[type='tel'],
+.components-text-control__input[type='text'],
+.components-text-control__input[type='time'],
+.components-text-control__input[type='url'],
+.components-text-control__input[type='week'] {
+  border-radius: 0;
+  font-family: var(--wp--preset--font-family--body);
+  font-weight: 500;
+}
+
+.components-button {
+  border-radius: 0;
+  font-family: var(--wp--preset--font-family--heading);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1rem;
+}
+
+.components-base-control__label {
+  font-family: var(--wp--preset--font-family--heading);
+}
