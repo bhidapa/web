@@ -64,9 +64,6 @@
     "plugins/e-library/blocks/no-access": {
       "name": "@blocks/e-library-no-access",
     },
-    "themes/azp/blocks/forms": {
-      "name": "@blocks/azp-forms",
-    },
   },
   "packages": {
     "@ampproject/remapping": ["@ampproject/remapping@2.3.0", "", { "dependencies": { "@jridgewell/gen-mapping": "^0.3.5", "@jridgewell/trace-mapping": "^0.3.24" } }, "sha512-30iZtAPgz+LTIYoeivqYo853f02jBYSd5uGnGpkFV0M3xOt9aN73erkgYAmZU43x4VfqcnLxW9Kpg3R5LC4YYw=="],
@@ -376,8 +373,6 @@
     "@blocks/acf-repeater-no-results": ["@blocks/acf-repeater-no-results@workspace:mu-plugins/blocks/acf-repeater-no-results"],
 
     "@blocks/acf-repeater-row": ["@blocks/acf-repeater-row@workspace:mu-plugins/blocks/acf-repeater-row"],
-
-    "@blocks/azp-forms": ["@blocks/azp-forms@workspace:themes/azp/blocks/forms"],
 
     "@blocks/e-library": ["@blocks/e-library@workspace:plugins/e-library/blocks/e-library"],
 
