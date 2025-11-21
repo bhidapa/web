@@ -17,7 +17,17 @@ domReady(() => {
       console.warn('Typeform block is missing button element');
       continue;
     }
-    const { open } = createPopup(formId);
+    const { open } = createPopup(formId, {
+      iframeProps: {
+        style: [
+          'border: 0',
+          'border-radius: 0',
+          // creates a new stacking context and can force the browser
+          // to use hardware acceleration
+          'transform: translateZ(0px)',
+        ].join(';'),
+      },
+    });
     button.onclick = open;
   }
 });
