@@ -8,7 +8,7 @@ Text Domain: azp
 Requires at least: 6.7
 Requires PHP: 8.2
 Tested up to: 6.7.1
-Version: 1.2.6
+Version: 1.2.8
 
 License: GNU General Public License v2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
@@ -342,6 +342,12 @@ ul.acf-checkbox-list li,
 }
 
 /* complianz */
+.cmplz-header {
+  /* no logo no close button, just show text left aligned */
+  display: unset !important;
+  grid-column: unset !important;
+}
+
 .cmplz-title {
   font-family: var(--wp--preset--font-family--heading);
   font-size: 1.17em !important; /* h3 */
