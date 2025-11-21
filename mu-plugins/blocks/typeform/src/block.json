@@ -1,0 +1,24 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "bhidapa/typeform",
+  "version": "0.0.0",
+  "category": "text",
+  "title": "Typeform",
+  "icon": "block-default",
+  "supports": {
+    "layout": {
+      "default": {
+        "type": "flex"
+      }
+    }
+  },
+  "attributes": {
+    "formId": {
+      "type": "string"
+    }
+  },
+  "editorScript": "file:./edit.tsx",
+  "viewScript": "file:./view.ts",
+  "viewStyle": "file:./view.css"
+}

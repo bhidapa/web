@@ -16,6 +16,7 @@
         "@wordpress/blocks": "^15.6.0",
         "@wordpress/browserslist-config": "^6.33.0",
         "@wordpress/components": "^30.6.0",
+        "@wordpress/dom-ready": "^4.35.0",
         "@wordpress/i18n": "^6.6.0",
         "@wordpress/scripts": "^30.26.0",
         "prettier": "^3.6.2",
@@ -54,6 +55,12 @@
     },
     "mu-plugins/blocks/post-type": {
       "name": "@blocks/post-type",
+    },
+    "mu-plugins/blocks/typeform": {
+      "name": "@blocks/typeform",
+      "dependencies": {
+        "@typeform/embed": "^5.5.1",
+      },
     },
     "plugins/e-library/blocks/e-library": {
       "name": "@blocks/e-library",
@@ -383,6 +390,8 @@
     "@blocks/not-logged-in": ["@blocks/not-logged-in@workspace:mu-plugins/blocks/not-logged-in"],
 
     "@blocks/post-type": ["@blocks/post-type@workspace:mu-plugins/blocks/post-type"],
+
+    "@blocks/typeform": ["@blocks/typeform@workspace:mu-plugins/blocks/typeform"],
 
     "@cacheable/memoize": ["@cacheable/memoize@2.0.3", "", { "dependencies": { "@cacheable/utils": "^2.0.3" } }, "sha512-hl9wfQgpiydhQEIv7fkjEzTGE+tcosCXLKFDO707wYJ/78FVOlowb36djex5GdbSyeHnG62pomYLMuV/OT8Pbw=="],
 
@@ -953,6 +962,8 @@
     "@tufjs/models": ["@tufjs/models@2.0.1", "", { "dependencies": { "@tufjs/canonical-json": "2.0.0", "minimatch": "^9.0.4" } }, "sha512-92F7/SFyufn4DXsha9+QfKnN03JGqtMFMXgSHbZOo8JG59WkTni7UzAouNQDf7AuP9OAMxVOPQcqG3sB7w+kkg=="],
 
     "@tybys/wasm-util": ["@tybys/wasm-util@0.10.1", "", { "dependencies": { "tslib": "^2.4.0" } }, "sha512-9tTaPJLSiejZKx+Bmog4uSubteqTvFrVrURwkmHixBo0G4seD0zUxp98E1DzUBJxLQ3NPwXrGKDiVjwx/DpPsg=="],
+
+    "@typeform/embed": ["@typeform/embed@5.5.1", "", {}, "sha512-lFApRl5KsGb02R8bEwsXd+BCziLH8M0KDAZq3SGiEa/Xfc+GKjlntw6+m70TXTiHJKECJbbgpPmT0EbDLWaq6g=="],
 
     "@types/aws-lambda": ["@types/aws-lambda@8.10.152", "", {}, "sha512-soT/c2gYBnT5ygwiHPmd9a1bftj462NWVk2tKCc1PYHSIacB2UwbTS2zYG4jzag1mRDuzg/OjtxQjQ2NKRB6Rw=="],
 

@@ -33,6 +33,7 @@
     "@wordpress/blocks": "^15.6.0",
     "@wordpress/browserslist-config": "^6.33.0",
     "@wordpress/components": "^30.6.0",
+    "@wordpress/dom-ready": "^4.35.0",
     "@wordpress/i18n": "^6.6.0",
     "@wordpress/scripts": "^30.26.0",
     "prettier": "^3.6.2",

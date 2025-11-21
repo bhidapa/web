@@ -1,0 +1,10 @@
+{
+  "name": "@blocks/typeform",
+  "scripts": {
+    "build": "wp-scripts build --webpack-copy-php",
+    "start": "wp-scripts start --webpack-copy-php"
+  },
+  "dependencies": {
+    "@typeform/embed": "^5.5.1"
+  }
+}

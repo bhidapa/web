@@ -8,7 +8,7 @@ Text Domain: azp
 Requires at least: 6.7
 Requires PHP: 8.2
 Tested up to: 6.7.1
-Version: 1.2.3
+Version: 1.2.4
 
 License: GNU General Public License v2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
@@ -79,7 +79,7 @@ footer {
 }
 
 .wp-block-button:not(.download-icon):not(.login-icon)
-  .wp-block-button__link::after {
+  a.wp-block-button__link::after {
   white-space: nowrap;
   font-family: 'Font Awesome 6 Free';
   content: ' \f0da';
