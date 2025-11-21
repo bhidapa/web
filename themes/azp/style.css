@@ -8,7 +8,7 @@ Text Domain: azp
 Requires at least: 6.7
 Requires PHP: 8.2
 Tested up to: 6.7.1
-Version: 1.2.4
+Version: 1.2.5
 
 License: GNU General Public License v2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
@@ -338,5 +338,41 @@ ul.acf-checkbox-list li,
   }
   form.submitting .wpcf7-submit {
     display: none;
+  }
+}
+
+/* complianz */
+.cmplz-title {
+  font-family: var(--wp--preset--font-family--heading);
+  font-size: 1.17em !important; /* h3 */
+  font-weight: 900 !important; /* h3 */
+}
+.cmplz-category-title {
+  font-family: var(--wp--preset--font-family--heading);
+  font-weight: 700 !important; /* h3 */
+  font-size: unset !important;
+}
+.cmplz-always-active {
+  font-family: var(--wp--preset--font-family--heading);
+  font-size: unset !important;
+}
+
+.cmplz-btn {
+  font-family: var(--wp--preset--font-family--heading);
+  font-weight: 700 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.1rem;
+}
+
+/* Collapsed button */
+#cmplz-manage-consent .cmplz-show {
+  border: 0 !important;
+  background-color: var(--wp--preset--color--secondary) !important;
+  color: var(--wp--preset--color--base) !important;
+  bottom: 25px !important;
+  right: 25px !important;
+  opacity: 0.5;
+  &:hover {
+    opacity: 1;
   }
 }
