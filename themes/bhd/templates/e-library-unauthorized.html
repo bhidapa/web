@@ -1,0 +1,96 @@
+<!-- wp:template-part {"slug":"header","theme":"bhd","area":"header"} /-->
+
+<!-- wp:group {"tagName":"main","style":{"spacing":{"padding":{"top":"0","bottom":"0","left":"0","right":"0"},"margin":{"top":"var:preset|spacing|60","bottom":"var:preset|spacing|60"}}},"layout":{"type":"default"}} -->
+<main
+  class="wp-block-group"
+  style="
+    margin-top: var(--wp--preset--spacing--60);
+    margin-bottom: var(--wp--preset--spacing--60);
+    padding-top: 0;
+    padding-right: 0;
+    padding-bottom: 0;
+    padding-left: 0;
+  "
+>
+  <!-- wp:group {"layout":{"type":"constrained"}} -->
+  <div class="wp-block-group">
+    <!-- wp:heading {"level":1} -->
+    <h1 class="wp-block-heading" id="h-zabranjen-pristup">Zabranjen pristup</h1>
+    <!-- /wp:heading -->
+
+    <!-- wp:e-library/e-library -->
+    <div class="wp-block-e-library-e-library">
+      <!-- wp:e-library/no-access {"mustBeLoggedIn":true} -->
+      <div class="wp-block-e-library-no-access">
+        <!-- wp:paragraph -->
+        <p>
+          <span class="wp-rich-text-font-awesome-icon wp-font-awesome-icon"
+            ><svg
+              aria-hidden="true"
+              focusable="false"
+              data-prefix="fas"
+              data-icon="triangle-exclamation"
+              class="svg-inline--fa fa-triangle-exclamation"
+              role="img"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 512 512"
+            >
+              <path
+                fill="currentColor"
+                d="M256 32c14.2 0 27.3 7.5 34.5 19.8l216 368c7.3 12.4 7.3 27.7 .2 40.1S486.3 480 472 480L40 480c-14.3 0-27.6-7.7-34.7-20.1s-7-27.8 .2-40.1l216-368C228.7 39.5 241.8 32 256 32zm0 128c-13.3 0-24 10.7-24 24l0 112c0 13.3 10.7 24 24 24s24-10.7 24-24l0-112c0-13.3-10.7-24-24-24zm32 224a32 32 0 1 0 -64 0 32 32 0 1 0 64 0z"
+              ></path></svg
+          ></span>
+          Nemate pristup. Ukoliko smatrate da je došlo do greške, molimo Vas da
+          kontaktirate
+          <a href="mailto:academy@bhidapa.ba">academy@bhidapa.ba</a>.
+        </p>
+        <!-- /wp:paragraph -->
+      </div>
+      <!-- /wp:e-library/no-access -->
+
+      <!-- wp:bhidapa/not-logged-in -->
+      <div class="wp-block-bhidapa-not-logged-in">
+        <!-- wp:paragraph -->
+        <p>
+          <span class="wp-rich-text-font-awesome-icon wp-font-awesome-icon"
+            ><svg
+              aria-hidden="true"
+              focusable="false"
+              data-prefix="fas"
+              data-icon="ban"
+              class="svg-inline--fa fa-ban"
+              role="img"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 512 512"
+            >
+              <path
+                fill="currentColor"
+                d="M367.2 412.5L99.5 144.8C77.1 176.1 64 214.5 64 256c0 106 86 192 192 192c41.5 0 79.9-13.1 111.2-35.5zm45.3-45.3C434.9 335.9 448 297.5 448 256c0-106-86-192-192-192c-41.5 0-79.9 13.1-111.2 35.5L412.5 367.2zM0 256a256 256 0 1 1 512 0A256 256 0 1 1 0 256z"
+              ></path></svg
+          ></span>
+          Pristup je dostupan isključivo studentima Akademije. Molimo Vas da se
+          prijavite.
+        </p>
+        <!-- /wp:paragraph -->
+
+        <!-- wp:buttons {"fontSize":"small","layout":{"type":"flex","justifyContent":"left"}} -->
+        <div class="wp-block-buttons has-custom-font-size has-small-font-size">
+          <!-- wp:button {"metadata":{"bindings":{"url":{"source":"bhidapa/login-url-with-return-redirect"}}},"className":"is-style-fill login-icon"} -->
+          <div class="wp-block-button is-style-fill login-icon">
+            <a class="wp-block-button__link wp-element-button" rel="nofollow"
+              >Prijavi se</a
+            >
+          </div>
+          <!-- /wp:button -->
+        </div>
+        <!-- /wp:buttons -->
+      </div>
+      <!-- /wp:bhidapa/not-logged-in -->
+    </div>
+    <!-- /wp:e-library/e-library -->
+  </div>
+  <!-- /wp:group -->
+</main>
+<!-- /wp:group -->
+
+<!-- wp:template-part {"slug":"footer","theme":"bhd","area":"footer"} /-->

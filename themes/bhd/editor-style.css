@@ -1,0 +1,32 @@
+@media (max-width: 1114px) {
+  /* small screen view */
+  .editor__navigation-desktop {
+    display: none;
+  }
+  .slogan {
+    text-align: left;
+  }
+}
+
+@media (min-width: 1115px) {
+  /* large screen view */
+  .editor__navigation-mobile {
+    display: none;
+  }
+  .slogan {
+    text-align: center;
+  }
+}
+
+.wp-block-navigation-item.has-child {
+  padding-bottom: 0 !important; /* defaults add padding to nested block items and then they seem off */
+}
+
+.wp-block-polylang-language-switcher.no-bkg-white-color .pll-switcher-select {
+  border: 0;
+  background: transparent;
+  color: white;
+  font-family: Erode, serif;
+  font-weight: 500;
+  font-size: 1rem;
+}

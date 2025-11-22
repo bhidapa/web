@@ -1,0 +1,159 @@
+/*
+Theme Name: BHIDAPA
+Author: BHIDAPA
+Author URI: https://bhidapa.ba
+Theme URI:
+Tags: full-site-editing
+Text Domain: bhd
+Requires at least: 6.7
+Requires PHP: 8.2
+Tested up to: 6.7.1
+Version: 1.0.0
+
+License: GNU General Public License v2 or later
+License URI: http://www.gnu.org/licenses/gpl-2.0.html
+*/
+
+/* Styles intended only for the front.*/
+html {
+  scroll-behavior: smooth;
+}
+
+@media screen and (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+body {
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-font-smoothing: antialiased;
+}
+
+:where(.wp-site-blocks) > * {
+  margin-top: 0;
+}
+
+footer {
+  margin-top: 0;
+}
+
+@media (max-width: 1114px) {
+  /* small screen view */
+  #navigation-desktop {
+    display: none;
+  }
+  .slogan {
+    text-align: left;
+  }
+  .wp-block-navigation-item {
+    text-align: right;
+  }
+}
+
+@media (min-width: 1115px) {
+  /* large screen view */
+  #navigation-mobile {
+    display: none;
+  }
+  .slogan {
+    text-align: center;
+  }
+}
+
+.wp-block-navigation-item.has-child {
+  padding-bottom: 0 !important; /* defaults add padding to nested block items and then they seem off */
+}
+
+.wp-block-image > a,
+.wp-block-image > figure > a {
+  display: inline;
+}
+
+.wp-block-button {
+  transition: box-shadow 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.wp-block-button:hover {
+  box-shadow: var(--wp--preset--shadow--elevation-3);
+}
+
+.wp-block-button:not(.download-icon):not(.login-icon)
+  a.wp-block-button__link::after {
+  white-space: nowrap;
+  font-family: 'Font Awesome 6 Free';
+  content: ' \f0da';
+}
+
+.wp-block-button.download-icon .wp-block-button__link::before {
+  white-space: nowrap;
+  font-family: 'Font Awesome 6 Free';
+  content: '\f019  ';
+}
+
+.wp-block-button.login-icon .wp-block-button__link::before {
+  white-space: nowrap;
+  font-family: 'Font Awesome 6 Free';
+  content: '\f2f6  ';
+}
+
+.wp-block-group:has(> .edu-prog-icon) {
+  margin-top: 52px;
+}
+
+.edu-prog-icon {
+  margin-top: -67px !important;
+}
+
+footer .wp-block-search__inside-wrapper {
+  padding: 0;
+  background: var(--wp--preset--color--base);
+}
+
+footer .wp-block-search__inside-wrapper input {
+  background-color: #ffffff; /* on iOS the background appears gray without this */
+  padding: 0 var(--wp--preset--spacing--40);
+}
+
+.wp-block-post-terms__separator {
+  color: var(--wp--preset--color--contrast);
+}
+
+/* polylang */
+.wp-block-polylang-language-switcher.no-bkg-white-color .pll-switcher-select {
+  border: 0;
+  background: transparent;
+  color: white;
+  font-family: Erode, serif;
+  font-weight: 500;
+  font-size: 1rem;
+}
+
+/* complianz */
+.cmplz-header {
+  /* no logo no close button, just show text across all spans */
+  display: unset !important;
+  .cmplz-title {
+    text-align: center; /* adopt the center justify */
+  }
+}
+.cmplz-title {
+  font-family: var(--wp--preset--font-family--heading);
+  font-size: 1.17em !important; /* h3 */
+  font-weight: 900 !important; /* h3 */
+}
+.cmplz-category-title {
+  font-family: var(--wp--preset--font-family--heading);
+  font-weight: 700 !important; /* h3 */
+  font-size: unset !important;
+}
+.cmplz-always-active {
+  font-family: var(--wp--preset--font-family--heading);
+  font-size: unset !important;
+}
+.cmplz-btn {
+  font-family: var(--wp--preset--font-family--heading);
+  font-weight: 700 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.1rem;
+}
