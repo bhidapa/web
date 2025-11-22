@@ -9,6 +9,7 @@ x-wp-env: &wp-env
 volumes:
   db-data:
   akp-wp-data:
+  bhd-wp-data:
 
 services:
   db:
@@ -30,6 +31,22 @@ services:
     ports:
       - 53388:80
   # akp.ba
+  bhd:
+    build:
+      context: images
+      dockerfile: wordpress.Dockerfile
+    depends_on:
+      - db
+    environment:
+      <<: *wp-env
+      WORDPRESS_DB_NAME: bhidapa
+    ports:
+      - 58387:80
+    volumes:
+      - bhd-wp-data:/var/www/html
+      - ./mu-plugins:/var/www/html/wp-content/mu-plugins
+      - ./plugins/e-library:/var/www/html/wp-content/plugins/e-library
+      - ./themes/bhd:/var/www/html/wp-content/themes/bhd
   akp:
     build:
       context: images
