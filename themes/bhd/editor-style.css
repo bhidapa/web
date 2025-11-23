@@ -5,3 +5,17 @@
 .wp-block-navigation-item.has-child {
   padding-bottom: 0 !important; /* defaults add padding to nested block items and then they seem off */
 }
+
+/*
+layout stuff
+copy to style too!
+*/
+.flex-1 {
+  flex: 1;
+}
+.height-full {
+  height: 100%;
+}
+.width-full {
+  width: 100%;
+}

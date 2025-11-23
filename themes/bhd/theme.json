@@ -47,6 +47,11 @@
           "name": "Accent"
         },
         {
+          "slug": "sky",
+          "color": "#EDFAFB",
+          "name": "Sky"
+        },
+        {
           "slug": "transparent",
           "color": "transparent",
           "name": "Transparent"
@@ -104,7 +109,7 @@
     },
     "spacing": {
       "customSpacingSize": false,
-      "units": ["px", "rem", "%"],
+      "units": ["px", "rem", "%", "dvh"],
       "padding": true,
       "margin": true,
       "blockGap": true,
@@ -231,37 +236,43 @@
       "h1": {
         "typography": {
           "fontFamily": "var(--wp--preset--font-family--default)",
-          "fontWeight": "800"
+          "fontWeight": "800",
+          "lineHeight": "1.2"
         }
       },
       "h2": {
         "typography": {
           "fontFamily": "var(--wp--preset--font-family--default)",
-          "fontWeight": "900"
+          "fontWeight": "600",
+          "lineHeight": "1.2"
         }
       },
       "h3": {
         "typography": {
           "fontFamily": "var(--wp--preset--font-family--default)",
-          "fontWeight": "900"
+          "fontWeight": "600",
+          "lineHeight": "1.2"
         }
       },
       "h4": {
         "typography": {
           "fontFamily": "var(--wp--preset--font-family--default)",
-          "fontWeight": "700"
+          "fontWeight": "600",
+          "lineHeight": "1.2"
         }
       },
       "h5": {
         "typography": {
           "fontFamily": "var(--wp--preset--font-family--default)",
-          "fontWeight": "700"
+          "fontWeight": "600",
+          "lineHeight": "1.2"
         }
       },
       "h6": {
         "typography": {
           "fontFamily": "var(--wp--preset--font-family--default)",
-          "fontWeight": "700"
+          "fontWeight": "600",
+          "lineHeight": "1.2"
         }
       },
       "link": {
@@ -333,10 +344,21 @@
               "background": "var(--wp--preset--color--base)"
             }
           },
-          "naked": {
+          "text": {
+            "typography": {
+              "fontWeight": "500"
+            },
             "color": {
-              "text": "var(--wp--preset--color--secondary)",
-              "background": "var(--wp--preset--color--base)"
+              "text": "var(--wp--preset--color--contrast)",
+              "background": "transparent"
+            },
+            "spacing": {
+              "padding": {
+                "top": "0",
+                "right": "0",
+                "bottom": "0",
+                "left": "0"
+              }
             }
           }
         }

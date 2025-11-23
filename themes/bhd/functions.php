@@ -33,8 +33,8 @@ add_action('login_enqueue_scripts', function () {
 
 add_action('init', function () {
     register_block_style('core/button', [
-        'name' => 'naked',
-        'label' => __('Naked', 'bhd'),
+        'name' => 'text',
+        'label' => __('Text', 'bhd'),
     ]);
 });
 

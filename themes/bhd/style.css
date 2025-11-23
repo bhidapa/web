@@ -102,16 +102,17 @@ body {
   display: inline;
 }
 
-.wp-block-button .wp-element-button {
+.wp-block-button:not(.is-style-text) .wp-element-button {
   transition: box-shadow 0.2s ease;
 }
-
-.wp-block-button .wp-element-button:hover {
+.wp-block-button:not(.is-style-text) .wp-element-button:hover {
   box-shadow: var(--wp--preset--shadow--elevation-1);
 }
-
-.wp-block-button .wp-element-button:active {
+.wp-block-button:not(.is-style-text) .wp-element-button:active {
   box-shadow: var(--wp--preset--shadow--elevation-2);
+}
+.wp-block-button.is-style-text .wp-element-button:hover {
+  text-decoration: underline;
 }
 
 /* complianz */
@@ -141,4 +142,18 @@ body {
   font-weight: 700 !important;
   text-transform: uppercase;
   letter-spacing: 0.1rem;
+}
+
+/*
+layout stuff
+copy to editor-style too!
+*/
+.flex-1 {
+  flex: 1;
+}
+.height-full {
+  height: 100%;
+}
+.width-full {
+  width: 100%;
 }
