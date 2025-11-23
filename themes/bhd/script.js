@@ -1,20 +1,25 @@
-// Get a reference to the header element
-const headerContainer = document.querySelector('.site-header-fixed-container');
+document.addEventListener('DOMContentLoaded', () => {
+  const headerContainer = document.querySelector(
+    '.site-header-fixed-container',
+  );
 
-// Define the scroll threshold (how far down the user needs to scroll)
-const scrollThreshold = 50;
-
-// Function to handle the scroll event
-function handleScroll() {
-  // Check if the vertical scroll position is greater than the threshold
-  if (window.scrollY > scrollThreshold) {
-    // Add the 'scrolled' class to make the header white
-    headerContainer.classList.add('scrolled');
-  } else {
-    // Remove the 'scrolled' class to make the header transparent again
-    headerContainer.classList.remove('scrolled');
+  if (!headerContainer) {
+    console.warn('Header container not found');
+    return;
   }
-}
 
-// Attach the handleScroll function to the window's scroll event
-window.addEventListener('scroll', handleScroll);
+  const scrollThreshold = 50;
+  function handleScroll() {
+    if (window.scrollY > scrollThreshold) {
+      headerContainer.classList.add('scrolled');
+    } else {
+      headerContainer.classList.remove('scrolled');
+    }
+  }
+
+  let requestedAnimFrame = 0;
+  window.addEventListener('scroll', () => {
+    cancelAnimationFrame(requestedAnimFrame);
+    requestedAnimFrame = requestAnimationFrame(handleScroll);
+  });
+});

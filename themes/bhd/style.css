@@ -63,7 +63,17 @@ footer {
   top: calc(0px + var(--wp-admin--admin-bar--position-offset, 0px));
   left: 0;
   width: 100%;
-  z-index: 10;
+  z-index: 50;
+  color: white;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+
+  &.scrolled {
+    backdrop-filter: blur(12px);
+    background-color: rgba(255, 255, 255, 0.6);
+    color: black;
+  }
 }
 
 :root :where(.wp-block-navigation a:where(:not(.wp-element-button))) {
