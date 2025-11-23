@@ -23,7 +23,7 @@
         },
         {
           "slug": "contrast",
-          "color": "#1e1e1e",
+          "color": "#262B30",
           "name": "Contrast"
         },
         {
@@ -71,7 +71,7 @@
           "name": "Secondary and primary"
         },
         {
-          "colors": ["#09465C", "#f0f0f0"],
+          "colors": ["#09465C", "#262B30"],
           "slug": "primary-contrast",
           "name": "Primary and Contrast"
         }
@@ -309,6 +309,10 @@
       "core/button": {
         "border": {
           "radius": "30px"
+        },
+        "color": {
+          "background": "var(--wp--preset--color--contrast)",
+          "text": "var(--wp--preset--color--base)"
         },
         "typography": {
           "fontFamily": "var(--wp--preset--font-family--default)",
