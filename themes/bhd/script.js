@@ -11,12 +11,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const scrollThreshold = 50;
   function handleScroll() {
     if (window.scrollY > scrollThreshold) {
-      headerContainer.classList.add('scrolled');
+      headerContainer.classList.remove('transparent');
     } else {
-      headerContainer.classList.remove('scrolled');
+      headerContainer.classList.add('transparent');
     }
   }
 
+  // init
+  requestAnimationFrame(handleScroll);
+
+  // monitor
   let requestedAnimFrame = 0;
   window.addEventListener('scroll', () => {
     cancelAnimationFrame(requestedAnimFrame);
