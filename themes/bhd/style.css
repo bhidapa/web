@@ -14,11 +14,19 @@ License: GNU General Public License v2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 */
 
+/* Carousel Slider */
 :root {
   --wp--custom--carousel-block--pagination-bottom: 40px;
   --wp--custom--carousel-block--navigation-sides-offset: 40px;
   --wp--custom--carousel-block--navigation-alignfull-color: white;
   --wp--custom--carousel-block--pagination-bullet-active-color: white;
+}
+@media (max-width: 1114px) {
+  /* small screen view */
+  :root {
+    --wp--custom--carousel-block--pagination-bottom: 20px;
+    --wp--custom--carousel-block--navigation-sides-offset: 20px;
+  }
 }
 .wp-block-cb-carousel-v2 .cb-pagination .cb-pagination-bullet {
   width: 20px;
@@ -28,6 +36,11 @@ License URI: http://www.gnu.org/licenses/gpl-2.0.html
   .cb-pagination
   .cb-pagination-bullet.swiper-pagination-bullet-active {
   width: 40px;
+}
+.wp-block-cb-carousel-v2 .slider-text-content {
+  max-width: 900px;
+  padding: 0
+    calc(2 * var(--wp--custom--carousel-block--navigation-sides-offset));
 }
 
 /* Styles intended only for the front.*/
@@ -50,10 +63,6 @@ body {
   margin-top: 0;
 }
 
-footer {
-  margin-top: 0;
-}
-
 .admin-bar {
   --wp-admin--admin-bar--position-offset: 32px;
 }
@@ -70,8 +79,8 @@ footer {
     color 0.2s ease;
 
   &.scrolled {
-    backdrop-filter: blur(12px);
-    background-color: rgba(255, 255, 255, 0.6);
+    backdrop-filter: blur(16px);
+    background-color: rgba(255, 255, 255, 0.8);
     color: black;
   }
 }
@@ -90,43 +99,15 @@ footer {
 }
 
 .wp-block-button .wp-element-button {
-  transition: box-shadow 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  transition: box-shadow 0.2s ease;
 }
 
 .wp-block-button .wp-element-button:hover {
-  box-shadow: var(--wp--preset--shadow--elevation-3);
+  box-shadow: var(--wp--preset--shadow--elevation-1);
 }
 
-.wp-block-group:has(> .edu-prog-icon) {
-  margin-top: 52px;
-}
-
-.edu-prog-icon {
-  margin-top: -67px !important;
-}
-
-footer .wp-block-search__inside-wrapper {
-  padding: 0;
-  background: var(--wp--preset--color--base);
-}
-
-footer .wp-block-search__inside-wrapper input {
-  background-color: #ffffff; /* on iOS the background appears gray without this */
-  padding: 0 var(--wp--preset--spacing--40);
-}
-
-.wp-block-post-terms__separator {
-  color: var(--wp--preset--color--contrast);
-}
-
-/* polylang */
-.wp-block-polylang-language-switcher.no-bkg-white-color .pll-switcher-select {
-  border: 0;
-  background: transparent;
-  color: white;
-  font-family: Erode, serif;
-  font-weight: 500;
-  font-size: 1rem;
+.wp-block-button .wp-element-button:active {
+  box-shadow: var(--wp--preset--shadow--elevation-2);
 }
 
 /* complianz */
