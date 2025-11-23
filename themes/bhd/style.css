@@ -14,6 +14,22 @@ License: GNU General Public License v2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 */
 
+:root {
+  --wp--custom--carousel-block--pagination-bottom: 40px;
+  --wp--custom--carousel-block--navigation-sides-offset: 40px;
+  --wp--custom--carousel-block--navigation-alignfull-color: white;
+  --wp--custom--carousel-block--pagination-bullet-active-color: white;
+}
+.wp-block-cb-carousel-v2 .cb-pagination .cb-pagination-bullet {
+  width: 20px;
+  border-radius: 16px;
+}
+.wp-block-cb-carousel-v2
+  .cb-pagination
+  .cb-pagination-bullet.swiper-pagination-bullet-active {
+  width: 40px;
+}
+
 /* Styles intended only for the front.*/
 html {
   scroll-behavior: smooth;
@@ -38,27 +54,20 @@ footer {
   margin-top: 0;
 }
 
-@media (max-width: 1114px) {
-  /* small screen view */
-  #navigation-desktop {
-    display: none;
-  }
-  .slogan {
-    text-align: left;
-  }
-  .wp-block-navigation-item {
-    text-align: right;
-  }
+.admin-bar {
+  --wp-admin--admin-bar--position-offset: 32px;
 }
 
-@media (min-width: 1115px) {
-  /* large screen view */
-  #navigation-mobile {
-    display: none;
-  }
-  .slogan {
-    text-align: center;
-  }
+.site-header-fixed-container {
+  position: fixed;
+  top: calc(0px + var(--wp-admin--admin-bar--position-offset, 0px));
+  left: 0;
+  width: 100%;
+  z-index: 10;
+}
+
+:root :where(.wp-block-navigation a:where(:not(.wp-element-button))) {
+  font-weight: unset;
 }
 
 .wp-block-navigation-item.has-child {
@@ -70,31 +79,12 @@ footer {
   display: inline;
 }
 
-.wp-block-button {
+.wp-block-button .wp-element-button {
   transition: box-shadow 200ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.wp-block-button:hover {
+.wp-block-button .wp-element-button:hover {
   box-shadow: var(--wp--preset--shadow--elevation-3);
-}
-
-.wp-block-button:not(.download-icon):not(.login-icon)
-  a.wp-block-button__link::after {
-  white-space: nowrap;
-  font-family: 'Font Awesome 6 Free';
-  content: ' \f0da';
-}
-
-.wp-block-button.download-icon .wp-block-button__link::before {
-  white-space: nowrap;
-  font-family: 'Font Awesome 6 Free';
-  content: '\f019  ';
-}
-
-.wp-block-button.login-icon .wp-block-button__link::before {
-  white-space: nowrap;
-  font-family: 'Font Awesome 6 Free';
-  content: '\f2f6  ';
 }
 
 .wp-block-group:has(> .edu-prog-icon) {

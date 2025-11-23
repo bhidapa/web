@@ -51,6 +51,13 @@ add_action(
             [],
             wp_get_theme()->get('Version'),
         );
+        wp_enqueue_script(
+            'bhd-script',
+            get_theme_file_uri('script.js'),
+            [],
+            wp_get_theme()->get('Version'),
+            ['type' => 'module'],
+        );
     },
     50, // load stylesheet last overriding all other styles
 );

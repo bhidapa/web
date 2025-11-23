@@ -28,17 +28,22 @@
         },
         {
           "slug": "primary",
-          "color": "#09465c",
+          "color": "#09465C",
           "name": "Primary"
         },
         {
           "slug": "secondary",
-          "color": "#019bbe",
+          "color": "#F47E6C",
           "name": "Secondary"
         },
         {
+          "slug": "tertiary",
+          "color": "#FDD772",
+          "name": "Tertiary"
+        },
+        {
           "slug": "accent",
-          "color": "#cbb26e",
+          "color": "#48BD9D",
           "name": "Accent"
         },
         {
@@ -50,23 +55,23 @@
       "gradients": [
         {
           "slug": "primary-white",
-          "gradient": "linear-gradient(#0073aa 49.9%,#fff 50%)",
+          "gradient": "linear-gradient(#09465C 49.9%,#fff 50%)",
           "name": "Primary color to white"
         },
         {
           "slug": "white-primary",
-          "gradient": "linear-gradient(#fff 49.9%,#0073aa 50%)",
+          "gradient": "linear-gradient(#fff 49.9%,#09465C 50%)",
           "name": "Horizontal white to Primary color"
         }
       ],
       "duotone": [
         {
-          "colors": ["#00a0d2", "#0073aa"],
+          "colors": ["#F47E6C", "#09465C"],
           "slug": "secondary-primary",
           "name": "Secondary and primary"
         },
         {
-          "colors": ["#0073aa", "#f0f0f0"],
+          "colors": ["#09465C", "#f0f0f0"],
           "slug": "primary-contrast",
           "name": "Primary and Contrast"
         }
@@ -117,154 +122,77 @@
       "lineHeight": true,
       "fontFamilies": [
         {
-          "name": "Heading",
-          "slug": "heading",
-          "fontFamily": "'Satoshi',sans-serif",
+          "name": "Default",
+          "slug": "default",
+          "fontFamily": "'DMSans',sans",
           "fontFace": [
             {
-              "fontFamily": "Satoshi",
-              "src": "file:./assets/fonts/satoshi/Satoshi-Light.woff2",
+              "fontFamily": "DMSans",
+              "src": "file:./assets/fonts/dmsans/DMSans-Light.ttf",
               "fontWeight": "300",
               "fontDisplay": "swap",
               "fontStyle": "normal"
             },
             {
-              "fontFamily": "Satoshi",
-              "src": "file:./assets/fonts/satoshi/Satoshi-LightItalic.woff2",
+              "fontFamily": "DMSans",
+              "src": "file:./assets/fonts/dmsans/DMSans-LightItalic.ttf",
               "fontWeight": "300",
               "fontDisplay": "swap",
               "fontStyle": "italic"
             },
             {
-              "fontFamily": "Satoshi",
-              "src": "file:./assets/fonts/satoshi/Satoshi-Regular.woff2",
+              "fontFamily": "DMSans",
+              "src": "file:./assets/fonts/dmsans/DMSans-Regular.ttf",
               "fontWeight": "400",
               "fontDisplay": "swap",
               "fontStyle": "normal"
             },
             {
-              "fontFamily": "Satoshi",
-              "src": "file:./assets/fonts/satoshi/Satoshi-Italic.woff2",
+              "fontFamily": "DMSans",
+              "src": "file:./assets/fonts/dmsans/DMSans-Italic.ttf",
               "fontWeight": "400",
               "fontDisplay": "swap",
               "fontStyle": "italic"
             },
             {
-              "fontFamily": "Satoshi",
-              "src": "file:./assets/fonts/satoshi/Satoshi-Medium.woff2",
+              "fontFamily": "DMSans",
+              "src": "file:./assets/fonts/dmsans/DMSans-Medium.ttf",
               "fontWeight": "500",
               "fontDisplay": "swap",
               "fontStyle": "normal"
             },
             {
-              "fontFamily": "Satoshi",
-              "src": "file:./assets/fonts/satoshi/Satoshi-MediumItalic.woff2",
+              "fontFamily": "DMSans",
+              "src": "file:./assets/fonts/dmsans/DMSans-MediumItalic.ttf",
               "fontWeight": "500",
               "fontDisplay": "swap",
               "fontStyle": "italic"
             },
             {
-              "fontFamily": "Satoshi",
-              "src": "file:./assets/fonts/satoshi/Satoshi-Bold.woff2",
+              "fontFamily": "DMSans",
+              "src": "file:./assets/fonts/dmsans/DMSans-Bold.ttf",
               "fontWeight": "700",
               "fontDisplay": "swap",
               "fontStyle": "normal"
             },
             {
-              "fontFamily": "Satoshi",
-              "src": "file:./assets/fonts/satoshi/Satoshi-BoldItalic.woff2",
+              "fontFamily": "DMSans",
+              "src": "file:./assets/fonts/dmsans/DMSans-BoldItalic.ttf",
               "fontWeight": "700",
               "fontDisplay": "swap",
               "fontStyle": "italic"
             },
             {
-              "fontFamily": "Satoshi",
-              "src": "file:./assets/fonts/satoshi/Satoshi-Black.woff2",
+              "fontFamily": "DMSans",
+              "src": "file:./assets/fonts/dmsans/DMSans-Black.ttf",
               "fontWeight": "900",
               "fontDisplay": "swap",
               "fontStyle": "normal"
             },
             {
-              "fontFamily": "Satoshi",
-              "src": "file:./assets/fonts/satoshi/Satoshi-BlackItalic.woff2",
+              "fontFamily": "DMSans",
+              "src": "file:./assets/fonts/dmsans/DMSans-BlackItalic.ttf",
               "fontWeight": "900",
-              "fontDisplay": "swap",
-              "fontStyle": "italic"
-            }
-          ]
-        },
-        {
-          "name": "Body",
-          "slug": "body",
-          "fontFamily": "'Erode',serif",
-          "fontFace": [
-            {
-              "fontFamily": "Erode",
-              "src": "file:./assets/fonts/erode/Erode-Light.woff2",
-              "fontWeight": "300",
-              "fontDisplay": "swap",
-              "fontStyle": "normal"
-            },
-            {
-              "fontFamily": "Erode",
-              "src": "file:./assets/fonts/erode/Erode-LightItalic.woff2",
-              "fontWeight": "300",
-              "fontDisplay": "swap",
-              "fontStyle": "italic"
-            },
-            {
-              "fontFamily": "Erode",
-              "src": "file:./assets/fonts/erode/Erode-Regular.woff2",
-              "fontWeight": "400",
-              "fontDisplay": "swap",
-              "fontStyle": "normal"
-            },
-            {
-              "fontFamily": "Erode",
-              "src": "file:./assets/fonts/erode/Erode-Italic.woff2",
-              "fontWeight": "400",
-              "fontDisplay": "swap",
-              "fontStyle": "italic"
-            },
-            {
-              "fontFamily": "Erode",
-              "src": "file:./assets/fonts/erode/Erode-Medium.woff2",
-              "fontWeight": "500",
-              "fontDisplay": "swap",
-              "fontStyle": "normal"
-            },
-            {
-              "fontFamily": "Erode",
-              "src": "file:./assets/fonts/erode/Erode-MediumItalic.woff2",
-              "fontWeight": "500",
-              "fontDisplay": "swap",
-              "fontStyle": "italic"
-            },
-            {
-              "fontFamily": "Erode",
-              "src": "file:./assets/fonts/erode/Erode-Semibold.woff2",
-              "fontWeight": "600",
-              "fontDisplay": "swap",
-              "fontStyle": "normal"
-            },
-            {
-              "fontFamily": "Erode",
-              "src": "file:./assets/fonts/erode/Erode-SemiboldItalic.woff2",
-              "fontWeight": "600",
-              "fontDisplay": "swap",
-              "fontStyle": "italic"
-            },
-            {
-              "fontFamily": "Erode",
-              "src": "file:./assets/fonts/erode/Erode-Bold.woff2",
-              "fontWeight": "700",
-              "fontDisplay": "swap",
-              "fontStyle": "normal"
-            },
-            {
-              "fontFamily": "Erode",
-              "src": "file:./assets/fonts/erode/Erode-BoldItalic.woff2",
-              "fontWeight": "700",
               "fontDisplay": "swap",
               "fontStyle": "italic"
             }
@@ -285,7 +213,7 @@
   },
   "styles": {
     "typography": {
-      "fontFamily": "var(--wp--preset--font-family--body)",
+      "fontFamily": "var(--wp--preset--font-family--default)",
       "fontWeight": "500",
       "lineHeight": "1.5"
     },
@@ -302,43 +230,43 @@
     "elements": {
       "h1": {
         "typography": {
-          "fontFamily": "var(--wp--preset--font-family--heading)",
+          "fontFamily": "var(--wp--preset--font-family--default)",
           "fontWeight": "800"
         }
       },
       "h2": {
         "typography": {
-          "fontFamily": "var(--wp--preset--font-family--heading)",
+          "fontFamily": "var(--wp--preset--font-family--default)",
           "fontWeight": "900"
         }
       },
       "h3": {
         "typography": {
-          "fontFamily": "var(--wp--preset--font-family--heading)",
+          "fontFamily": "var(--wp--preset--font-family--default)",
           "fontWeight": "900"
         }
       },
       "h4": {
         "typography": {
-          "fontFamily": "var(--wp--preset--font-family--heading)",
+          "fontFamily": "var(--wp--preset--font-family--default)",
           "fontWeight": "700"
         }
       },
       "h5": {
         "typography": {
-          "fontFamily": "var(--wp--preset--font-family--heading)",
+          "fontFamily": "var(--wp--preset--font-family--default)",
           "fontWeight": "700"
         }
       },
       "h6": {
         "typography": {
-          "fontFamily": "var(--wp--preset--font-family--heading)",
+          "fontFamily": "var(--wp--preset--font-family--default)",
           "fontWeight": "700"
         }
       },
       "link": {
         "color": {
-          "text": "var(--wp--preset--color--secondary)"
+          "text": "var(--wp--preset--color--accent)"
         },
         "typography": {
           "textDecoration": "none"
@@ -355,7 +283,7 @@
         "elements": {
           "link": {
             "typography": {
-              "fontFamily": "var(--wp--preset--font-family--heading)",
+              "fontFamily": "var(--wp--preset--font-family--default)",
               "textDecoration": "none",
               "fontWeight": "600"
             },
@@ -380,16 +308,19 @@
       },
       "core/button": {
         "border": {
-          "radius": "0"
-        },
-        "color": {
-          "background": "var(--wp--preset--color--secondary)"
+          "radius": "30px"
         },
         "typography": {
-          "fontFamily": "var(--wp--preset--font-family--heading)",
-          "fontWeight": "700",
-          "textTransform": "uppercase",
-          "letterSpacing": "0.1rem"
+          "fontFamily": "var(--wp--preset--font-family--default)",
+          "fontWeight": "300"
+        },
+        "spacing": {
+          "padding": {
+            "top": "var(--wp--preset--spacing--20)",
+            "right": "var(--wp--preset--spacing--60)",
+            "bottom": "var(--wp--preset--spacing--20)",
+            "left": "var(--wp--preset--spacing--60)"
+          }
         },
         "variations": {
           "outline": {
