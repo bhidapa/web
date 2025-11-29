@@ -232,3 +232,22 @@ copy to editor-style too!
 .width-full {
   width: 100%;
 }
+
+footer {
+  .wp-block-search__inside-wrapper {
+    padding: 0;
+    background: var(--wp--preset--color--base);
+  }
+
+  .wp-block-search__inside-wrapper input {
+    background-color: #ffffff; /* on iOS the background appears gray without this */
+    padding: 0 var(--wp--preset--spacing--40);
+    border-top-left-radius: 10px;
+    border-bottom-left-radius: 10px;
+  }
+
+  .wp-block-search__inside-wrapper button {
+    border-top-right-radius: 10px;
+    border-bottom-right-radius: 10px;
+  }
+}
