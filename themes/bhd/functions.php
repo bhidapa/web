@@ -8,21 +8,13 @@
  * @since 1.0.0
  */
 
-require_once 'inc/queries.php';
 require_once 'inc/e-library.php';
-
-// fix some wordpress default translations
-unload_textdomain('default');
-load_textdomain(
-    'default',
-    get_template_directory() . '/languages/default-' . get_locale() . '.mo',
-);
 
 add_action('login_enqueue_scripts', function () {
     echo '<style type="text/css">
     #login h1 a, .login h1 a {
         background-image: url(' .
-        get_theme_file_uri('assets/images/logo-text-powered-by.svg') .
+        get_theme_file_uri('assets/images/logo.svg') .
         ');
         height: 100px;
         width: 100%;
@@ -199,10 +191,6 @@ add_action('wp_before_admin_bar_render', function () {
     /** @var WP_Admin_Bar */
     global $wp_admin_bar;
     $wp_admin_bar->remove_menu('wp-logo');
-});
-
-add_filter('wpcf7_autop_or_not', function () {
-    return false;
 });
 
 // Register Post Meta source in the block bindings registry.
