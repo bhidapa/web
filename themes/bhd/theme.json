@@ -277,10 +277,7 @@
       },
       "link": {
         "color": {
-          "text": "var(--wp--preset--color--accent)"
-        },
-        "typography": {
-          "textDecoration": "none"
+          "text": "var(--wp--preset--color--primary)"
         },
         ":hover": {
           "typography": {

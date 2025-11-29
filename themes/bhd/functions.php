@@ -204,3 +204,17 @@ add_action('wp_before_admin_bar_render', function () {
 add_filter('wpcf7_autop_or_not', function () {
     return false;
 });
+
+// Register Post Meta source in the block bindings registry.
+add_action('init', function () {
+    register_block_bindings_source('bhd/post-url', [
+        'label' => __('Post URL', 'bhd'),
+        'uses_context' => ['postId'],
+        'get_value_callback' => function (array $source_args, WP_Block $block) {
+            if (empty($block->context['postId'])) {
+                return '';
+            }
+            return get_the_permalink($block->context['postId']);
+        },
+    ]);
+});

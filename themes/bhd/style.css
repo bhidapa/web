@@ -67,6 +67,52 @@ body {
   --wp-admin--admin-bar--position-offset: 32px;
 }
 
+.header-akp-button {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  border-radius: 10px;
+  padding: 12px;
+  gap: 10px;
+  background-color: #039bbd30;
+  transition:
+    background-color 0.2s ease,
+    box-shadow 0.2s ease;
+
+  &:hover {
+    box-shadow: var(--wp--preset--shadow--elevation-1);
+  }
+  &:active {
+    box-shadow: var(--wp--preset--shadow--elevation-2);
+  }
+
+  img {
+    height: 18px;
+  }
+  span {
+    color: #09465c; /* akp dark blue color */
+    text-transform: uppercase;
+    letter-spacing: 1.25px;
+    font-weight: 600;
+    font-size: var(--wp--preset--font-size--small);
+  }
+}
+
+.header-lang-switcher {
+  line-height: 1;
+  select {
+    transition: color 0.2s ease;
+    font-family: var(--wp--preset--font-family--heading);
+    font-weight: 400;
+    border: none;
+    background: none;
+    padding-left: 10px;
+    padding-right: 10px;
+    appearance: none;
+    cursor: pointer;
+  }
+}
+
 .site-header-fixed-container {
   position: fixed;
   top: calc(0px + var(--wp-admin--admin-bar--position-offset, 0px));
@@ -78,43 +124,10 @@ body {
     border-color 0.2s ease,
     color 0.2s ease;
 
-  .header-akp-button {
-    display: flex;
-    align-items: center;
-    text-decoration: none;
-    border-radius: 10px;
-    padding: 12px;
-    gap: 10px;
-    transition:
-      background-color 0.2s ease,
-      box-shadow 0.2s ease;
-
-    &:hover {
-      box-shadow: var(--wp--preset--shadow--elevation-1);
-    }
-    &:active {
-      box-shadow: var(--wp--preset--shadow--elevation-2);
-    }
-
-    img {
-      height: 18px;
-    }
-    span {
-      color: #09465c; /* akp dark blue color */
-      text-transform: uppercase;
-      letter-spacing: 1.25px;
-      font-weight: 600;
-      font-size: var(--wp--preset--font-size--small);
-    }
-  }
-
   /* default */
   background-color: rgba(255, 255, 255, 1);
   color: black;
   border-bottom: 2px solid var(--wp--preset--color--darker-base);
-  .header-akp-button {
-    background-color: #039bbd30;
-  }
 
   &.transparent {
     background-color: transparent;
@@ -122,6 +135,9 @@ body {
     border-bottom-color: transparent;
     .header-akp-button {
       background-color: white;
+    }
+    .header-lang-switcher select {
+      color: white;
     }
   }
 }
