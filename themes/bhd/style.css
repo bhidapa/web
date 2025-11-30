@@ -1,0 +1,257 @@
+/*
+Theme Name: BHIDAPA
+Author: BHIDAPA
+Author URI: https://bhidapa.ba
+Theme URI:
+Tags: full-site-editing
+Text Domain: bhd
+Requires at least: 6.7
+Requires PHP: 8.2
+Tested up to: 6.7.1
+Version: 1.0.0
+
+License: GNU General Public License v2 or later
+License URI: http://www.gnu.org/licenses/gpl-2.0.html
+*/
+
+/* Carousel Slider */
+:root {
+  --wp--custom--carousel-block--pagination-bottom: 40px;
+  --wp--custom--carousel-block--navigation-sides-offset: 40px;
+  --wp--custom--carousel-block--navigation-alignfull-color: white;
+  --wp--custom--carousel-block--pagination-bullet-active-color: white;
+}
+@media (max-width: 1114px) {
+  /* small screen view */
+  :root {
+    --wp--custom--carousel-block--pagination-bottom: 20px;
+    --wp--custom--carousel-block--navigation-sides-offset: 20px;
+  }
+}
+.wp-block-cb-carousel-v2 .cb-pagination .cb-pagination-bullet {
+  width: 20px;
+  border-radius: 16px;
+}
+.wp-block-cb-carousel-v2
+  .cb-pagination
+  .cb-pagination-bullet.swiper-pagination-bullet-active {
+  width: 40px;
+}
+.wp-block-cb-carousel-v2 .slider-text-content {
+  max-width: 900px;
+  padding: 0
+    calc(2 * var(--wp--custom--carousel-block--navigation-sides-offset));
+}
+
+/* Styles intended only for the front.*/
+html {
+  scroll-behavior: smooth;
+}
+
+@media screen and (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+body {
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-font-smoothing: antialiased;
+}
+
+:where(.wp-site-blocks) > * {
+  margin-top: 0;
+}
+
+.admin-bar {
+  --wp-admin--admin-bar--position-offset: 32px;
+}
+
+.header-akp-button {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  border-radius: 10px;
+  padding: 12px;
+  gap: 10px;
+  background-color: var(--wp--preset--color--sky);
+  transition:
+    background-color 0.2s ease,
+    box-shadow 0.2s ease;
+
+  &:hover {
+    box-shadow: var(--wp--preset--shadow--elevation-1);
+  }
+  &:active {
+    box-shadow: var(--wp--preset--shadow--elevation-2);
+  }
+
+  img {
+    height: 18px;
+  }
+  span {
+    color: #09465c; /* akp dark blue color */
+    text-transform: uppercase;
+    letter-spacing: 1.25px;
+    font-weight: 600;
+    font-size: var(--wp--preset--font-size--small);
+  }
+}
+
+.header-lang-switcher {
+  line-height: 1;
+  select {
+    transition: color 0.2s ease;
+    font-family: var(--wp--preset--font-family--heading);
+    font-weight: 400;
+    border: none;
+    background: none;
+    padding-left: 10px;
+    padding-right: 10px;
+    appearance: none;
+    cursor: pointer;
+  }
+}
+
+.site-header-fixed-container {
+  position: fixed;
+  top: calc(0px + var(--wp-admin--admin-bar--position-offset, 0px));
+  left: 0;
+  width: 100%;
+  z-index: 50;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease;
+
+  /* default */
+  background-color: rgba(255, 255, 255, 1);
+  color: black;
+  border-bottom: 2px solid var(--wp--preset--color--darker-base);
+
+  &.transparent {
+    background-color: transparent;
+    color: white;
+    border-bottom-color: transparent;
+    .header-akp-button {
+      background-color: white;
+    }
+    .header-lang-switcher select {
+      color: white;
+    }
+  }
+}
+
+body .wp-block-navigation__responsive-container-open:not(.always-shown) {
+  display: block !important;
+}
+body
+  .wp-block-navigation__responsive-container:not(.hidden-by-default):not(
+    .is-menu-open
+  ) {
+  display: none !important;
+}
+
+@media (min-width: 804px) {
+  body .wp-block-navigation__responsive-container-open:not(.always-shown) {
+    display: none !important;
+  }
+  body
+    .wp-block-navigation__responsive-container:not(.hidden-by-default):not(
+      .is-menu-open
+    ) {
+    display: block !important;
+  }
+}
+
+:root :where(.wp-block-navigation a:where(:not(.wp-element-button))) {
+  font-weight: unset;
+}
+
+.wp-block-navigation-item.has-child {
+  padding-bottom: 0 !important; /* defaults add padding to nested block items and then they seem off */
+}
+
+.wp-block-image > a,
+.wp-block-image > figure > a {
+  display: inline;
+}
+
+.wp-block-button:not(.is-style-text) .wp-element-button {
+  transition: box-shadow 0.2s ease;
+}
+.wp-block-button:not(.is-style-text) .wp-element-button:hover {
+  box-shadow: var(--wp--preset--shadow--elevation-1);
+}
+.wp-block-button:not(.is-style-text) .wp-element-button:active {
+  box-shadow: var(--wp--preset--shadow--elevation-2);
+}
+.wp-block-button.is-style-text .wp-element-button:hover {
+  text-decoration: underline;
+}
+
+/* complianz */
+.cmplz-header {
+  /* no logo no close button, just show text across all spans */
+  display: unset !important;
+  .cmplz-title {
+    text-align: center; /* adopt the center justify */
+  }
+}
+.cmplz-title {
+  font-family: var(--wp--preset--font-family--heading);
+  font-size: 1.17em !important; /* h3 */
+  font-weight: 900 !important; /* h3 */
+}
+.cmplz-category-title {
+  font-family: var(--wp--preset--font-family--heading);
+  font-weight: 700 !important; /* h3 */
+  font-size: unset !important;
+}
+.cmplz-always-active {
+  font-family: var(--wp--preset--font-family--heading);
+  font-size: unset !important;
+}
+.cmplz-btn {
+  font-family: var(--wp--preset--font-family--heading);
+  font-weight: 700 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.1rem;
+}
+
+/*
+layout stuff
+copy to editor-style too!
+*/
+.flex-1 {
+  flex: 1;
+}
+.height-full {
+  height: 100%;
+}
+.width-full {
+  width: 100%;
+}
+
+footer {
+  a {
+    text-decoration: none; /* no underline for links in footer */
+  }
+
+  .wp-block-search__inside-wrapper {
+    padding: 0;
+    background: var(--wp--preset--color--base);
+  }
+
+  .wp-block-search__inside-wrapper input {
+    background-color: #ffffff; /* on iOS the background appears gray without this */
+    padding: 0 var(--wp--preset--spacing--40);
+    border-top-left-radius: 10px;
+    border-bottom-left-radius: 10px;
+  }
+
+  .wp-block-search__inside-wrapper button {
+    border-top-right-radius: 10px;
+    border-bottom-right-radius: 10px;
+  }
+}

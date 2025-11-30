@@ -20,6 +20,12 @@ export interface Website {
 
 export const websites: Website[] = [
   {
+    name: 'bhidapa',
+    hostedZone: 'bhidapa.ba',
+    domain: 'nova.bhidapa.ba',
+    noCache: true,
+  },
+  {
     name: 'akp',
     hostedZone: 'akp.ba',
     domain: 'akp.ba',

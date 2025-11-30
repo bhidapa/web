@@ -53,6 +53,9 @@
     "mu-plugins/blocks/not-logged-in": {
       "name": "@blocks/not-logged-in",
     },
+    "mu-plugins/blocks/post-categories-tag": {
+      "name": "@blocks/post-categories-tag",
+    },
     "mu-plugins/blocks/post-type": {
       "name": "@blocks/post-type",
     },
@@ -388,6 +391,8 @@
     "@blocks/e-library-no-access": ["@blocks/e-library-no-access@workspace:plugins/e-library/blocks/no-access"],
 
     "@blocks/not-logged-in": ["@blocks/not-logged-in@workspace:mu-plugins/blocks/not-logged-in"],
+
+    "@blocks/post-categories-tag": ["@blocks/post-categories-tag@workspace:mu-plugins/blocks/post-categories-tag"],
 
     "@blocks/post-type": ["@blocks/post-type@workspace:mu-plugins/blocks/post-type"],
 
