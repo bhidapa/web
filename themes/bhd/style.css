@@ -8,7 +8,7 @@ Text Domain: bhd
 Requires at least: 6.7
 Requires PHP: 8.2
 Tested up to: 6.7.1
-Version: 1.0.0
+Version: 1.0.1
 
 License: GNU General Public License v2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
@@ -98,7 +98,11 @@ body {
   }
 }
 
+.header-lang-switcher-icon {
+  display: flex;
+}
 .header-lang-switcher {
+  display: flex;
   line-height: 1;
   select {
     transition: color 0.2s ease;
@@ -110,6 +114,7 @@ body {
     padding-right: 10px;
     appearance: none;
     cursor: pointer;
+    color: black;
   }
 }
 
