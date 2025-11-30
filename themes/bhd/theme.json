@@ -420,12 +420,5 @@
       "title": "Footer",
       "area": "footer"
     }
-  ],
-  "customTemplates": [
-    {
-      "name": "e-library-unauthorized",
-      "title": "E-Library Unauthorized",
-      "postTypes": ["page"]
-    }
   ]
 }
