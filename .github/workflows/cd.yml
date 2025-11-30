@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
 
 # Need ID token write permission to use GitHub OIDC with AWS
 permissions:
@@ -31,6 +34,7 @@ jobs:
       - run: bun check:${{ matrix.check }}
 
   infra:
+    if: github.ref == 'refs/heads/main'
     needs: checks
     environment: prod
     name: Infra
