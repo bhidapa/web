@@ -69,7 +69,7 @@ jobs:
     name: Deploy ${{ matrix.website }}
     runs-on: ubuntu-latest
     concurrency:
-      group: deploy-prod
+      group: deploy-prod-${{ matrix.website }}
       cancel-in-progress: false
     strategy:
       matrix:
