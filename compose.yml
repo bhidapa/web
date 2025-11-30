@@ -30,7 +30,7 @@ services:
       PMA_PASSWORD: supersecret
     ports:
       - 53388:80
-  # akp.ba
+  # bhidapa.ba
   bhd:
     build:
       context: images
@@ -47,6 +47,7 @@ services:
       - ./mu-plugins:/var/www/html/wp-content/mu-plugins
       - ./plugins/e-library:/var/www/html/wp-content/plugins/e-library
       - ./themes/bhd:/var/www/html/wp-content/themes/bhd
+  # akp.ba
   akp:
     build:
       context: images
