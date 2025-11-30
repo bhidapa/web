@@ -10,7 +10,16 @@ if (!website) {
   throw new Error('WEBSITE is not set');
 }
 
-const bundles = ['mu-plugins', 'themes/azp', 'plugins/e-library'];
+const themeForWebsite: Record<string, string> = {
+  bhidapa: 'bhd',
+  akp: 'azp',
+};
+const theme = themeForWebsite[website];
+if (!theme) {
+  throw new Error(`No theme configured for website ${website}`);
+}
+
+const bundles = ['mu-plugins', `themes/${theme}`, 'plugins/e-library'];
 
 console.log(`Pushing to ${website}`);
 for (const bundle of bundles) {
