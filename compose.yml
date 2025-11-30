@@ -8,8 +8,8 @@ x-wp-env: &wp-env
 
 volumes:
   db-data:
-  akp-wp-data:
   bhd-wp-data:
+  akp-wp-data:
 
 services:
   db:
