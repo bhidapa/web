@@ -5,6 +5,8 @@ export interface Website {
   name: string;
   hostedZone: string;
   domain: string;
+  /** Disable caching on Cloudfront. Mainly useful for development. */
+  noCache?: boolean;
   /** Alternative domains that all redirect back to the {@link domain main domain}. */
   alternate?: {
     name: string;

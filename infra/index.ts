@@ -960,7 +960,9 @@ for (const website of websites) {
         targetOriginId: 'alb',
         viewerProtocolPolicy: 'redirect-to-https',
         ...cfCacheBehaviorMethods.all,
-        cachePolicyId: cfDynamicCachePolicy.id,
+        cachePolicyId: website.noCache
+          ? cfCacheDisabledPolicy.apply((p) => p.id!)
+          : cfDynamicCachePolicy.id,
         originRequestPolicyId: cfDynamicOriginRequestPolicy.id,
         compress: true,
       },
@@ -1015,7 +1017,9 @@ for (const website of websites) {
           targetOriginId: 'alb',
           viewerProtocolPolicy: 'redirect-to-https',
           ...cfCacheBehaviorMethods.getAndOpts,
-          cachePolicyId: cfStaticCachePolicy.id,
+          cachePolicyId: website.noCache
+            ? cfCacheDisabledPolicy.apply((p) => p.id!)
+            : cfStaticCachePolicy.id,
           originRequestPolicyId: cfStaticOriginRequestPolicy.id,
           compress: true,
         },
@@ -1024,7 +1028,9 @@ for (const website of websites) {
           targetOriginId: 'alb',
           viewerProtocolPolicy: 'redirect-to-https',
           ...cfCacheBehaviorMethods.getAndOpts,
-          cachePolicyId: cfStaticCachePolicy.id,
+          cachePolicyId: website.noCache
+            ? cfCacheDisabledPolicy.apply((p) => p.id!)
+            : cfStaticCachePolicy.id,
           originRequestPolicyId: cfStaticOriginRequestPolicy.id,
           compress: true,
         },
