@@ -8,7 +8,7 @@ Text Domain: bhd
 Requires at least: 6.7
 Requires PHP: 8.2
 Tested up to: 6.7.1
-Version: 1.0.5
+Version: 1.0.6
 
 License: GNU General Public License v2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
@@ -49,6 +49,9 @@ License URI: http://www.gnu.org/licenses/gpl-2.0.html
   /* color: var(--wp--custom--carousel-block--navigation-alignfull-color); */
   padding: 10px;
   border-radius: 10px;
+}
+.wp-block-cb-carousel-v2 .slider-text-content {
+  word-break: break-word;
 }
 
 /* Styles intended only for the front.*/
