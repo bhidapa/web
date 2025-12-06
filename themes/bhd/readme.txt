@@ -3,12 +3,13 @@ Contributors: BHIDAPA
 Requires at least: 6.7
 Requires PHP: 8.2
 Tested up to: 6.7.1
-Version: 1.0.3
+Version: 1.0.4
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 Copyright: BHIDAPA
 
 == Changelog ==
+1.0.4 Carousel prev next buttons more prominent
 1.0.3 Project item hover action
 1.0.2 Flex grow and shrink CSS classes
 1.0.1 Header lang switcher styles
