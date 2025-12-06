@@ -1,4 +1,21 @@
 <?php
+
+/*
+<!-- wp:paragraph {
+    "metadata":{
+        "bindings":{
+            "content":{
+                "source":"bhidapa/acf-field",
+                "args": {
+                    "key":"subtitle",
+                    "sub": false
+                }
+            }
+        }
+    }
+} -->
+*/
+
 add_action('init', function () {
     register_block_bindings_source('bhidapa/acf-field', [
         'label' => __('ACF Field', 'bhidapa'),
