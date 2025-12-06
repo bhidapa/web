@@ -13,6 +13,12 @@ copy to style too!
 .flex-1 {
   flex: 1;
 }
+.flex-grow-1 {
+  flex-grow: 1;
+}
+.flex-shrink-1 {
+  flex-shrink: 1;
+}
 .height-full {
   height: 100%;
 }
