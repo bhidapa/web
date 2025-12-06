@@ -20,6 +20,7 @@ License URI: http://www.gnu.org/licenses/gpl-2.0.html
   --wp--custom--carousel-block--navigation-sides-offset: 40px;
   --wp--custom--carousel-block--navigation-alignfull-color: white;
   --wp--custom--carousel-block--pagination-bullet-active-color: white;
+  --wp--custom--carousel-block--navigation-alignfull-color: black; /* together with prev/next button styles */
 }
 @media (max-width: 1114px) {
   /* small screen view */
@@ -45,7 +46,7 @@ License URI: http://www.gnu.org/licenses/gpl-2.0.html
 .wp-block-cb-carousel-v2 .swiper-button-prev,
 .wp-block-cb-carousel-v2 .swiper-button-next {
   background-color: white;
-  color: black;
+  /* color: var(--wp--custom--carousel-block--navigation-alignfull-color); */
   padding: 10px;
   border-radius: 10px;
 }
