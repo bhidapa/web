@@ -343,7 +343,8 @@
           },
           "text": {
             "typography": {
-              "fontWeight": "500"
+              "fontWeight": "500",
+              "textAlign": "left"
             },
             "color": {
               "text": "var(--wp--preset--color--contrast)",
