@@ -1102,7 +1102,8 @@ for (const website of websites) {
   for (const alt of website.alternate || []) {
     new aws.lb.ListenerRule(`${website.name}-to-${alt.name}-redirect-lb-rule`, {
       listenerArn: lbHttp.arn,
-      priority: 50 + website.alternate!.indexOf(alt),
+      priority:
+        50 + websites.indexOf(website) + website.alternate!.indexOf(alt),
       conditions: [
         {
           hostHeader: {
