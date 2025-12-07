@@ -31,3 +31,13 @@ function register_blocks_in_dir(string $path)
     }
     @closedir($dir);
 }
+
+add_action('wp_enqueue_scripts', function () {
+    wp_enqueue_script(
+        'core-script',
+        plugins_url('script.js', __FILE__),
+        [],
+        '1.0.0',
+        ['type' => 'module'],
+    );
+});
