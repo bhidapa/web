@@ -29,6 +29,26 @@ export const websites: Website[] = [
         name: 'www',
         domain: 'www.bhidapa.ba',
       },
+      {
+        hostedZone: 'bhidapa.com',
+        name: 'com',
+        domain: 'bhidapa.com',
+      },
+      {
+        hostedZone: 'bhidapa.com',
+        name: 'www-com',
+        domain: 'www.bhidapa.com',
+      },
+      {
+        hostedZone: 'psychotherapy.ba',
+        name: 'psych',
+        domain: 'psychotherapy.ba',
+      },
+      {
+        hostedZone: 'psychotherapy.ba',
+        name: 'www-psych',
+        domain: 'www.psychotherapy.ba',
+      },
     ],
   },
   {
