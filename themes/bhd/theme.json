@@ -365,7 +365,7 @@
         "variations": {
           "rounded": {
             "border": {
-              "radius": "3px"
+              "radius": "10px"
             }
           }
         }
