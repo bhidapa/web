@@ -22,8 +22,14 @@ export const websites: Website[] = [
   {
     name: 'bhidapa',
     hostedZone: 'bhidapa.ba',
-    domain: 'nova.bhidapa.ba',
+    domain: 'bhidapa.ba',
     noCache: true,
+    alternate: [
+      {
+        name: 'www',
+        domain: 'www.bhidapa.ba',
+      },
+    ],
   },
   {
     name: 'akp',
