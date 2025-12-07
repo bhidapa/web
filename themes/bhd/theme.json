@@ -362,6 +362,11 @@
         }
       },
       "core/image": {
+        "typography": {
+          "fontWeight": "300",
+          "fontSize": "var(--wp--preset--font-size--small)",
+          "textAlign": "center"
+        },
         "variations": {
           "rounded": {
             "border": {
