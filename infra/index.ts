@@ -731,9 +731,10 @@ for (const website of websites) {
       path: '/', // TODO: integrate with WP_Site_Health but needs authentication
     },
   });
+  const lbRulePriority = 100 * (websites.indexOf(website) + 1);
   new aws.lb.ListenerRule(`${website.name}-lb-rule`, {
     listenerArn: lbHttp.apply((l) => l.arn),
-    priority: 10 + websites.indexOf(website),
+    priority: lbRulePriority,
     conditions: [
       {
         hostHeader: {
@@ -1106,8 +1107,7 @@ for (const website of websites) {
   for (const alt of website.alternate || []) {
     new aws.lb.ListenerRule(`${website.name}-to-${alt.name}-redirect-lb-rule`, {
       listenerArn: lbHttp.arn,
-      priority:
-        10 + websites.indexOf(website) + 50 + website.alternate!.indexOf(alt),
+      priority: lbRulePriority + 10 + website.alternate!.indexOf(alt),
       conditions: [
         {
           hostHeader: {
@@ -1280,13 +1280,11 @@ for (const website of websites) {
 // Wordpress Cloudfront Invalidation plugin and other needs for an installation
 // https://wordpress.org/plugins/c3-cloudfront-clear-cache/
 
-// TODO: SES account/policy for email sending
-
 // IAM Policy for CloudFront Invalidation and S3 Media Access
 const wpUserPolicy = new aws.iam.Policy('wp-user-policy', {
   name: name('wp-user-policy'),
   description:
-    'Policy for WordPress installations. At the moment only for CloudFront invalidation',
+    'Policy for WordPress installations. CloudFront invalidation and SES mail sending.',
   policy: {
     Version: '2012-10-17',
     Statement: [
@@ -1299,6 +1297,7 @@ const wpUserPolicy = new aws.iam.Policy('wp-user-policy', {
           'cloudfront:GetDistributionConfig',
           'cloudfront:GetInvalidation',
           'cloudfront:CreateInvalidation',
+          'ses:SendRawEmail',
         ],
         Resource: '*',
       },
@@ -1319,10 +1318,20 @@ new aws.iam.UserPolicyAttachment('wp-user-policy-attachment', {
 });
 
 // Create access key for the user
-const mediaAndCfAccessKey = new aws.iam.AccessKey('wp-user-access-key', {
-  user: wpUser.name,
-});
+const mediaAndCfAccessKey = new aws.iam.AccessKey(
+  'wp-user-access-key',
+  {
+    user: wpUser.name,
+  },
+  {
+    // because SES is only in eu-west-1
+    provider: new aws.Provider('eu-west-1-provider', {
+      region: 'eu-west-1',
+    }),
+  },
+);
 
 // Export the bucket name and user credentials
 export const wpUserAccessKeyId = mediaAndCfAccessKey.id;
-export const wpUserSecretAccessKey = mediaAndCfAccessKey.secret.apply((s) => s);
+export const wpUserSecretAccessKey = mediaAndCfAccessKey.secret;
+export const wpUserSmtpPassword = mediaAndCfAccessKey.sesSmtpPasswordV4;
