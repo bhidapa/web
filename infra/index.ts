@@ -1087,7 +1087,6 @@ for (const website of websites) {
         });
         break;
       case 'CNAME':
-      default:
         new aws.route53.Record(pulumiRecordName, {
           zoneId: hostedZone.zoneId,
           name: alt.domain,
@@ -1095,6 +1094,11 @@ for (const website of websites) {
           records: [website.domain],
           ttl: 300,
         });
+        break;
+      default:
+        throw new Error(
+          `Unsupported record type ${alt.recordType} for alternate domain ${alt.domain}`,
+        );
     }
   }
 
@@ -1103,7 +1107,7 @@ for (const website of websites) {
     new aws.lb.ListenerRule(`${website.name}-to-${alt.name}-redirect-lb-rule`, {
       listenerArn: lbHttp.arn,
       priority:
-        50 + websites.indexOf(website) + website.alternate!.indexOf(alt),
+        10 + websites.indexOf(website) + 500 + website.alternate!.indexOf(alt),
       conditions: [
         {
           hostHeader: {

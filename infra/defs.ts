@@ -11,10 +11,9 @@ export interface Website {
   alternate?: {
     name: string;
     domain: string;
+    recordType: 'A' | 'CNAME';
     /** If the hosted zone is different from the main website, set it. */
     hostedZone?: string;
-    /** @default 'CNAME' */
-    recordType?: 'CNAME' | 'A';
   }[];
 }
 
@@ -23,31 +22,35 @@ export const websites: Website[] = [
     name: 'bhidapa',
     hostedZone: 'bhidapa.ba',
     domain: 'bhidapa.ba',
-    noCache: true,
     alternate: [
       {
         name: 'www',
         domain: 'www.bhidapa.ba',
+        recordType: 'CNAME',
       },
       {
         hostedZone: 'bhidapa.com',
         name: 'com',
         domain: 'bhidapa.com',
+        recordType: 'A',
       },
       {
         hostedZone: 'bhidapa.com',
         name: 'www-com',
         domain: 'www.bhidapa.com',
+        recordType: 'A',
       },
       {
         hostedZone: 'psychotherapy.ba',
         name: 'psych',
         domain: 'psychotherapy.ba',
+        recordType: 'A',
       },
       {
         hostedZone: 'psychotherapy.ba',
         name: 'www-psych',
         domain: 'www.psychotherapy.ba',
+        recordType: 'A',
       },
     ],
   },
@@ -59,6 +62,7 @@ export const websites: Website[] = [
       {
         name: 'www',
         domain: 'www.akp.ba',
+        recordType: 'CNAME',
       },
       {
         name: 'academy-bhidapa',
