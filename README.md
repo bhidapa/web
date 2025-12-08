@@ -10,8 +10,8 @@ This codebase manages the following websites:
 
 - [BHIDAPA](https://bhidapa.ba/en/)
 - [Academy of Psychotherapy](https://akp.ba/en/)
-- [Congress](https://congress.bhidapa.ba/)
-- [Journal](https://journal.bhidapa.ba/) (not WordPress, managing only infra)
+- 🔜 [Congress](https://congress.bhidapa.ba/)
+- 🔜 [Journal](https://journal.bhidapa.ba/) (not WordPress, managing only infra)
 
 ## Gotchas
 
