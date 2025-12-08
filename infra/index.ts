@@ -1150,15 +1150,12 @@ for (const website of websites) {
     tags: { proj },
   });
 
-  // Ready the Log Group
   const logGroup = new aws.cloudwatch.LogGroup(`${website.name}-log-group`, {
     name: `/ecs/${name('wp')}/${website.name}`,
     retentionInDays: 7,
     tags: { proj },
   });
 
-  // Fargate Service
-  // TODO: new service should be deployed after the image gets recreated
   new awsx.ecs.FargateService(`${website.name}-service`, {
     name: website.name,
     cluster: wpCluster.arn,
@@ -1277,10 +1274,9 @@ for (const website of websites) {
   });
 }
 
-// Wordpress Cloudfront Invalidation plugin and other needs for an installation
+// Wordpress Cloudfront Invalidation plugin, and other needs for an installation
 // https://wordpress.org/plugins/c3-cloudfront-clear-cache/
 
-// IAM Policy for CloudFront Invalidation and S3 Media Access
 const wpUserPolicy = new aws.iam.Policy('wp-user-policy', {
   name: name('wp-user-policy'),
   description:
@@ -1306,7 +1302,6 @@ const wpUserPolicy = new aws.iam.Policy('wp-user-policy', {
   tags: { proj },
 });
 
-// IAM User for WordPress plugins (C3 CloudFront Clear Cache and WP Offload Media)
 const wpUser = new aws.iam.User('wp-user', {
   name: name('wp-user'),
   tags: { proj },
@@ -1317,7 +1312,6 @@ new aws.iam.UserPolicyAttachment('wp-user-policy-attachment', {
   policyArn: wpUserPolicy.arn,
 });
 
-// Create access key for the user
 const mediaAndCfAccessKey = new aws.iam.AccessKey(
   'wp-user-access-key',
   {
@@ -1331,7 +1325,6 @@ const mediaAndCfAccessKey = new aws.iam.AccessKey(
   },
 );
 
-// Export the bucket name and user credentials
 export const wpUserAccessKeyId = mediaAndCfAccessKey.id;
 export const wpUserSecretAccessKey = mediaAndCfAccessKey.secret;
 export const wpUserSmtpPassword = mediaAndCfAccessKey.sesSmtpPasswordV4;
