@@ -8,6 +8,7 @@
  * @since 1.0.0
  */
 
+require_once 'inc/queries.php';
 require_once 'inc/e-library.php';
 
 add_action('login_enqueue_scripts', function () {
