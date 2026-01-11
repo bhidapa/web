@@ -5,11 +5,11 @@ class E_Library
     private const HIGH_HOOK_PRIORITY = 15; // 10 being the default
 
     private const LITERATURE_POST_TYPE = 'literatura';
-    private const STUDY_GROUP_TAXONOMY = 'studijska-grupa';
 
     public function __construct(
         private E_Library_Student $student,
         private string $unauthorized_template_id,
+        private string $study_group_taxonomy,
     ) {
         add_action('show_user_profile', [$this, 'add_user_meta_fields']);
         add_action('edit_user_profile', [$this, 'add_user_meta_fields']);
@@ -48,7 +48,10 @@ class E_Library
         if (!$the_id) {
             return false;
         }
-        $study_groups = get_the_terms(get_the_ID(), self::STUDY_GROUP_TAXONOMY);
+        $study_groups = get_the_terms(
+            get_the_ID(),
+            $this->study_group_taxonomy,
+        );
         if (!$study_groups) {
             return [];
         }

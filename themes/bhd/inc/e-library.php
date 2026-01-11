@@ -4,6 +4,6 @@
  */
 add_action('init', function () {
     if (function_exists('e_library_setup')) {
-        e_library_setup('bhd//e-library-unauthorized');
+        e_library_setup('bhd//e-library-unauthorized', 'studijska-grupa');
     }
 });

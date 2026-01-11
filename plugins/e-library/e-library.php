@@ -15,12 +15,15 @@ require_once 'library.php';
  *
  * @param string $unauthorized_template_id The ID of the template to display for unauthorized access.
  */
-function e_library_setup(string $unauthorized_template_id)
-{
+function e_library_setup(
+    string $unauthorized_template_id,
+    string $study_group_taxonomy,
+) {
     global $e_library;
     $e_library = new E_Library(
         new E_Library_Student(),
         $unauthorized_template_id,
+        $study_group_taxonomy,
     );
     register_blocks_in_dir(dirname(__FILE__) . '/blocks/');
 }
