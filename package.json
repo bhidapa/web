@@ -14,13 +14,13 @@
     "node": ">=24.0.0"
   },
   "scripts": {
-    "blocks:build": "bun -F '@blocks/*' build",
-    "blocks:start": "bun -F '@blocks/*' start",
-    "check:build": "bun blocks:build",
+    "build": "bun -F '@blocks/*' build",
+    "check:build": "bun run build",
     "check:format": "bunx --bun prettier -c .",
     "check:php": "composer exec phpstan analyze -- --memory-limit=-1",
     "check:types": "bunx --bun tsc --noEmit",
-    "format": "bun check:format -w"
+    "format": "bun check:format -w",
+    "start": "bun -F '@blocks/*' start"
   },
   "devDependencies": {
     "@prettier/plugin-php": "^0.24.0",
