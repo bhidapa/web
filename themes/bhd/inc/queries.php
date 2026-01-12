@@ -10,6 +10,10 @@ function custom_posts_order(WP_Query $query)
         $query->set('order', 'ASC');
         $query->set('orderby', 'date');
     }
+    if (is_tax('obuka')) {
+        $query->set('order', 'ASC');
+        $query->set('orderby', 'date');
+    }
     if (is_tax('projekat')) {
         $query->set('order', 'ASC');
         $query->set('orderby', 'date');
