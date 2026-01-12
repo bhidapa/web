@@ -6,7 +6,7 @@ function custom_posts_order(WP_Query $query)
         $query->set('order', 'ASC');
         $query->set('orderby', 'date');
     }
-    if (is_tax('studijska-grupa')) {
+    if (is_tax('grupa-strucnjaka')) {
         $query->set('order', 'ASC');
         $query->set('orderby', 'date');
     }
