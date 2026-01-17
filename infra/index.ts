@@ -1409,16 +1409,17 @@ const websitesServerDeployDocument = new aws.ssm.Document(
     name: name('websites-server-deploy'),
     documentType: 'Command',
     documentFormat: 'YAML',
-    content: pulumi.jsonStringify({
-      schemaVersion: '2.2',
-      description: 'Deploy all WordPress websites using docker-compose',
-      mainSteps: [
-        {
-          action: 'aws:runShellScript',
-          name: 'deployWebsites',
-          inputs: {
-            runCommand: [
-              ...`
+    content: pulumi.jsonStringify(
+      {
+        schemaVersion: '2.2',
+        description: 'Deploy all WordPress websites using docker-compose',
+        mainSteps: [
+          {
+            action: 'aws:runShellScript',
+            name: 'deployWebsites',
+            inputs: {
+              runCommand: [
+                ...`
 set -eux
 
 aws ecr get-login-password --region ${region} | docker login --username AWS --password-stdin ${ecrRepositoryUrl}
@@ -1448,15 +1449,18 @@ docker compose up -d --remove-orphans --wait
   )
   .join('\n')}
 `
-                .split('\n')
-                .map((line) => line.trim())
-                .filter(Boolean)
-                .filter((line) => !line.startsWith('#')),
-            ],
+                  .split('\n')
+                  .map((line) => line.trim())
+                  .filter(Boolean)
+                  .filter((line) => !line.startsWith('#')),
+              ],
+            },
           },
-        },
-      ],
-    }),
+        ],
+      },
+      undefined,
+      2,
+    ),
     tags: { proj },
   },
 );
