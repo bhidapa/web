@@ -1409,8 +1409,8 @@ const websitesServerDeployDocument = new aws.ssm.Document(
       ])
       .apply(
         ([
-          websiteComposeParamName,
           ecrRepositoryUrl,
+          websiteComposeParamName,
           fpmImageUri,
           nginxImageUri,
           dbHost,
