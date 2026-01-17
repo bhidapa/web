@@ -1447,8 +1447,8 @@ aws ecr get-login-password --region ${region} | docker login --username AWS --pa
 ${websites
   .map(
     (website) => `
-mkdir -p /opt/${website.name}
-cd /opt/${website.name}
+mkdir -p /opt/websites/${website.name}
+cd /opt/websites/${website.name}
 
 aws ssm get-parameter --name '${websiteComposeParamName}' --region ${region} --query 'Parameter.Value' --output text > compose.yml
 
