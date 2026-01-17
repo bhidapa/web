@@ -1487,16 +1487,16 @@ const websitesServer = new aws.ec2.Instance(
         },
       ],
     }).id,
-    keyName: 'jump-server', // TODO: use own when jump server is gone
     instanceType: 't4g.medium',
     subnetId: publicSubnetA.id,
+    keyName: 'websites-server',
     vpcSecurityGroupIds: [websitesServerSecurityGroup.id],
     iamInstanceProfile: websitesServerProfile.name,
     rootBlockDevice: {
       // TODO: back up the EBS volume with AWS Backup
       volumeSize: 50, // GB
     },
-    tags: { proj, Name: name('websites') },
+    tags: { proj, Name: name('websites-server') },
     userData: `#!/bin/bash
 set -eux
 
