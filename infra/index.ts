@@ -6,7 +6,6 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { name, portOf, proj, region, websites } from './defs.ts';
 import { newImage } from './image.ts';
-import { amiId } from './ami.ts';
 
 // VPC
 const vpc = new aws.ec2.Vpc('vpc', {
@@ -107,7 +106,6 @@ const natInstance = new aws.ec2.Instance(
     instanceType: 't4g.nano',
     subnetId: publicSubnetA.id,
     vpcSecurityGroupIds: [natSecurityGroup.id],
-    sourceDestCheck: false,
     tags: { proj, Name: name('nat-instance') },
   },
   { ignoreChanges: ['ami'] },
@@ -1330,7 +1328,7 @@ new aws.iam.RolePolicy('websites-role-param-policy', {
       {
         Effect: 'Allow',
         Action: ['ssm:GetParameter', 'ssm:GetParameters'],
-        Resource: `arn:aws:ssm:${region}:*:parameter/app/*`,
+        Resource: '*',
       },
       {
         Effect: 'Allow',
@@ -1349,7 +1347,7 @@ new aws.iam.RolePolicy('websites-role-param-policy', {
           'ecr:GetDownloadUrlForLayer',
           'ecr:BatchGetImage',
         ],
-        Resource: '*', // Allow access to all ECR repositories
+        Resource: '*',
       },
     ],
   },
@@ -1426,7 +1424,7 @@ ${websites
 mkdir -p /opt/${website.name}
 cd /opt/${website.name}
 
-aws ssm get-parameter --name "${websitesComposeParam.name}" --region ${region} --query 'Parameter.Value' --output text > compose.yml
+aws ssm get-parameter --name "${websitesComposeParam.name}" --region ${region} --query "Parameter.Value" --output text > compose.yml
 
 cat << EOF > .env
 FPM_IMAGE=${pulumi.concat(fpmImage.imageUri)}
@@ -1434,7 +1432,7 @@ NGINX_IMAGE=${pulumi.concat(nginxImage.imageUri)}
 WORDPRESS_DB_HOST=${dbInstance.endpoint}
 WORDPRESS_DB_USER=${dbInstance.username}
 WORDPRESS_DB_NAME=${website.name}
-WORDPRESS_DB_PASSWORD=$(aws secretsmanager get-secret-value --secret-id ${pulumi.concat(dbPassword.id)} --region ${region} --query SecretString --output text)
+WORDPRESS_DB_PASSWORD=$(aws secretsmanager get-secret-value --secret-id ${dbPassword.id} --region ${region} --query SecretString --output text)
 WEBSITE_PORT=${portOf(website)}
 EOF
 
@@ -1458,18 +1456,57 @@ docker compose up -d --remove-orphans --wait
 });
 
 // EC2 instance for Docker-based deployment
-// Note: Uses a custom AMI built with Packer (see ami.ts)
-const websitesInstance = new aws.ec2.Instance('websites-instance', {
-  ami: amiId, // Custom AMI with Docker and Docker Compose pre-installed
-  instanceType: 't4g.medium', // 2vCPU, 4GB RAM for running multiple containers
-  subnetId: privateSubnetA.id,
-  vpcSecurityGroupIds: [websitesSecurityGroup.id],
-  iamInstanceProfile: websitesInstanceProfile.name,
-  rootBlockDevice: {
-    volumeSize: 30, // 30GB for Docker images and volumes
+const websitesInstance = new aws.ec2.Instance(
+  'websites-instance',
+  {
+    ami: aws.ec2.getAmiOutput({
+      mostRecent: true,
+      owners: ['amazon'],
+      filters: [
+        {
+          name: 'name',
+          values: ['al2023-ami-*-arm64'],
+        },
+        {
+          name: 'architecture',
+          values: ['arm64'],
+        },
+        {
+          name: 'virtualization-type',
+          values: ['hvm'],
+        },
+      ],
+    }).id,
+    keyName: 'jump-server', // TODO: use own when jump server is gone
+    instanceType: 't4g.medium',
+    subnetId: publicSubnetA.id,
+    vpcSecurityGroupIds: [websitesSecurityGroup.id],
+    iamInstanceProfile: websitesInstanceProfile.name,
+    rootBlockDevice: {
+      volumeSize: 50, // GB
+    },
+    tags: { proj, Name: name('websites') },
+    userData: `#!/bin/bash
+set -eux
+
+# Update system
+dnf update -y
+
+# Install required packages
+dnf install -y \
+  amazon-efs-utils \
+  rsync \
+  mariadb105 \
+  nfs-utils \
+  vim
+
+# Install Docker Compose
+sudo curl -SL https://github.com/docker/compose/releases/latest/download/docker-compose-linux-aarch64 -o /usr/libexec/docker/cli-plugins/docker-compose
+sudo chmod +x /usr/libexec/docker/cli-plugins/docker-compose
+`,
   },
-  tags: { proj, Name: name('websites') },
-});
+  { ignoreChanges: ['ami'] },
+);
 
 // TODO: back up the EBS volume with AWS Backup
 
