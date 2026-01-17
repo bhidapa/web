@@ -1289,11 +1289,11 @@ for (const website of websites) {
   });
 }
 
-const websitesComposeParam = new aws.ssm.Parameter('websites-compose-param', {
-  name: name('compose.websites.yml'),
+const websiteComposeParam = new aws.ssm.Parameter('website-compose-param', {
+  name: name('compose.website.yml'),
   type: 'String',
   description: `Docker Compose configuration for each of the websites running on EC2`,
-  value: fs.readFileSync('compose.websites.yml', 'utf8'),
+  value: fs.readFileSync('compose.website.yml', 'utf8'),
   tags: { proj },
 });
 
@@ -1429,7 +1429,7 @@ ${websites
 mkdir -p /opt/${website.name}
 cd /opt/${website.name}
 
-aws ssm get-parameter --name "${websitesComposeParam.name}" --region ${region} --query "Parameter.Value" --output text > compose.yml
+aws ssm get-parameter --name "${websiteComposeParam.name}" --region ${region} --query "Parameter.Value" --output text > compose.yml
 
 cat << EOF > .env
 FPM_IMAGE=${pulumi.concat(fpmImage.imageUri)}
@@ -1530,7 +1530,7 @@ export const wbsitesServerEndpoint = websitesServerEip.publicDns;
 // TODO: back up the EBS volume with AWS Backup
 
 // SSM Association to run deployment on instance startup and on-demand
-new aws.ssm.Association('deploy-websites-association', {
+new aws.ssm.Association('websites-server-deploy-association', {
   name: websitesServerDeployDocument.name,
   targets: [
     {
