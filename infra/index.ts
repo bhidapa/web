@@ -1489,6 +1489,7 @@ const websitesServer = new aws.ec2.Instance(
     vpcSecurityGroupIds: [websitesServerSecurityGroup.id],
     iamInstanceProfile: websitesServerProfile.name,
     rootBlockDevice: {
+      // TODO: back up the EBS volume with AWS Backup
       volumeSize: 50, // GB
     },
     tags: { proj, Name: name('websites') },
@@ -1524,11 +1525,6 @@ new aws.ec2.EipAssociation('websites-server-eip-assoc', {
   allocationId: websitesServerEip.id,
 });
 
-export const wbsitesServerUsername = 'ec2-user';
-export const wbsitesServerEndpoint = websitesServerEip.publicDns;
-
-// TODO: back up the EBS volume with AWS Backup
-
 // SSM Association to run deployment on instance startup and on-demand
 new aws.ssm.Association('websites-server-deploy-association', {
   name: websitesServerDeployDocument.name,
@@ -1540,8 +1536,8 @@ new aws.ssm.Association('websites-server-deploy-association', {
   ],
 });
 
-export const websitesServerId = websitesServer.id;
-export const websitesServerPrivateIp = websitesServer.privateIp;
+export const wbsitesServerUsername = 'ec2-user';
+export const wbsitesServerEndpoint = websitesServerEip.publicDns;
 
 // Wordpress Cloudfront Invalidation plugin, and other needs for an installation
 // https://wordpress.org/plugins/c3-cloudfront-clear-cache/
