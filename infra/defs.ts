@@ -74,6 +74,10 @@ export const websites: Website[] = [
   },
 ];
 
+export function portOf(website: Website): number {
+  return 8000 + websites.indexOf(website) + 1;
+}
+
 export const region = aws.config.region!;
 export const proj = pulumi.getProject();
 export const stack = pulumi.getStack();
