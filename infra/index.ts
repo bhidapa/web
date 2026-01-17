@@ -1297,8 +1297,8 @@ const websitesComposeParam = new aws.ssm.Parameter('websites-compose-param', {
   tags: { proj },
 });
 
-const websitesRole = new aws.iam.Role('websites-role', {
-  name: name('websites-role'),
+const websitesServerRole = new aws.iam.Role('websites-server-role', {
+  name: name('websites-server-role'),
   assumeRolePolicy: {
     Version: '2012-10-17',
     Statement: [
@@ -1314,14 +1314,14 @@ const websitesRole = new aws.iam.Role('websites-role', {
   tags: { proj },
 });
 
-new aws.iam.RolePolicyAttachment('websites-role-ssm-policy', {
-  role: websitesRole.name,
+new aws.iam.RolePolicyAttachment('websites-server-role-ssm-policy', {
+  role: websitesServerRole.name,
   policyArn: 'arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore',
 });
 
-new aws.iam.RolePolicy('websites-role-param-policy', {
-  name: name('websites-role-param-policy'),
-  role: websitesRole.id,
+new aws.iam.RolePolicy('websites-server-role-param-policy', {
+  name: name('websites-server-role-param-policy'),
+  role: websitesServerRole.id,
   policy: {
     Version: '2012-10-17',
     Statement: [
@@ -1357,63 +1357,68 @@ const websitesServerProfile = new aws.iam.InstanceProfile(
   'websites-server-profile',
   {
     name: name('websites-server-profile'),
-    role: websitesRole.name,
+    role: websitesServerRole.name,
   },
 );
 
 // Security group for EC2 deployment instance
-const websitesSecurityGroup = new aws.ec2.SecurityGroup('websites-sg', {
-  name: name('websites-sg'),
-  vpcId: vpc.id,
-  description: 'Security group for EC2 websites instance',
-  ingress: [
-    {
-      protocol: 'tcp',
-      fromPort: 22,
-      toPort: 22,
-      cidrBlocks: ['0.0.0.0/0'],
-      description: 'SSH access',
-    },
-    ...websites.map((website) => ({
-      fromPort: portOf(website),
-      toPort: portOf(website),
-      protocol: 'tcp',
-      securityGroups: [lbSecurityGroup.id],
-      description: `HTTP from ALB on port ${portOf(website)}`,
-    })),
-  ],
-  egress: [
-    { protocol: '-1', fromPort: 0, toPort: 0, cidrBlocks: ['0.0.0.0/0'] },
-  ],
-  tags: { proj, Name: name('websites-sg') },
-});
+const websitesServerSecurityGroup = new aws.ec2.SecurityGroup(
+  'websites-server-sg',
+  {
+    name: name('websites-server-sg'),
+    vpcId: vpc.id,
+    description: 'Security group for EC2 websites server instance',
+    ingress: [
+      {
+        protocol: 'tcp',
+        fromPort: 22,
+        toPort: 22,
+        cidrBlocks: ['0.0.0.0/0'],
+        description: 'SSH access',
+      },
+      ...websites.map((website) => ({
+        fromPort: portOf(website),
+        toPort: portOf(website),
+        protocol: 'tcp',
+        securityGroups: [lbSecurityGroup.id],
+        description: `HTTP from ALB on port ${portOf(website)}`,
+      })),
+    ],
+    egress: [
+      { protocol: '-1', fromPort: 0, toPort: 0, cidrBlocks: ['0.0.0.0/0'] },
+    ],
+    tags: { proj, Name: name('websites-sg') },
+  },
+);
 
 // Allow EC2 instance to access database
-new aws.ec2.SecurityGroupRule('websites-to-db', {
+new aws.ec2.SecurityGroupRule('websites-server-to-db', {
   type: 'ingress',
   fromPort: 3306,
   toPort: 3306,
   protocol: 'tcp',
   securityGroupId: dbSecurityGroup.id,
-  sourceSecurityGroupId: websitesSecurityGroup.id,
+  sourceSecurityGroupId: websitesServerSecurityGroup.id,
   description: 'Database access from EC2 websites instance',
 });
 
 // SSM Document for deploying all websites
-const deployDocument = new aws.ssm.Document('deploy-websites-document', {
-  name: name('deploy-websites'),
-  documentType: 'Command',
-  documentFormat: 'YAML',
-  content: pulumi.jsonStringify({
-    schemaVersion: '2.2',
-    description: 'Deploy all WordPress websites using docker-compose',
-    mainSteps: [
-      {
-        action: 'aws:runShellScript',
-        name: 'deployWebsites',
-        inputs: {
-          runCommand: [
-            ...`
+const websitesServerDeployDocument = new aws.ssm.Document(
+  'websites-server-deploy-document',
+  {
+    name: name('websites-server-deploy'),
+    documentType: 'Command',
+    documentFormat: 'YAML',
+    content: pulumi.jsonStringify({
+      schemaVersion: '2.2',
+      description: 'Deploy all WordPress websites using docker-compose',
+      mainSteps: [
+        {
+          action: 'aws:runShellScript',
+          name: 'deployWebsites',
+          inputs: {
+            runCommand: [
+              ...`
 set -eux
 
 aws ecr get-login-password --region ${region} | docker login --username AWS --password-stdin ${ecrRepositoryUrl}
@@ -1443,17 +1448,18 @@ docker compose up -d --remove-orphans --wait
   )
   .join('\n')}
 `
-              .split('\n')
-              .map((line) => line.trim())
-              .filter(Boolean)
-              .filter((line) => !line.startsWith('#')),
-          ],
+                .split('\n')
+                .map((line) => line.trim())
+                .filter(Boolean)
+                .filter((line) => !line.startsWith('#')),
+            ],
+          },
         },
-      },
-    ],
-  }),
-  tags: { proj },
-});
+      ],
+    }),
+    tags: { proj },
+  },
+);
 
 // EC2 instance for Docker-based deployment
 const websitesServer = new aws.ec2.Instance(
@@ -1480,7 +1486,7 @@ const websitesServer = new aws.ec2.Instance(
     keyName: 'jump-server', // TODO: use own when jump server is gone
     instanceType: 't4g.medium',
     subnetId: publicSubnetA.id,
-    vpcSecurityGroupIds: [websitesSecurityGroup.id],
+    vpcSecurityGroupIds: [websitesServerSecurityGroup.id],
     iamInstanceProfile: websitesServerProfile.name,
     rootBlockDevice: {
       volumeSize: 50, // GB
@@ -1525,7 +1531,7 @@ export const wbsitesServerEndpoint = websitesServerEip.publicDns;
 
 // SSM Association to run deployment on instance startup and on-demand
 new aws.ssm.Association('deploy-websites-association', {
-  name: deployDocument.name,
+  name: websitesServerDeployDocument.name,
   targets: [
     {
       key: 'InstanceIds',
