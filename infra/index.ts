@@ -1353,10 +1353,10 @@ new aws.iam.RolePolicy('websites-role-param-policy', {
   },
 });
 
-const websitesInstanceProfile = new aws.iam.InstanceProfile(
-  'websites-instance-profile',
+const websitesServerProfile = new aws.iam.InstanceProfile(
+  'websites-server-profile',
   {
-    name: name('websites-instance-profile'),
+    name: name('websites-server-profile'),
     role: websitesRole.name,
   },
 );
@@ -1456,8 +1456,8 @@ docker compose up -d --remove-orphans --wait
 });
 
 // EC2 instance for Docker-based deployment
-const websitesInstance = new aws.ec2.Instance(
-  'websites-instance',
+const websitesServer = new aws.ec2.Instance(
+  'websites-server',
   {
     ami: aws.ec2.getAmiOutput({
       mostRecent: true,
@@ -1481,7 +1481,7 @@ const websitesInstance = new aws.ec2.Instance(
     instanceType: 't4g.medium',
     subnetId: publicSubnetA.id,
     vpcSecurityGroupIds: [websitesSecurityGroup.id],
-    iamInstanceProfile: websitesInstanceProfile.name,
+    iamInstanceProfile: websitesServerProfile.name,
     rootBlockDevice: {
       volumeSize: 50, // GB
     },
@@ -1508,6 +1508,19 @@ sudo chmod +x /usr/libexec/docker/cli-plugins/docker-compose
   { ignoreChanges: ['ami'] },
 );
 
+// Jump Server static public IP
+const websitesServerEip = new aws.ec2.Eip('websites-server-eip', {
+  domain: 'vpc',
+  tags: { proj, Name: name('websites-server-eip') },
+});
+new aws.ec2.EipAssociation('websites-server-eip-assoc', {
+  instanceId: websitesServer.id,
+  allocationId: websitesServerEip.id,
+});
+
+export const wbsitesServerUsername = 'ec2-user';
+export const wbsitesServerEndpoint = websitesServerEip.publicDns;
+
 // TODO: back up the EBS volume with AWS Backup
 
 // SSM Association to run deployment on instance startup and on-demand
@@ -1516,13 +1529,13 @@ new aws.ssm.Association('deploy-websites-association', {
   targets: [
     {
       key: 'InstanceIds',
-      values: [websitesInstance.id],
+      values: [websitesServer.id],
     },
   ],
 });
 
-export const websitesInstanceId = websitesInstance.id;
-export const websitesInstancePrivateIp = websitesInstance.privateIp;
+export const websitesServerId = websitesServer.id;
+export const websitesServerPrivateIp = websitesServer.privateIp;
 
 // Wordpress Cloudfront Invalidation plugin, and other needs for an installation
 // https://wordpress.org/plugins/c3-cloudfront-clear-cache/
