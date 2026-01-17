@@ -1409,17 +1409,37 @@ const websitesServerDeployDocument = new aws.ssm.Document(
     name: name('websites-server-deploy'),
     documentType: 'Command',
     documentFormat: 'YAML',
-    content: pulumi.jsonStringify(
-      {
-        schemaVersion: '2.2',
-        description: 'Deploy all WordPress websites using docker-compose',
-        mainSteps: [
-          {
-            action: 'aws:runShellScript',
-            name: 'deployWebsites',
-            inputs: {
-              runCommand: [
-                ...`
+    content: pulumi
+      .all([
+        ecrRepositoryUrl,
+        websiteComposeParam.name,
+        fpmImage.imageUri,
+        nginxImage.imageUri,
+        dbInstance.endpoint,
+        dbInstance.username,
+        dbPassword.id,
+      ])
+      .apply(
+        ([
+          websiteComposeParamName,
+          ecrRepositoryUrl,
+          fpmImageUri,
+          nginxImageUri,
+          dbHost,
+          dbUser,
+          dbPasswordSecretId,
+        ]) =>
+          pulumi.jsonStringify(
+            {
+              schemaVersion: '2.2',
+              description: 'Deploy all WordPress websites using docker-compose',
+              mainSteps: [
+                {
+                  action: 'aws:runShellScript',
+                  name: 'deployWebsites',
+                  inputs: {
+                    runCommand: [
+                      ...`
 set -eux
 
 aws ecr get-login-password --region ${region} | docker login --username AWS --password-stdin ${ecrRepositoryUrl}
@@ -1430,15 +1450,15 @@ ${websites
 mkdir -p /opt/${website.name}
 cd /opt/${website.name}
 
-aws ssm get-parameter --name "${websiteComposeParam.name}" --region ${region} --query "Parameter.Value" --output text > compose.yml
+aws ssm get-parameter --name '${websiteComposeParamName}' --region ${region} --query 'Parameter.Value' --output text > compose.yml
 
 cat << EOF > .env
-FPM_IMAGE=${pulumi.concat(fpmImage.imageUri)}
-NGINX_IMAGE=${pulumi.concat(nginxImage.imageUri)}
-WORDPRESS_DB_HOST=${dbInstance.endpoint}
-WORDPRESS_DB_USER=${dbInstance.username}
+FPM_IMAGE=${fpmImageUri}
+NGINX_IMAGE=${nginxImageUri}
+WORDPRESS_DB_HOST=${dbHost}
+WORDPRESS_DB_USER=${dbUser}
 WORDPRESS_DB_NAME=${website.name}
-WORDPRESS_DB_PASSWORD=$(aws secretsmanager get-secret-value --secret-id ${dbPassword.id} --region ${region} --query SecretString --output text)
+WORDPRESS_DB_PASSWORD=$(aws secretsmanager get-secret-value --secret-id ${dbPasswordSecretId} --region ${region} --query SecretString --output text)
 WEBSITE_PORT=${portOf(website)}
 EOF
 
@@ -1449,18 +1469,19 @@ docker compose up -d --remove-orphans --wait
   )
   .join('\n')}
 `
-                  .split('\n')
-                  .map((line) => line.trim())
-                  .filter(Boolean)
-                  .filter((line) => !line.startsWith('#')),
+                        .split('\n')
+                        .map((line) => line.trim())
+                        .filter(Boolean)
+                        .filter((line) => !line.startsWith('#')),
+                    ],
+                  },
+                },
               ],
             },
-          },
-        ],
-      },
-      undefined,
-      2,
-    ),
+            undefined,
+            2,
+          ),
+      ),
     tags: { proj },
   },
 );
@@ -1516,7 +1537,10 @@ sudo curl -SL https://github.com/docker/compose/releases/latest/download/docker-
 sudo chmod +x /usr/libexec/docker/cli-plugins/docker-compose
 `,
   },
-  { ignoreChanges: ['ami'] },
+  {
+    ignoreChanges: ['ami'],
+    replaceOnChanges: ['*'], // TODO: remove when we're good
+  },
 );
 
 // Jump Server static public IP
