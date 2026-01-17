@@ -1402,91 +1402,6 @@ new aws.ec2.SecurityGroupRule('websites-server-to-db', {
   description: 'Database access from EC2 websites instance',
 });
 
-// SSM Document for deploying all websites
-const websitesServerDeployDocument = new aws.ssm.Document(
-  'websites-server-deploy-document',
-  {
-    name: name('websites-server-deploy'),
-    documentType: 'Command',
-    documentFormat: 'YAML',
-    content: pulumi
-      .all([
-        ecrRepositoryUrl,
-        websiteComposeParam.name,
-        fpmImage.imageUri,
-        nginxImage.imageUri,
-        dbInstance.endpoint,
-        dbInstance.username,
-        dbPassword.id,
-      ])
-      .apply(
-        ([
-          ecrRepositoryUrl,
-          websiteComposeParamName,
-          fpmImageUri,
-          nginxImageUri,
-          dbHost,
-          dbUser,
-          dbPasswordSecretId,
-        ]) =>
-          pulumi.jsonStringify(
-            {
-              schemaVersion: '2.2',
-              description: 'Deploy all WordPress websites using docker-compose',
-              mainSteps: [
-                {
-                  action: 'aws:runShellScript',
-                  name: 'deployWebsites',
-                  inputs: {
-                    runCommand: [
-                      ...`
-set -eux
-
-aws ecr get-login-password --region ${region} | docker login --username AWS --password-stdin ${ecrRepositoryUrl}
-
-${websites
-  .map(
-    (website) => `
-mkdir -p /var/www/${website.name}
-cd /var/www/${website.name}
-
-aws ssm get-parameter --name '${websiteComposeParamName}' --region ${region} --query 'Parameter.Value' --output text > compose.yml
-
-cat << EOF > .env
-FPM_IMAGE=${fpmImageUri}
-NGINX_IMAGE=${nginxImageUri}
-WORDPRESS_DB_HOST=${dbHost}
-WORDPRESS_DB_USER=${dbUser}
-WORDPRESS_DB_NAME=${website.name}
-WORDPRESS_DB_PASSWORD=$(aws secretsmanager get-secret-value --secret-id ${dbPasswordSecretId} --region ${region} --query SecretString --output text)
-WEBSITE_PORT=${portOf(website)}
-EOF
-
-docker compose pull
-
-docker compose up -d --remove-orphans --wait
-`,
-  )
-  .join('\n')}
-`
-                        .split('\n')
-                        .map((line) => line.trim())
-                        .filter(Boolean)
-                        .filter((line) => !line.startsWith('#')),
-                    ],
-                  },
-                },
-              ],
-            },
-            undefined,
-            2,
-          ),
-      ),
-    tags: { proj },
-  },
-);
-
-// EC2 instance for Docker-based deployment
 const websitesServer = new aws.ec2.Instance(
   'websites-server',
   {
@@ -1553,9 +1468,160 @@ new aws.ec2.EipAssociation('websites-server-eip-assoc', {
   allocationId: websitesServerEip.id,
 });
 
-// SSM Association to run deployment on instance startup and on-demand
+const websitesServerDeployDocument = new aws.ssm.Document(
+  'websites-server-deploy-document',
+  {
+    name: name('websites-server-deploy'),
+    documentType: 'Command',
+    documentFormat: 'YAML',
+    content: pulumi
+      .all([
+        ecrRepositoryUrl,
+        websiteComposeParam.name,
+        fpmImage.imageUri,
+        nginxImage.imageUri,
+        dbInstance.endpoint,
+        dbInstance.username,
+        dbPassword.id,
+      ])
+      .apply(
+        ([
+          ecrRepositoryUrl,
+          websiteComposeParamName,
+          fpmImageUri,
+          nginxImageUri,
+          dbHost,
+          dbUser,
+          dbPasswordSecretId,
+        ]) =>
+          pulumi.jsonStringify(
+            {
+              schemaVersion: '2.2',
+              description: 'Deploy all WordPress websites using docker compose',
+              mainSteps: [
+                {
+                  action: 'aws:runShellScript',
+                  name: 'deployWebsites',
+                  inputs: {
+                    runCommand: [
+                      ...`
+set -eux
+
+aws ecr get-login-password --region ${region} | docker login --username AWS --password-stdin ${ecrRepositoryUrl}
+
+${websites
+  .map(
+    (website) => `
+mkdir -p /var/www/${website.name}
+cd /var/www/${website.name}
+
+aws ssm get-parameter --name '${websiteComposeParamName}' --region ${region} --query 'Parameter.Value' --output text > compose.yml
+
+cat << EOF > .env
+FPM_IMAGE=${fpmImageUri}
+NGINX_IMAGE=${nginxImageUri}
+WORDPRESS_DB_HOST=${dbHost}
+WORDPRESS_DB_USER=${dbUser}
+WORDPRESS_DB_NAME=${website.name}
+WORDPRESS_DB_PASSWORD=$(aws secretsmanager get-secret-value --secret-id ${dbPasswordSecretId} --region ${region} --query SecretString --output text)
+WEBSITE_PORT=${portOf(website)}
+EOF
+
+docker compose pull
+
+docker compose up -d --remove-orphans --wait
+`,
+  )
+  .join('\n')}
+`
+                        .split('\n')
+                        .map((line) => line.trim())
+                        .filter(Boolean)
+                        .filter((line) => !line.startsWith('#')),
+                    ],
+                  },
+                },
+              ],
+            },
+            undefined,
+            2,
+          ),
+      ),
+    tags: { proj },
+  },
+);
 new aws.ssm.Association('websites-server-deploy-association', {
   name: websitesServerDeployDocument.name,
+  targets: [
+    {
+      key: 'InstanceIds',
+      values: [websitesServer.id],
+    },
+  ],
+});
+
+const websitesServerWpCliDocument = new aws.ssm.Document(
+  'websites-server-wp-cli-document',
+  {
+    name: name('websites-server-wp-cli'),
+    documentType: 'Command',
+    documentFormat: 'YAML',
+    content: pulumi
+      .all([dbInstance.endpoint, dbInstance.username, dbPassword.id])
+      .apply(([dbHost, dbUser, dbPasswordSecretId]) =>
+        pulumi.jsonStringify(
+          {
+            schemaVersion: '2.2',
+            description: 'Install WP CLI for WordPress websites',
+            mainSteps: [
+              {
+                action: 'aws:runShellScript',
+                name: 'deployWebsites',
+                inputs: {
+                  runCommand: [
+                    ...`
+set -eux
+
+cat > /usr/local/bin/wp-cli << 'EOF'
+#!/bin/bash
+if [ -z "$WEBSITE" ]; then
+  echo "WEBSITE environment variable is not set" >&2
+  exit 1
+fi
+if [ ! -d "/var/www/$WEBSITE/wp-data" ]; then
+  echo "Directory /var/www/$WEBSITE/wp-data does not exist" >&2
+  exit 1
+fi
+DB_PASSWORD=$(aws secretsmanager get-secret-value --secret-id ${dbPasswordSecretId} --region ${region} --query SecretString --output text)
+docker run -it --rm \
+  -v /var/www/$WEBSITE/wp-data:/var/www/html \
+  -e WORDPRESS_DB_HOST=${dbHost} \
+  -e WORDPRESS_DB_USER=${dbUser} \
+  -e WORDPRESS_DB_NAME=$WEBSITE \
+  -e WORDPRESS_DB_PASSWORD="$DB_PASSWORD" \
+  --entrypoint bash \
+  wordpress:cli
+EOF
+chmod +x /usr/local/bin/wp-cli
+`
+                      .split('\n')
+                      .map((line) => line.trim())
+                      .filter(Boolean)
+                      .filter((line) => !line.startsWith('#')),
+                  ],
+                },
+              },
+            ],
+          },
+          undefined,
+          2,
+        ),
+      ),
+    tags: { proj },
+  },
+);
+new aws.ssm.Association('websites-server-wp-cli-association', {
+  name: websitesServerWpCliDocument.name,
   targets: [
     {
       key: 'InstanceIds',
