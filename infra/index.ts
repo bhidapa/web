@@ -1584,8 +1584,9 @@ set -eux
 
 cat > /usr/local/bin/wp-cli << 'EOF'
 #!/bin/bash
+WEBSITE="$1"
 if [ -z "$WEBSITE" ]; then
-  echo "WEBSITE environment variable is not set" >&2
+  echo "Website argument not provided. Possible values are: ${websiteNames.join(', ')}." >&2
   exit 1
 fi
 if [ ! -d "/var/www/$WEBSITE/wp-data" ]; then
