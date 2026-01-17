@@ -41,3 +41,8 @@ add_action('wp_enqueue_scripts', function () {
         ['type' => 'module'],
     );
 });
+
+add_filter('c3_invalidation_interval', function () {
+    $custom_interval_minutes = 15;
+    return $custom_interval_minutes;
+});
