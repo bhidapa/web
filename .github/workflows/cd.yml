@@ -84,7 +84,7 @@ jobs:
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H ${{ secrets.SSH_ENDPOINT }} >> ~/.ssh/known_hosts
       - run: bun ci
-      - run: bun blocks:build
+      - run: bun run build
       - env:
           ENDPOINT: 'ec2-user@${{ secrets.SSH_ENDPOINT }}'
           WEBSITE: ${{ matrix.website }}
