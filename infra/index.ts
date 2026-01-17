@@ -3,7 +3,6 @@ import * as aws_native from '@pulumi/aws-native';
 import * as awsx from '@pulumi/awsx';
 import * as pulumi from '@pulumi/pulumi';
 import * as fs from 'fs';
-import * as path from 'path';
 import { name, portOf, proj, region, websites } from './defs.ts';
 import { newImage } from './image.ts';
 
@@ -1293,7 +1292,7 @@ const websitesComposeParam = new aws.ssm.Parameter('websites-compose-param', {
   name: name('compose.websites.yml'),
   type: 'String',
   description: `Docker Compose configuration for each of the websites running on EC2`,
-  value: fs.readFileSync(path.join(__dirname, 'compose.websites.yml'), 'utf8'),
+  value: fs.readFileSync('compose.websites.yml', 'utf8'),
   tags: { proj },
 });
 
