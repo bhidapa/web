@@ -105,6 +105,7 @@ const natInstance = new aws.ec2.Instance(
     instanceType: 't4g.nano',
     subnetId: publicSubnetA.id,
     vpcSecurityGroupIds: [natSecurityGroup.id],
+    sourceDestCheck: false,
     tags: { proj, Name: name('nat-instance') },
   },
   { ignoreChanges: ['ami'] },
