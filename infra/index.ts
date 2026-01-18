@@ -1442,10 +1442,10 @@ dnf update -y
 # Install required packages
 dnf install -y \
   amazon-efs-utils \
-  rsync \
-  mariadb105 \
   nfs-utils \
-  vim
+  rsync \
+  vim \
+  htop
 
 # Install Docker Compose
 sudo curl -SL https://github.com/docker/compose/releases/latest/download/docker-compose-linux-aarch64 -o /usr/libexec/docker/cli-plugins/docker-compose
