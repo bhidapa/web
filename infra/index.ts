@@ -362,6 +362,7 @@ const dbInstance = new aws.rds.Instance('db-instance', {
 // EFS File System
 const efs = new aws.efs.FileSystem('fs', {
   creationToken: name('fs'),
+  throughputMode: 'elastic',
   tags: { proj, Name: name('fs') },
 });
 new aws.efs.MountTarget('fs-mount-target-a', {
@@ -1184,6 +1185,11 @@ for (const website of websites) {
         fpm: {
           name: 'fpm',
           image: fpmImage.imageUri,
+          linuxParameters: {
+            capabilities: {
+              add: ['SYS_PTRACE'],
+            },
+          },
           essential: true,
           healthCheck: {
             // also change the healthcheck in compose.yml
