@@ -321,6 +321,12 @@ const dbParameterGroup = new aws.rds.ParameterGroup('db-parameter-group', {
       value: '0', // OFF
       applyMethod: 'immediate',
     },
+    // fpm needs more connections when stuff is slow
+    {
+      name: 'max_connections',
+      value: '100',
+      applyMethod: 'immediate',
+    },
   ],
   tags: { proj },
 });
