@@ -308,19 +308,31 @@ class E_Library_Student
                 'login',
             );
 
-            $mails[] = [
-                'to' => $student['email'],
-                'subject' => 'Biblioteka - Akademija za psihoterapiju',
-                'message' => sprintf(
+            $subject = apply_filters(
+                'e_library_student_import_email_subject',
+                'Biblioteka',
+                $student,
+                $reset_password_url,
+            );
+            $message = apply_filters(
+                'e_library_student_import_email_message',
+                sprintf(
                     'Poštovani,<br><br>
-Dobro došli u elektronsku biblioteku Akademije za psihoterapiju!<br><br>
+Dobro došli u elektronsku biblioteku!<br><br>
 Vaše korisničko ime je: <b>%s</b><br>
 <a href="%s">Kliknite ovdje kako biste podesili Vašu šifru.</a><br><br>
-Srdačan pozdrav,<br>
-Akademija za psihoterapiju',
+Srdačan pozdrav',
                     $student['username'],
                     $reset_password_url,
                 ),
+                $student,
+                $reset_password_url,
+            );
+
+            $mails[] = [
+                'to' => $student['email'],
+                'subject' => $subject,
+                'message' => $message,
             ];
 
             // TODO: send email to new student
