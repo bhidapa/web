@@ -70,12 +70,11 @@ add_action('init', function () {
             if (!$user->exists()) {
                 return '';
             }
-
             return match ($source_args['key'] ?? '') {
                 'display_name' => $user->display_name,
                 'email' => $user->user_email,
-                'first_name' => get_user_meta($user->ID, 'first_name', true),
-                'last_name' => get_user_meta($user->ID, 'last_name', true),
+                'first_name' => $user->first_name,
+                'last_name' => $user->last_name,
                 'login' => $user->user_login,
                 default => '',
             };
