@@ -74,8 +74,8 @@ add_action('init', function () {
             return match ($source_args['key'] ?? '') {
                 'display_name' => $user->display_name,
                 'email' => $user->user_email,
-                'first_name' => $user->first_name,
-                'last_name' => $user->last_name,
+                'first_name' => get_user_meta($user->ID, 'first_name', true),
+                'last_name' => get_user_meta($user->ID, 'last_name', true),
                 'login' => $user->user_login,
                 default => '',
             };
