@@ -70,7 +70,7 @@ add_action('init', function () {
             if (!$user->exists()) {
                 return '';
             }
-            return match ($source_args['key'] ?? '') {
+            $value = match ($source_args['key'] ?? '') {
                 'display_name' => $user->display_name,
                 'email' => $user->user_email,
                 'first_name' => $user->first_name,
@@ -78,6 +78,9 @@ add_action('init', function () {
                 'login' => $user->user_login,
                 default => '',
             };
+            $prefix = $source_args['prefix'] ?? '';
+            $suffix = $source_args['suffix'] ?? '';
+            return $prefix . $value . $suffix;
         },
     ]);
 });
