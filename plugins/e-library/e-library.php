@@ -18,10 +18,11 @@ require_once 'library.php';
 function e_library_setup(
     string $unauthorized_template_id,
     string $study_group_taxonomy,
+    string $login_redirect_url,
 ) {
     global $e_library;
     $e_library = new E_Library(
-        new E_Library_Student(),
+        new E_Library_Student($login_redirect_url),
         $unauthorized_template_id,
         $study_group_taxonomy,
     );

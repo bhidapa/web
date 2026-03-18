@@ -4,7 +4,11 @@
  */
 add_action('init', function () {
     if (function_exists('e_library_setup')) {
-        e_library_setup('bhd//e-library-unauthorized', 'grupa-strucnjaka');
+        e_library_setup(
+            'bhd//e-library-unauthorized',
+            'grupa-strucnjaka',
+            '/biblioteka/',
+        );
     }
 });
 
@@ -27,11 +31,7 @@ Vaše korisničko ime je: <b>%s</b><br>
 Srdačan pozdrav,<br>
 BHIDAPA',
             $student['username'],
-            add_query_arg(
-                'redirect_to',
-                urlencode('/biblioteka/'),
-                $reset_password_url,
-            ),
+            $reset_password_url,
         );
     },
     10,

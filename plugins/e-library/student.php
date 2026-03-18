@@ -6,7 +6,7 @@ class E_Library_Student
     public const USER_ROLE = 'student';
     public const STUDY_GROUPS_META_KEY = 'e-library__user_study_groups';
 
-    public function __construct()
+    public function __construct(string $login_redirect_url)
     {
         $role = add_role(self::USER_ROLE, __('Student', 'azp'), [
             'read' => true,
@@ -15,6 +15,26 @@ class E_Library_Student
             $role = get_role(self::USER_ROLE);
             $role->has_cap('read') || $role->add_cap('read');
         }
+
+        add_filter(
+            'login_redirect',
+            function (
+                string $redirect_to,
+                string $requested_redirect_to,
+                WP_User|WP_Error $user,
+            ) use ($login_redirect_url) {
+                if (
+                    $user instanceof WP_User &&
+                    $user->has_cap(self::USER_ROLE)
+                ) {
+                    return $requested_redirect_to ?:
+                        home_url($login_redirect_url);
+                }
+                return $redirect_to;
+            },
+            10,
+            3,
+        );
 
         add_action('admin_menu', function () {
             add_submenu_page(

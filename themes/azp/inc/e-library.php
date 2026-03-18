@@ -4,7 +4,11 @@
  */
 add_action('init', function () {
     if (function_exists('e_library_setup')) {
-        e_library_setup('azp//e-library-unauthorized', 'studijska-grupa');
+        e_library_setup(
+            'azp//e-library-unauthorized',
+            'studijska-grupa',
+            '/biblioteka/',
+        );
     }
 });
 
@@ -27,11 +31,7 @@ Vaše korisničko ime je: <b>%s</b><br>
 Srdačan pozdrav,<br>
 Akademija za psihoterapiju',
             $student['username'],
-            add_query_arg(
-                'redirect_to',
-                urlencode('/biblioteka/'),
-                $reset_password_url,
-            ),
+            $reset_password_url,
         );
     },
     10,
