@@ -50,6 +50,9 @@
     "mu-plugins/blocks/acf-repeater-row": {
       "name": "@blocks/acf-repeater-row",
     },
+    "mu-plugins/blocks/logged-in": {
+      "name": "@blocks/logged-in",
+    },
     "mu-plugins/blocks/not-logged-in": {
       "name": "@blocks/not-logged-in",
     },
@@ -392,6 +395,8 @@
     "@blocks/e-library-has-access": ["@blocks/e-library-has-access@workspace:plugins/e-library/blocks/has-access"],
 
     "@blocks/e-library-no-access": ["@blocks/e-library-no-access@workspace:plugins/e-library/blocks/no-access"],
+
+    "@blocks/logged-in": ["@blocks/logged-in@workspace:mu-plugins/blocks/logged-in"],
 
     "@blocks/not-logged-in": ["@blocks/not-logged-in@workspace:mu-plugins/blocks/not-logged-in"],
 
