@@ -51,4 +51,22 @@ add_action('init', function () {
             return get_the_title();
         },
     ]);
+    register_block_bindings_source('bhidapa/current-user', [
+        'label' => __('Current User', 'bhidapa'),
+        'get_value_callback' => function (array $source_args) {
+            $user = wp_get_current_user();
+            if (!$user->exists()) {
+                return '';
+            }
+
+            return match ($source_args['key'] ?? '') {
+                'display_name' => $user->display_name,
+                'email' => $user->user_email,
+                'first_name' => $user->first_name,
+                'last_name' => $user->last_name,
+                'login' => $user->user_login,
+                default => '',
+            };
+        },
+    ]);
 });
