@@ -27,7 +27,11 @@ Vaše korisničko ime je: <b>%s</b><br>
 Srdačan pozdrav,<br>
 Akademija za psihoterapiju',
             $student['username'],
-            add_query_arg('redirect_to', urlencode('/biblioteka/'), $reset_password_url),
+            add_query_arg(
+                'redirect_to',
+                urlencode('/biblioteka/'),
+                $reset_password_url,
+            ),
         );
     },
     10,

@@ -27,7 +27,11 @@ Vaše korisničko ime je: <b>%s</b><br>
 Srdačan pozdrav,<br>
 BHIDAPA',
             $student['username'],
-            add_query_arg('redirect_to', urlencode('/biblioteka/'), $reset_password_url),
+            add_query_arg(
+                'redirect_to',
+                urlencode('/biblioteka/'),
+                $reset_password_url,
+            ),
         );
     },
     10,
