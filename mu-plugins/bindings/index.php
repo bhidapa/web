@@ -38,6 +38,18 @@ add_action('init', function () {
             return wp_login_url($wp->request);
         },
     ]);
+    register_block_bindings_source('bhidapa/logout-url-with-return-redirect', [
+        'label' => __('Logout URL with return redirect', 'bhidapa'),
+        'get_value_callback' => function () {
+            $redirect_to = $_GET['redirect_to'] ?? '';
+            if (!empty($redirect_to)) {
+                return wp_logout_url($redirect_to);
+            }
+            /** @var WP */
+            global $wp;
+            return wp_logout_url($wp->request);
+        },
+    ]);
     register_block_bindings_source('bhidapa/post-title', [
         'label' => __('Post Title', 'bhidapa'),
         'get_value_callback' => function (array $source_args) {
