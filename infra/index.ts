@@ -1391,6 +1391,17 @@ const websitesServerSecurityGroup = new aws.ec2.SecurityGroup(
   },
 );
 
+// Allow EC2 instance to access EFS
+new aws.ec2.SecurityGroupRule('websites-server-to-efs', {
+  type: 'ingress',
+  fromPort: 2049,
+  toPort: 2049,
+  protocol: 'tcp',
+  securityGroupId: efsSecurityGroup.id,
+  sourceSecurityGroupId: websitesServerSecurityGroup.id,
+  description: 'NFS access from EC2 websites instance',
+});
+
 // Allow EC2 instance to access database
 new aws.ec2.SecurityGroupRule('websites-server-to-db', {
   type: 'ingress',
