@@ -25,7 +25,7 @@ console.log(`Pushing to ${website}`);
 await Promise.all(
   bundles.map((bundle) => {
     console.log(`Syncing ${bundle}`);
-    return $`rsync -azvc --no-perms --no-owner --no-group --delete \
+    return $`rsync -azvc --no-perms --no-owner --no-group --no-times --delete \
       --exclude "*/node_modules" --exclude ".DS_Store" \
       ${bundle}/ \
       ${endpoint}:/var/www/${website}/wp-data/wp-content/${bundle}/`;
