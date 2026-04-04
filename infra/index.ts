@@ -312,12 +312,6 @@ new aws.efs.MountTarget('fs-mount-target-b', {
   subnetId: privateSubnetB.id,
   securityGroups: [efsSecurityGroup.id],
 });
-new aws.efs.BackupPolicy('fs-backup-policy', {
-  fileSystemId: efs.id,
-  backupPolicy: {
-    status: 'ENABLED',
-  },
-});
 
 // WordPress Containers inside the ECR Repository
 const fpmImage = newImage({ name: 'fpm' });
@@ -508,6 +502,7 @@ new aws.ec2.EipAssociation('websites-server-eip-assoc', {
   allocationId: websitesServerEip.id,
 });
 
+// Back up the EC2 instance using AWS Backup (EBS volume backup)
 const websitesServerBackupVault = new aws.backup.Vault(
   'websites-server-backup-vault',
   {
