@@ -28,7 +28,7 @@ await Promise.all(
     return $`rsync -azvc --no-perms --no-owner --no-group --delete \
       --exclude "*/node_modules" --exclude ".DS_Store" \
       ${bundle}/ \
-      ${endpoint}:/mnt/efs/${website}/wp-content/${bundle}/`;
+      ${endpoint}:/var/www/${website}/wp-data/wp-content/${bundle}/`;
   }),
 );
 console.log('OK');
