@@ -548,8 +548,363 @@ export const jumpServerEndpoint = jumpServerEip.publicDns;
 // WordPress Containers inside the ECR Repository
 const fpmImage = newImage({ name: 'fpm' });
 const nginxImage = newImage({ name: 'nginx' });
-// all images have the same repositoryUrl
-const ecrRepositoryUrl = fpmImage.repositoryUrl;
+
+// Monolithic server on EC2 running all websites
+const websiteComposeParam = new aws.ssm.Parameter('website-compose-param', {
+  name: name('compose.website.yml'),
+  type: 'String',
+  description: `Docker Compose configuration for each of the websites running on EC2`,
+  value: fs.readFileSync('compose.website.yml', 'utf8'),
+  tags: { proj },
+});
+
+const websitesServerRole = new aws.iam.Role('websites-server-role', {
+  name: name('websites-server-role'),
+  assumeRolePolicy: {
+    Version: '2012-10-17',
+    Statement: [
+      {
+        Action: 'sts:AssumeRole',
+        Effect: 'Allow',
+        Principal: {
+          Service: 'ec2.amazonaws.com',
+        },
+      },
+    ],
+  },
+  tags: { proj },
+});
+
+new aws.iam.RolePolicyAttachment('websites-server-role-ssm-policy', {
+  role: websitesServerRole.name,
+  policyArn: 'arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore',
+});
+
+new aws.iam.RolePolicy('websites-server-role-param-policy', {
+  name: name('websites-server-role-param-policy'),
+  role: websitesServerRole.id,
+  policy: {
+    Version: '2012-10-17',
+    Statement: [
+      {
+        Effect: 'Allow',
+        Action: ['ssm:GetParameter', 'ssm:GetParameters'],
+        Resource: '*',
+      },
+      {
+        Effect: 'Allow',
+        Action: ['secretsmanager:GetSecretValue'],
+        Resource: dbPassword.id,
+      },
+      {
+        Effect: 'Allow',
+        Action: ['ecr:GetAuthorizationToken'],
+        Resource: '*',
+      },
+      {
+        Effect: 'Allow',
+        Action: [
+          'ecr:BatchCheckLayerAvailability',
+          'ecr:GetDownloadUrlForLayer',
+          'ecr:BatchGetImage',
+        ],
+        Resource: '*',
+      },
+    ],
+  },
+});
+
+const websitesServerProfile = new aws.iam.InstanceProfile(
+  'websites-server-profile',
+  {
+    name: name('websites-server-profile'),
+    role: websitesServerRole.name,
+  },
+);
+
+// Security group for EC2 deployment instance
+const websitesServerSecurityGroup = new aws.ec2.SecurityGroup(
+  'websites-server-sg',
+  {
+    name: name('websites-server-sg'),
+    vpcId: vpc.id,
+    description: 'Security group for EC2 websites server instance',
+    ingress: [
+      {
+        protocol: 'tcp',
+        fromPort: 22,
+        toPort: 22,
+        cidrBlocks: ['0.0.0.0/0'],
+        description: 'SSH access',
+      },
+      ...websites.map((website) => ({
+        fromPort: portOf(website),
+        toPort: portOf(website),
+        protocol: 'tcp',
+        securityGroups: [lbSecurityGroup.id],
+        description: `HTTP from ALB on port ${portOf(website)}`,
+      })),
+    ],
+    egress: [
+      { protocol: '-1', fromPort: 0, toPort: 0, cidrBlocks: ['0.0.0.0/0'] },
+    ],
+    tags: { proj, Name: name('websites-sg') },
+  },
+);
+
+// Allow EC2 instance to access EFS
+new aws.ec2.SecurityGroupRule('websites-server-to-efs', {
+  type: 'ingress',
+  fromPort: 2049,
+  toPort: 2049,
+  protocol: 'tcp',
+  securityGroupId: efsSecurityGroup.id,
+  sourceSecurityGroupId: websitesServerSecurityGroup.id,
+  description: 'NFS access from EC2 websites instance',
+});
+
+// Allow EC2 instance to access database
+new aws.ec2.SecurityGroupRule('websites-server-to-db', {
+  type: 'ingress',
+  fromPort: 3306,
+  toPort: 3306,
+  protocol: 'tcp',
+  securityGroupId: dbSecurityGroup.id,
+  sourceSecurityGroupId: websitesServerSecurityGroup.id,
+  description: 'Database access from EC2 websites instance',
+});
+
+const websitesServer = new aws.ec2.Instance(
+  'websites-server',
+  {
+    ami: aws.ec2.getAmiOutput({
+      mostRecent: true,
+      owners: ['amazon'],
+      filters: [
+        {
+          name: 'name',
+          values: ['al2023-ami-*-arm64'],
+        },
+        {
+          name: 'architecture',
+          values: ['arm64'],
+        },
+        {
+          name: 'virtualization-type',
+          values: ['hvm'],
+        },
+      ],
+    }).id,
+    instanceType: 't4g.medium',
+    subnetId: publicSubnetA.id,
+    keyName: 'websites-server',
+    vpcSecurityGroupIds: [websitesServerSecurityGroup.id],
+    iamInstanceProfile: websitesServerProfile.name,
+    rootBlockDevice: {
+      // TODO: back up the EBS volume with AWS Backup
+      volumeSize: 50, // GB
+    },
+    tags: { proj, Name: name('websites-server') },
+    userData: `#!/bin/bash
+set -eux
+
+# Update system
+dnf update -y
+
+# Install required packages
+dnf install -y \
+  amazon-efs-utils \
+  nfs-utils \
+  rsync \
+  vim \
+  htop
+
+# Install Docker Compose
+sudo curl -SL https://github.com/docker/compose/releases/latest/download/docker-compose-linux-aarch64 -o /usr/libexec/docker/cli-plugins/docker-compose
+sudo chmod +x /usr/libexec/docker/cli-plugins/docker-compose
+`,
+  },
+  {
+    ignoreChanges: ['ami'],
+    replaceOnChanges: ['*'], // TODO: remove when we're good
+  },
+);
+
+// Jump Server static public IP
+const websitesServerEip = new aws.ec2.Eip('websites-server-eip', {
+  domain: 'vpc',
+  tags: { proj, Name: name('websites-server-eip') },
+});
+new aws.ec2.EipAssociation('websites-server-eip-assoc', {
+  instanceId: websitesServer.id,
+  allocationId: websitesServerEip.id,
+});
+
+const websitesServerDeployDocument = new aws.ssm.Document(
+  'websites-server-deploy-document',
+  {
+    name: name('websites-server-deploy'),
+    documentType: 'Command',
+    documentFormat: 'YAML',
+    content: pulumi
+      .all([
+        fpmImage.repositoryUrl, // both nginxImage and fpmImage images have the same repositoryUrl
+        websiteComposeParam.name,
+        fpmImage.imageUri,
+        nginxImage.imageUri,
+        dbInstance.endpoint,
+        dbInstance.username,
+        dbPassword.id,
+      ])
+      .apply(
+        ([
+          ecrRepositoryUrl,
+          websiteComposeParamName,
+          fpmImageUri,
+          nginxImageUri,
+          dbHost,
+          dbUser,
+          dbPasswordSecretId,
+        ]) =>
+          pulumi.jsonStringify(
+            {
+              schemaVersion: '2.2',
+              description: 'Deploy all WordPress websites using docker compose',
+              mainSteps: [
+                {
+                  action: 'aws:runShellScript',
+                  name: 'deployWebsites',
+                  inputs: {
+                    runCommand: [
+                      ...`
+set -eux
+
+aws ecr get-login-password --region ${region} | docker login --username AWS --password-stdin ${ecrRepositoryUrl}
+
+${websites
+  .map(
+    (website) => `
+mkdir -p /var/www/${website.name}
+cd /var/www/${website.name}
+
+aws ssm get-parameter --name '${websiteComposeParamName}' --region ${region} --query 'Parameter.Value' --output text > compose.yml
+
+cat << EOF > .env
+FPM_IMAGE="${fpmImageUri}"
+NGINX_IMAGE="${nginxImageUri}"
+WORDPRESS_DB_HOST="${dbHost}"
+WORDPRESS_DB_USER="${dbUser}"
+WORDPRESS_DB_NAME="${website.name}"
+WORDPRESS_DB_PASSWORD="$(aws secretsmanager get-secret-value --secret-id ${dbPasswordSecretId} --region ${region} --query SecretString --output text)"
+WEBSITE_PORT="${portOf(website)}"
+EOF
+
+docker compose pull
+
+docker compose up -d --remove-orphans --wait
+`,
+  )
+  .join('\n')}
+`
+                        .split('\n')
+                        .map((line) => line.trim())
+                        .filter(Boolean)
+                        .filter((line) => !line.startsWith('#')),
+                    ],
+                  },
+                },
+              ],
+            },
+            undefined,
+            2,
+          ),
+      ),
+    tags: { proj },
+  },
+);
+new aws.ssm.Association('websites-server-deploy-association', {
+  name: websitesServerDeployDocument.name,
+  targets: [
+    {
+      key: 'InstanceIds',
+      values: [websitesServer.id],
+    },
+  ],
+});
+
+const websitesServerWpCliDocument = new aws.ssm.Document(
+  'websites-server-wp-cli-document',
+  {
+    name: name('websites-server-wp-cli'),
+    documentType: 'Command',
+    documentFormat: 'YAML',
+    content: pulumi
+      .all([dbInstance.endpoint, dbInstance.username, dbPassword.id])
+      .apply(([dbHost, dbUser, dbPasswordSecretId]) =>
+        pulumi.jsonStringify(
+          {
+            schemaVersion: '2.2',
+            description: 'Install WP CLI for WordPress websites',
+            mainSteps: [
+              {
+                action: 'aws:runShellScript',
+                name: 'deployWebsites',
+                inputs: {
+                  runCommand: [
+                    ...`
+set -eux
+
+cat > /usr/local/bin/wp-cli << 'EOF'
+#!/bin/bash
+WEBSITE="$1"
+if [ -z "$WEBSITE" ]; then
+  echo "Website argument not provided. Possible values are: ${websiteNames.join(', ')}." >&2
+  exit 1
+fi
+if [ ! -d "/var/www/$WEBSITE/wp-data" ]; then
+  echo "Directory /var/www/$WEBSITE/wp-data does not exist" >&2
+  exit 1
+fi
+DB_PASSWORD="$(aws secretsmanager get-secret-value --secret-id ${dbPasswordSecretId} --region ${region} --query SecretString --output text)"
+docker run -it --rm \
+  -v /var/www/$WEBSITE/wp-data:/var/www/html \
+  -e WORDPRESS_DB_HOST="${dbHost}" \
+  -e WORDPRESS_DB_USER="${dbUser}" \
+  -e WORDPRESS_DB_NAME=$WEBSITE \
+  -e WORDPRESS_DB_PASSWORD="$DB_PASSWORD" \
+  --entrypoint bash \
+  wordpress:cli
+EOF
+chmod +x /usr/local/bin/wp-cli
+`
+                      .split('\n')
+                      .map((line) => line.trim())
+                      .filter(Boolean)
+                      .filter((line) => !line.startsWith('#')),
+                  ],
+                },
+              },
+            ],
+          },
+          undefined,
+          2,
+        ),
+      ),
+    tags: { proj },
+  },
+);
+new aws.ssm.Association('websites-server-wp-cli-association', {
+  name: websitesServerWpCliDocument.name,
+  targets: [
+    {
+      key: 'InstanceIds',
+      values: [websitesServer.id],
+    },
+  ],
+});
+
+export const wbsitesServerUsername = 'ec2-user';
+export const wbsitesServerEndpoint = websitesServerEip.publicDns;
 
 // ECS Cluster and Roles
 const wpCluster = new aws.ecs.Cluster('wp-cluster', {
@@ -1288,362 +1643,6 @@ for (const website of websites) {
     tags: { proj },
   });
 }
-
-const websiteComposeParam = new aws.ssm.Parameter('website-compose-param', {
-  name: name('compose.website.yml'),
-  type: 'String',
-  description: `Docker Compose configuration for each of the websites running on EC2`,
-  value: fs.readFileSync('compose.website.yml', 'utf8'),
-  tags: { proj },
-});
-
-const websitesServerRole = new aws.iam.Role('websites-server-role', {
-  name: name('websites-server-role'),
-  assumeRolePolicy: {
-    Version: '2012-10-17',
-    Statement: [
-      {
-        Action: 'sts:AssumeRole',
-        Effect: 'Allow',
-        Principal: {
-          Service: 'ec2.amazonaws.com',
-        },
-      },
-    ],
-  },
-  tags: { proj },
-});
-
-new aws.iam.RolePolicyAttachment('websites-server-role-ssm-policy', {
-  role: websitesServerRole.name,
-  policyArn: 'arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore',
-});
-
-new aws.iam.RolePolicy('websites-server-role-param-policy', {
-  name: name('websites-server-role-param-policy'),
-  role: websitesServerRole.id,
-  policy: {
-    Version: '2012-10-17',
-    Statement: [
-      {
-        Effect: 'Allow',
-        Action: ['ssm:GetParameter', 'ssm:GetParameters'],
-        Resource: '*',
-      },
-      {
-        Effect: 'Allow',
-        Action: ['secretsmanager:GetSecretValue'],
-        Resource: dbPassword.id,
-      },
-      {
-        Effect: 'Allow',
-        Action: ['ecr:GetAuthorizationToken'],
-        Resource: '*',
-      },
-      {
-        Effect: 'Allow',
-        Action: [
-          'ecr:BatchCheckLayerAvailability',
-          'ecr:GetDownloadUrlForLayer',
-          'ecr:BatchGetImage',
-        ],
-        Resource: '*',
-      },
-    ],
-  },
-});
-
-const websitesServerProfile = new aws.iam.InstanceProfile(
-  'websites-server-profile',
-  {
-    name: name('websites-server-profile'),
-    role: websitesServerRole.name,
-  },
-);
-
-// Security group for EC2 deployment instance
-const websitesServerSecurityGroup = new aws.ec2.SecurityGroup(
-  'websites-server-sg',
-  {
-    name: name('websites-server-sg'),
-    vpcId: vpc.id,
-    description: 'Security group for EC2 websites server instance',
-    ingress: [
-      {
-        protocol: 'tcp',
-        fromPort: 22,
-        toPort: 22,
-        cidrBlocks: ['0.0.0.0/0'],
-        description: 'SSH access',
-      },
-      ...websites.map((website) => ({
-        fromPort: portOf(website),
-        toPort: portOf(website),
-        protocol: 'tcp',
-        securityGroups: [lbSecurityGroup.id],
-        description: `HTTP from ALB on port ${portOf(website)}`,
-      })),
-    ],
-    egress: [
-      { protocol: '-1', fromPort: 0, toPort: 0, cidrBlocks: ['0.0.0.0/0'] },
-    ],
-    tags: { proj, Name: name('websites-sg') },
-  },
-);
-
-// Allow EC2 instance to access EFS
-new aws.ec2.SecurityGroupRule('websites-server-to-efs', {
-  type: 'ingress',
-  fromPort: 2049,
-  toPort: 2049,
-  protocol: 'tcp',
-  securityGroupId: efsSecurityGroup.id,
-  sourceSecurityGroupId: websitesServerSecurityGroup.id,
-  description: 'NFS access from EC2 websites instance',
-});
-
-// Allow EC2 instance to access database
-new aws.ec2.SecurityGroupRule('websites-server-to-db', {
-  type: 'ingress',
-  fromPort: 3306,
-  toPort: 3306,
-  protocol: 'tcp',
-  securityGroupId: dbSecurityGroup.id,
-  sourceSecurityGroupId: websitesServerSecurityGroup.id,
-  description: 'Database access from EC2 websites instance',
-});
-
-const websitesServer = new aws.ec2.Instance(
-  'websites-server',
-  {
-    ami: aws.ec2.getAmiOutput({
-      mostRecent: true,
-      owners: ['amazon'],
-      filters: [
-        {
-          name: 'name',
-          values: ['al2023-ami-*-arm64'],
-        },
-        {
-          name: 'architecture',
-          values: ['arm64'],
-        },
-        {
-          name: 'virtualization-type',
-          values: ['hvm'],
-        },
-      ],
-    }).id,
-    instanceType: 't4g.medium',
-    subnetId: publicSubnetA.id,
-    keyName: 'websites-server',
-    vpcSecurityGroupIds: [websitesServerSecurityGroup.id],
-    iamInstanceProfile: websitesServerProfile.name,
-    rootBlockDevice: {
-      // TODO: back up the EBS volume with AWS Backup
-      volumeSize: 50, // GB
-    },
-    tags: { proj, Name: name('websites-server') },
-    userData: `#!/bin/bash
-set -eux
-
-# Update system
-dnf update -y
-
-# Install required packages
-dnf install -y \
-  amazon-efs-utils \
-  nfs-utils \
-  rsync \
-  vim \
-  htop
-
-# Install Docker Compose
-sudo curl -SL https://github.com/docker/compose/releases/latest/download/docker-compose-linux-aarch64 -o /usr/libexec/docker/cli-plugins/docker-compose
-sudo chmod +x /usr/libexec/docker/cli-plugins/docker-compose
-`,
-  },
-  {
-    ignoreChanges: ['ami'],
-    replaceOnChanges: ['*'], // TODO: remove when we're good
-  },
-);
-
-// Jump Server static public IP
-const websitesServerEip = new aws.ec2.Eip('websites-server-eip', {
-  domain: 'vpc',
-  tags: { proj, Name: name('websites-server-eip') },
-});
-new aws.ec2.EipAssociation('websites-server-eip-assoc', {
-  instanceId: websitesServer.id,
-  allocationId: websitesServerEip.id,
-});
-
-const websitesServerDeployDocument = new aws.ssm.Document(
-  'websites-server-deploy-document',
-  {
-    name: name('websites-server-deploy'),
-    documentType: 'Command',
-    documentFormat: 'YAML',
-    content: pulumi
-      .all([
-        ecrRepositoryUrl,
-        websiteComposeParam.name,
-        fpmImage.imageUri,
-        nginxImage.imageUri,
-        dbInstance.endpoint,
-        dbInstance.username,
-        dbPassword.id,
-      ])
-      .apply(
-        ([
-          ecrRepositoryUrl,
-          websiteComposeParamName,
-          fpmImageUri,
-          nginxImageUri,
-          dbHost,
-          dbUser,
-          dbPasswordSecretId,
-        ]) =>
-          pulumi.jsonStringify(
-            {
-              schemaVersion: '2.2',
-              description: 'Deploy all WordPress websites using docker compose',
-              mainSteps: [
-                {
-                  action: 'aws:runShellScript',
-                  name: 'deployWebsites',
-                  inputs: {
-                    runCommand: [
-                      ...`
-set -eux
-
-aws ecr get-login-password --region ${region} | docker login --username AWS --password-stdin ${ecrRepositoryUrl}
-
-${websites
-  .map(
-    (website) => `
-mkdir -p /var/www/${website.name}
-cd /var/www/${website.name}
-
-aws ssm get-parameter --name '${websiteComposeParamName}' --region ${region} --query 'Parameter.Value' --output text > compose.yml
-
-cat << EOF > .env
-FPM_IMAGE="${fpmImageUri}"
-NGINX_IMAGE="${nginxImageUri}"
-WORDPRESS_DB_HOST="${dbHost}"
-WORDPRESS_DB_USER="${dbUser}"
-WORDPRESS_DB_NAME="${website.name}"
-WORDPRESS_DB_PASSWORD="$(aws secretsmanager get-secret-value --secret-id ${dbPasswordSecretId} --region ${region} --query SecretString --output text)"
-WEBSITE_PORT="${portOf(website)}"
-EOF
-
-docker compose pull
-
-docker compose up -d --remove-orphans --wait
-`,
-  )
-  .join('\n')}
-`
-                        .split('\n')
-                        .map((line) => line.trim())
-                        .filter(Boolean)
-                        .filter((line) => !line.startsWith('#')),
-                    ],
-                  },
-                },
-              ],
-            },
-            undefined,
-            2,
-          ),
-      ),
-    tags: { proj },
-  },
-);
-new aws.ssm.Association('websites-server-deploy-association', {
-  name: websitesServerDeployDocument.name,
-  targets: [
-    {
-      key: 'InstanceIds',
-      values: [websitesServer.id],
-    },
-  ],
-});
-
-const websitesServerWpCliDocument = new aws.ssm.Document(
-  'websites-server-wp-cli-document',
-  {
-    name: name('websites-server-wp-cli'),
-    documentType: 'Command',
-    documentFormat: 'YAML',
-    content: pulumi
-      .all([dbInstance.endpoint, dbInstance.username, dbPassword.id])
-      .apply(([dbHost, dbUser, dbPasswordSecretId]) =>
-        pulumi.jsonStringify(
-          {
-            schemaVersion: '2.2',
-            description: 'Install WP CLI for WordPress websites',
-            mainSteps: [
-              {
-                action: 'aws:runShellScript',
-                name: 'deployWebsites',
-                inputs: {
-                  runCommand: [
-                    ...`
-set -eux
-
-cat > /usr/local/bin/wp-cli << 'EOF'
-#!/bin/bash
-WEBSITE="$1"
-if [ -z "$WEBSITE" ]; then
-  echo "Website argument not provided. Possible values are: ${websiteNames.join(', ')}." >&2
-  exit 1
-fi
-if [ ! -d "/var/www/$WEBSITE/wp-data" ]; then
-  echo "Directory /var/www/$WEBSITE/wp-data does not exist" >&2
-  exit 1
-fi
-DB_PASSWORD="$(aws secretsmanager get-secret-value --secret-id ${dbPasswordSecretId} --region ${region} --query SecretString --output text)"
-docker run -it --rm \
-  -v /var/www/$WEBSITE/wp-data:/var/www/html \
-  -e WORDPRESS_DB_HOST="${dbHost}" \
-  -e WORDPRESS_DB_USER="${dbUser}" \
-  -e WORDPRESS_DB_NAME=$WEBSITE \
-  -e WORDPRESS_DB_PASSWORD="$DB_PASSWORD" \
-  --entrypoint bash \
-  wordpress:cli
-EOF
-chmod +x /usr/local/bin/wp-cli
-`
-                      .split('\n')
-                      .map((line) => line.trim())
-                      .filter(Boolean)
-                      .filter((line) => !line.startsWith('#')),
-                  ],
-                },
-              },
-            ],
-          },
-          undefined,
-          2,
-        ),
-      ),
-    tags: { proj },
-  },
-);
-new aws.ssm.Association('websites-server-wp-cli-association', {
-  name: websitesServerWpCliDocument.name,
-  targets: [
-    {
-      key: 'InstanceIds',
-      values: [websitesServer.id],
-    },
-  ],
-});
-
-export const wbsitesServerUsername = 'ec2-user';
-export const wbsitesServerEndpoint = websitesServerEip.publicDns;
 
 // Wordpress Cloudfront Invalidation plugin, and other needs for an installation
 // https://wordpress.org/plugins/c3-cloudfront-clear-cache/
