@@ -724,10 +724,7 @@ sudo curl -SL https://github.com/docker/compose/releases/latest/download/docker-
 sudo chmod +x /usr/libexec/docker/cli-plugins/docker-compose
 `,
   },
-  {
-    ignoreChanges: ['ami'],
-    replaceOnChanges: ['*'], // TODO: remove when we're good
-  },
+  { ignoreChanges: ['ami'] },
 );
 
 // Jump Server static public IP
