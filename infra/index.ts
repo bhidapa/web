@@ -1086,8 +1086,8 @@ for (const website of websites) {
   const tg = new aws.lb.TargetGroup(`${website.name}-lb-tg`, {
     name: name(`${website.name}-lb-tg`),
     vpcId: vpc.id,
-    targetType: 'ip',
-    port: 80,
+    targetType: 'instance',
+    port: portOf(website),
     protocol: 'HTTP',
     tags: { proj },
     healthCheck: {
@@ -1095,6 +1095,11 @@ for (const website of websites) {
       matcher: '200-399',
       path: '/', // TODO: integrate with WP_Site_Health but needs authentication
     },
+  });
+  new aws.lb.TargetGroupAttachment(`${website.name}-lb-tg-attachment`, {
+    targetGroupArn: tg.arn,
+    targetId: websitesServer.id,
+    port: portOf(website),
   });
   const lbRulePriority = 100 * (websites.indexOf(website) + 1);
   new aws.lb.ListenerRule(`${website.name}-lb-rule`, {
@@ -1633,13 +1638,7 @@ for (const website of websites) {
       securityGroups: [wpSecurityGroup.id],
       assignPublicIp: false,
     },
-    loadBalancers: [
-      {
-        targetGroupArn: tg.arn,
-        containerName: 'nginx',
-        containerPort: 80,
-      },
-    ],
+    loadBalancers: [],
     tags: { proj },
   });
 }
