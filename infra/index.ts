@@ -1518,13 +1518,13 @@ cd /var/www/${website.name}
 aws ssm get-parameter --name '${websiteComposeParamName}' --region ${region} --query 'Parameter.Value' --output text > compose.yml
 
 cat << EOF > .env
-FPM_IMAGE=${fpmImageUri}
-NGINX_IMAGE=${nginxImageUri}
-WORDPRESS_DB_HOST=${dbHost}
-WORDPRESS_DB_USER=${dbUser}
-WORDPRESS_DB_NAME=${website.name}
-WORDPRESS_DB_PASSWORD=$(aws secretsmanager get-secret-value --secret-id ${dbPasswordSecretId} --region ${region} --query SecretString --output text)
-WEBSITE_PORT=${portOf(website)}
+FPM_IMAGE="${fpmImageUri}"
+NGINX_IMAGE="${nginxImageUri}"
+WORDPRESS_DB_HOST="${dbHost}"
+WORDPRESS_DB_USER="${dbUser}"
+WORDPRESS_DB_NAME="${website.name}"
+WORDPRESS_DB_PASSWORD="$(aws secretsmanager get-secret-value --secret-id ${dbPasswordSecretId} --region ${region} --query SecretString --output text)"
+WEBSITE_PORT="${portOf(website)}"
 EOF
 
 docker compose pull
@@ -1593,11 +1593,11 @@ if [ ! -d "/var/www/$WEBSITE/wp-data" ]; then
   echo "Directory /var/www/$WEBSITE/wp-data does not exist" >&2
   exit 1
 fi
-DB_PASSWORD=$(aws secretsmanager get-secret-value --secret-id ${dbPasswordSecretId} --region ${region} --query SecretString --output text)
+DB_PASSWORD="$(aws secretsmanager get-secret-value --secret-id ${dbPasswordSecretId} --region ${region} --query SecretString --output text)"
 docker run -it --rm \
   -v /var/www/$WEBSITE/wp-data:/var/www/html \
-  -e WORDPRESS_DB_HOST=${dbHost} \
-  -e WORDPRESS_DB_USER=${dbUser} \
+  -e WORDPRESS_DB_HOST="${dbHost}" \
+  -e WORDPRESS_DB_USER="${dbUser}" \
   -e WORDPRESS_DB_NAME=$WEBSITE \
   -e WORDPRESS_DB_PASSWORD="$DB_PASSWORD" \
   --entrypoint bash \
