@@ -140,12 +140,6 @@ new aws.ec2.MainRouteTableAssociation('main-route-table-association', {
   routeTableId: privateRouteTable.id,
 });
 
-// Jump Server static public IP
-const jumpServerEip = new aws.ec2.Eip('jump-server-eip', {
-  domain: 'vpc',
-  tags: { proj, Name: name('jump-server-eip') },
-});
-
 // Security Groups
 const cfPrefixList = aws.ec2.getManagedPrefixListOutput({
   filters: [
@@ -167,13 +161,6 @@ const lbSecurityGroup = new aws.ec2.SecurityGroup('lb-sg', {
       toPort: 80,
       prefixListIds: [cfPrefixList.id],
       description: 'Decrypted HTTP from CloudFront',
-    },
-    {
-      protocol: 'tcp',
-      fromPort: 80,
-      toPort: 80,
-      cidrBlocks: [pulumi.interpolate`${jumpServerEip.publicIp}/32`],
-      description: 'Direct HTTP access from Jump Server from the outside',
     },
   ],
   egress: [
