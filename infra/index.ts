@@ -185,13 +185,13 @@ const dbSecurityGroup = new aws.ec2.SecurityGroup('db-sg', {
   name: name('db-sg'),
   vpcId: vpc.id,
   description: 'Security group for Aurora database',
-  tags: { proj, name: name('db-sg') },
+  tags: { proj, Name: name('db-sg') },
 });
 const efsSecurityGroup = new aws.ec2.SecurityGroup('fs-sg', {
   name: name('fs-sg'),
   vpcId: vpc.id,
   description: 'Security group for EFS',
-  tags: { proj, name: name('fs-sg') },
+  tags: { proj, Name: name('fs-sg') },
 });
 
 // MariaDB RDS
