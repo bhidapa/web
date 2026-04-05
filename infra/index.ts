@@ -381,6 +381,56 @@ new aws.iam.RolePolicyAttachment('websites-server-role-ssm-policy', {
   policyArn: 'arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore',
 });
 
+new aws.iam.RolePolicyAttachment('websites-server-role-cw-policy', {
+  role: websitesServerRole.name,
+  policyArn: 'arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy',
+});
+
+const cloudwatchAgentConfig = new aws.ssm.Parameter('cloudwatch-agent-config', {
+  name: name('cloudwatch-agent-config'),
+  type: 'String',
+  description: 'CloudWatch Agent configuration for EC2 host metrics',
+  value: pulumi.jsonStringify(
+    {
+      agent: {
+        metrics_collection_interval: 60,
+        run_as_user: 'root',
+      },
+      metrics: {
+        namespace: name(),
+        metrics_collected: {
+          mem: {
+            measurement: ['mem_used_percent', 'mem_available', 'mem_total'],
+            metrics_collection_interval: 60,
+          },
+          cpu: {
+            measurement: [
+              'cpu_usage_idle',
+              'cpu_usage_user',
+              'cpu_usage_system',
+              'cpu_usage_iowait',
+            ],
+            metrics_collection_interval: 60,
+            totalcpu: true,
+          },
+          disk: {
+            measurement: ['used_percent', 'inodes_free'],
+            metrics_collection_interval: 60,
+            resources: ['/'],
+          },
+          swap: {
+            measurement: ['swap_used_percent'],
+            metrics_collection_interval: 60,
+          },
+        },
+      },
+    },
+    undefined,
+    2,
+  ),
+  tags: { proj },
+});
+
 new aws.iam.RolePolicy('websites-server-role-param-policy', {
   name: name('websites-server-role-param-policy'),
   role: websitesServerRole.id,
@@ -454,7 +504,7 @@ const websitesServer = new aws.ec2.Instance(
       volumeSize: 50, // GB
     },
     tags: { proj, Name: name('websites-server') },
-    userData: `#!/bin/bash
+    userData: pulumi.interpolate`#!/bin/bash
 set -eux
 
 # Update system
@@ -471,6 +521,10 @@ dnf install -y \
 # Install Docker Compose
 sudo curl -SL https://github.com/docker/compose/releases/latest/download/docker-compose-linux-aarch64 -o /usr/libexec/docker/cli-plugins/docker-compose
 sudo chmod +x /usr/libexec/docker/cli-plugins/docker-compose
+
+# Install and start CloudWatch Agent
+dnf install -y amazon-cloudwatch-agent
+amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c ssm:${cloudwatchAgentConfig.name}
 `,
   },
   { ignoreChanges: ['ami'] },
@@ -599,6 +653,8 @@ WORDPRESS_DB_USER="${dbUser}"
 WORDPRESS_DB_NAME="${website.name}"
 WORDPRESS_DB_PASSWORD="$(aws secretsmanager get-secret-value --secret-id ${dbPasswordSecretId} --region ${region} --query SecretString --output text)"
 WEBSITE_PORT="${portOf(website)}"
+WEBSITE_NAME="${website.name}"
+AWS_REGION="${region}"
 EOF
 
 docker compose pull
