@@ -679,9 +679,6 @@ docker compose up -d --remove-orphans --wait
       ),
     tags: { proj },
   },
-  {
-    dependsOn: [websiteComposeParam],
-  },
 );
 new aws.ssm.Association('websites-server-deploy-association', {
   name: websitesServerDeployDocument.name,
