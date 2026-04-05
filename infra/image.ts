@@ -89,6 +89,7 @@ export function newImage({ name: imageName }: NewImageArgs) {
     },
   );
   return {
+    repositoryUrl: repo.repositoryUrl,
     imageUri: pulumi.interpolate`${repo.repositoryUrl}@${image.digest}`,
   };
 }
