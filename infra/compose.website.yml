@@ -35,7 +35,7 @@ services:
       options:
         awslogs-region: ${AWS_REGION}
         awslogs-group: /websites/${WEBSITE_NAME}
-        awslogs-stream: fpm
+        awslogs-stream: nginx
         awslogs-create-group: 'true'
     ports:
       - '${WEBSITE_PORT}:80'
