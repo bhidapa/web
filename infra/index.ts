@@ -211,21 +211,6 @@ const dbSecurityGroup = new aws.ec2.SecurityGroup('db-sg', {
   ],
   tags: { proj, Name: name('db-sg') },
 });
-const efsSecurityGroup = new aws.ec2.SecurityGroup('fs-sg', {
-  name: name('fs-sg'),
-  vpcId: vpc.id,
-  description: 'Security group for EFS',
-  ingress: [
-    {
-      protocol: 'tcp',
-      fromPort: 2049,
-      toPort: 2049,
-      securityGroups: [websitesServerSecurityGroup.id],
-      description: 'NFS access from Websites Server',
-    },
-  ],
-  tags: { proj, Name: name('fs-sg') },
-});
 
 // MariaDB RDS
 // TODO: figure out how to store the secret with both username and password
@@ -327,24 +312,6 @@ const dbInstance = new aws.rds.Instance('db-instance', {
   tags: { proj },
 });
 // TODO: automatically create databases for each website (see create-dbs.sql)
-
-// EFS File System
-// TODO: remove after satisfactory migration to EC2
-const efs = new aws.efs.FileSystem('fs', {
-  creationToken: name('fs'),
-  throughputMode: 'elastic',
-  tags: { proj, Name: name('fs') },
-});
-new aws.efs.MountTarget('fs-mount-target-a', {
-  fileSystemId: efs.id,
-  subnetId: privateSubnetA.id,
-  securityGroups: [efsSecurityGroup.id],
-});
-new aws.efs.MountTarget('fs-mount-target-b', {
-  fileSystemId: efs.id,
-  subnetId: privateSubnetB.id,
-  securityGroups: [efsSecurityGroup.id],
-});
 
 // WordPress Containers inside the ECR Repository
 const fpmImage = newImage({ name: 'fpm' });
