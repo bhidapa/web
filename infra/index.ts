@@ -371,7 +371,12 @@ const cloudwatchAgentConfigParam = new aws.ssm.Parameter(
           namespace: name(),
           metrics_collected: {
             mem: {
-              measurement: ['mem_used_percent', 'mem_available', 'mem_total'],
+              measurement: [
+                'mem_used_percent',
+                'mem_available',
+                'mem_total',
+                'mem_used',
+              ],
               metrics_collection_interval: 60,
             },
             disk: {
