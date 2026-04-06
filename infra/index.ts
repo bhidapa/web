@@ -353,6 +353,7 @@ new aws.iam.RolePolicyAttachment('websites-server-role-cw-policy', {
   policyArn: 'arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy',
 });
 
+// Cloudwatch Agent configuration for EC2 monitoring
 const cloudwatchAgentConfig = new aws.ssm.Parameter('cloudwatch-agent-config', {
   name: name('cloudwatch-agent-config'),
   type: 'String',
@@ -370,24 +371,15 @@ const cloudwatchAgentConfig = new aws.ssm.Parameter('cloudwatch-agent-config', {
             measurement: ['mem_used_percent', 'mem_available', 'mem_total'],
             metrics_collection_interval: 60,
           },
-          cpu: {
+          disk: {
             measurement: [
-              'cpu_usage_idle',
-              'cpu_usage_user',
-              'cpu_usage_system',
-              'cpu_usage_iowait',
+              'disk_free',
+              'disk_used',
+              'disk_total',
+              'used_percent',
             ],
             metrics_collection_interval: 60,
-            totalcpu: true,
-          },
-          disk: {
-            measurement: ['used_percent', 'inodes_free'],
-            metrics_collection_interval: 60,
             resources: ['/'],
-          },
-          swap: {
-            measurement: ['swap_used_percent'],
-            metrics_collection_interval: 60,
           },
         },
       },
