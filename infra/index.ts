@@ -5,6 +5,7 @@ import * as pulumi from '@pulumi/pulumi';
 import * as fs from 'fs';
 import { name, portOf, proj, region, websites } from './defs.ts';
 import { newImage } from './image.ts';
+import { createAssociation } from './association.ts';
 
 // VPC
 const vpc = new aws.ec2.Vpc('vpc', {
@@ -354,41 +355,44 @@ new aws.iam.RolePolicyAttachment('websites-server-role-cw-policy', {
 });
 
 // Cloudwatch Agent configuration for EC2 monitoring
-const cloudwatchAgentConfig = new aws.ssm.Parameter('cloudwatch-agent-config', {
-  name: name('cloudwatch-agent-config'),
-  type: 'String',
-  description: 'CloudWatch Agent configuration for EC2 host metrics',
-  value: pulumi.jsonStringify(
-    {
-      agent: {
-        metrics_collection_interval: 60,
-        run_as_user: 'root',
-      },
-      metrics: {
-        namespace: name(),
-        metrics_collected: {
-          mem: {
-            measurement: ['mem_used_percent', 'mem_available', 'mem_total'],
-            metrics_collection_interval: 60,
-          },
-          disk: {
-            measurement: [
-              'disk_free',
-              'disk_used',
-              'disk_total',
-              'used_percent',
-            ],
-            metrics_collection_interval: 60,
-            resources: ['/'],
+const cloudwatchAgentConfigParam = new aws.ssm.Parameter(
+  'cloudwatch-agent-config-param',
+  {
+    name: name('cloudwatch-agent-config'),
+    type: 'String',
+    description: 'CloudWatch Agent configuration for EC2 host metrics',
+    value: pulumi.jsonStringify(
+      {
+        agent: {
+          metrics_collection_interval: 60,
+          run_as_user: 'root',
+        },
+        metrics: {
+          namespace: name(),
+          metrics_collected: {
+            mem: {
+              measurement: ['mem_used_percent', 'mem_available', 'mem_total'],
+              metrics_collection_interval: 60,
+            },
+            disk: {
+              measurement: [
+                'disk_free',
+                'disk_used',
+                'disk_total',
+                'used_percent',
+              ],
+              metrics_collection_interval: 60,
+              resources: ['/'],
+            },
           },
         },
       },
-    },
-    undefined,
-    2,
-  ),
-  tags: { proj },
-});
+      undefined,
+      2,
+    ),
+    tags: { proj },
+  },
+);
 
 new aws.iam.RolePolicy('websites-server-role-param-policy', {
   name: name('websites-server-role-param-policy'),
@@ -483,7 +487,6 @@ sudo chmod +x /usr/libexec/docker/cli-plugins/docker-compose
 
 # Install and start CloudWatch Agent
 dnf install -y amazon-cloudwatch-agent
-amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c ssm:${cloudwatchAgentConfig.name}
 `,
   },
   { ignoreChanges: ['ami'] },
@@ -496,6 +499,9 @@ new aws.ec2.EipAssociation('websites-server-eip-assoc', {
   instanceId: websitesServer.id,
   allocationId: websitesServerEip.id,
 });
+
+export const wbsitesServerUsername = 'ec2-user';
+export const wbsitesServerEndpoint = websitesServerEip.publicDns;
 
 // Back up the EC2 instance using AWS Backup (EBS volume backup)
 const websitesServerBackupVault = new aws.backup.Vault(
@@ -555,9 +561,110 @@ new aws.backup.Selection('websites-server-backup-selection', {
   resources: [websitesServer.arn],
 });
 
-const websitesServerDeployDocument = new aws.ssm.Document(
-  'websites-server-deploy-document',
-  {
+// Apply Cloudwatch Agent config
+createAssociation({
+  name: 'cloudwatch-agent-config-association',
+  instances: [websitesServer],
+  document: new aws.ssm.Document('cloudwatch-agent-config-document', {
+    name: name('cloudwatch-agent-config'),
+    documentType: 'Command',
+    documentFormat: 'JSON',
+    content: pulumi.jsonStringify({
+      schemaVersion: '2.2',
+      description:
+        'Fetch and apply CloudWatch Agent configuration from SSM Parameter Store',
+      mainSteps: [
+        {
+          action: 'aws:runShellScript',
+          name: 'fetchCloudWatchAgentConfig',
+          inputs: {
+            runCommand: [
+              pulumi.interpolate`amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c ssm:${cloudwatchAgentConfigParam.name}`,
+            ],
+          },
+        },
+      ],
+    }),
+    tags: { proj },
+  }),
+  deps: [
+    {
+      name: 'cloudwatch-agent-config-config-dep',
+      parameter: cloudwatchAgentConfigParam,
+    },
+  ],
+});
+
+// Set up WP-CLI
+createAssociation({
+  name: 'websites-server-wp-cli-association',
+  instances: [websitesServer],
+  document: new aws.ssm.Document('websites-server-wp-cli-document', {
+    name: name('websites-server-wp-cli'),
+    documentType: 'Command',
+    documentFormat: 'YAML',
+    content: pulumi
+      .all([dbInstance.endpoint, dbInstance.username, dbPassword.id])
+      .apply(([dbHost, dbUser, dbPasswordSecretId]) =>
+        pulumi.jsonStringify(
+          {
+            schemaVersion: '2.2',
+            description: 'Install WP CLI for WordPress websites',
+            mainSteps: [
+              {
+                action: 'aws:runShellScript',
+                name: 'deployWebsites',
+                inputs: {
+                  runCommand: [
+                    ...`
+set -eux
+
+cat > /usr/local/bin/wp-cli << 'EOF'
+#!/bin/bash
+WEBSITE="$1"
+if [ -z "$WEBSITE" ]; then
+  echo "Website argument not provided. Possible values are: ${websiteNames.join(', ')}." >&2
+  exit 1
+fi
+if [ ! -d "/var/www/$WEBSITE/wp-data" ]; then
+  echo "Directory /var/www/$WEBSITE/wp-data does not exist" >&2
+  exit 1
+fi
+DB_PASSWORD="$(aws secretsmanager get-secret-value --secret-id ${dbPasswordSecretId} --region ${region} --query SecretString --output text)"
+docker run -it --rm \
+  -v /var/www/$WEBSITE/wp-data:/var/www/html \
+  -e WORDPRESS_DB_HOST="${dbHost}" \
+  -e WORDPRESS_DB_USER="${dbUser}" \
+  -e WORDPRESS_DB_NAME=$WEBSITE \
+  -e WORDPRESS_DB_PASSWORD="$DB_PASSWORD" \
+  --entrypoint bash \
+  wordpress:cli
+EOF
+chmod +x /usr/local/bin/wp-cli
+`
+                      .split('\n')
+                      .map((line) => line.trim())
+                      .filter(Boolean)
+                      .filter((line) => !line.startsWith('#')),
+                  ],
+                },
+              },
+            ],
+          },
+          undefined,
+          2,
+        ),
+      ),
+    tags: { proj },
+  }),
+  deps: [],
+});
+
+// Deploy websites
+createAssociation({
+  name: 'websites-server-deploy-association',
+  instances: [websitesServer],
+  document: new aws.ssm.Document('websites-server-deploy-document', {
     name: name('websites-server-deploy'),
     documentType: 'Command',
     documentFormat: 'YAML',
@@ -637,91 +744,14 @@ docker compose up -d --remove-orphans --wait
           ),
       ),
     tags: { proj },
-  },
-);
-new aws.ssm.Association('websites-server-deploy-association', {
-  name: websitesServerDeployDocument.name,
-  targets: [
+  }),
+  deps: [
     {
-      key: 'InstanceIds',
-      values: [websitesServer.id],
+      name: 'websites-server-deploy-compose-dep',
+      parameter: websiteComposeParam,
     },
   ],
 });
-
-const websitesServerWpCliDocument = new aws.ssm.Document(
-  'websites-server-wp-cli-document',
-  {
-    name: name('websites-server-wp-cli'),
-    documentType: 'Command',
-    documentFormat: 'YAML',
-    content: pulumi
-      .all([dbInstance.endpoint, dbInstance.username, dbPassword.id])
-      .apply(([dbHost, dbUser, dbPasswordSecretId]) =>
-        pulumi.jsonStringify(
-          {
-            schemaVersion: '2.2',
-            description: 'Install WP CLI for WordPress websites',
-            mainSteps: [
-              {
-                action: 'aws:runShellScript',
-                name: 'deployWebsites',
-                inputs: {
-                  runCommand: [
-                    ...`
-set -eux
-
-cat > /usr/local/bin/wp-cli << 'EOF'
-#!/bin/bash
-WEBSITE="$1"
-if [ -z "$WEBSITE" ]; then
-  echo "Website argument not provided. Possible values are: ${websiteNames.join(', ')}." >&2
-  exit 1
-fi
-if [ ! -d "/var/www/$WEBSITE/wp-data" ]; then
-  echo "Directory /var/www/$WEBSITE/wp-data does not exist" >&2
-  exit 1
-fi
-DB_PASSWORD="$(aws secretsmanager get-secret-value --secret-id ${dbPasswordSecretId} --region ${region} --query SecretString --output text)"
-docker run -it --rm \
-  -v /var/www/$WEBSITE/wp-data:/var/www/html \
-  -e WORDPRESS_DB_HOST="${dbHost}" \
-  -e WORDPRESS_DB_USER="${dbUser}" \
-  -e WORDPRESS_DB_NAME=$WEBSITE \
-  -e WORDPRESS_DB_PASSWORD="$DB_PASSWORD" \
-  --entrypoint bash \
-  wordpress:cli
-EOF
-chmod +x /usr/local/bin/wp-cli
-`
-                      .split('\n')
-                      .map((line) => line.trim())
-                      .filter(Boolean)
-                      .filter((line) => !line.startsWith('#')),
-                  ],
-                },
-              },
-            ],
-          },
-          undefined,
-          2,
-        ),
-      ),
-    tags: { proj },
-  },
-);
-new aws.ssm.Association('websites-server-wp-cli-association', {
-  name: websitesServerWpCliDocument.name,
-  targets: [
-    {
-      key: 'InstanceIds',
-      values: [websitesServer.id],
-    },
-  ],
-});
-
-export const wbsitesServerUsername = 'ec2-user';
-export const wbsitesServerEndpoint = websitesServerEip.publicDns;
 
 // Application Load Balancer (HTTP only - CloudFront handles SSL)
 const lb = new awsx.lb.ApplicationLoadBalancer('lb', {

@@ -87,3 +87,6 @@ export function name(suffix?: string) {
   }
   return `${proj}-${stack}-${suffix}`;
 }
+
+const caller = aws.getCallerIdentityOutput();
+export const accountId = caller.accountId;
