@@ -88,6 +88,7 @@ const triggerFn = new aws.lambda.CallbackFunction(
   'association-trigger-lambda',
   {
     role: lambdaRole,
+    runtime: aws.lambda.Runtime.NodeJS22dX,
     callback: async (event: { associationId: string }) => {
       const { SSMClient, StartAssociationsOnceCommand } = await import(
         '@aws-sdk/client-ssm'
