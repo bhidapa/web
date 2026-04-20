@@ -89,6 +89,28 @@ const wp: WordpressWebsite[] = [
   },
 ];
 
+/*
+
+clone websites to static files using siteone-crawler https://crawler.siteone.io/:
+
+```sh
+siteone-crawler \
+  --url=https://example.com \
+  --offline-export-dir=./example-clone \
+  --offline-export-preserve-urls \
+  --offline-export-remove-unwanted-code=0
+```
+
+then sync to an s3 bucket using rclone https://rclone.org/:
+
+```sh
+rclone sync ./example-clone s3:example-bucket \
+  --progress \
+  --transfers=32
+```
+
+*/
+
 const st: StaticWebsite[] = [
   {
     type: 'static',
