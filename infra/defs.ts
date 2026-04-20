@@ -118,6 +118,18 @@ const st: StaticWebsite[] = [
     hostedZone: 'bhidapa.ba',
     domain: 'congress.bhidapa.ba',
   },
+  {
+    type: 'static',
+    name: 'second-congress',
+    hostedZone: 'bhidapa.ba',
+    domain: 'second.congress.bhidapa.ba',
+  },
+  {
+    type: 'static',
+    name: 'first-congress',
+    hostedZone: 'bhidapa.ba',
+    domain: 'first.congress.bhidapa.ba',
+  },
 ];
 
 export function isStatic(
