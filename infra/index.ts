@@ -1007,6 +1007,29 @@ for (const website of websites) {
       },
     );
 
+    // rewrite URIs like /path/ or /path to /path/index.html so S3 REST API can find the object
+    // (defaultRootObject only handles the root, OAC bypasses the S3 website endpoint)
+    const indexRewriteFn = new aws.cloudfront.Function(
+      `${website.name}-index-rewrite-fn`,
+      {
+        name: name(`${website.name}-index-rewrite`),
+        runtime: 'cloudfront-js-2.0',
+        publish: true,
+        code: `
+function handler(event) {
+  var request = event.request;
+  var uri = request.uri;
+  if (uri.endsWith('/')) {
+    request.uri += 'index.html';
+  } else if (!uri.includes('.')) {
+    request.uri += '/index.html';
+  }
+  return request;
+}
+`,
+      },
+    );
+
     const oac = new aws.cloudfront.OriginAccessControl(`${website.name}-oac`, {
       name: name(`${website.name}-oac`),
       description: `OAC for ${website.name} S3 bucket`,
@@ -1060,6 +1083,12 @@ for (const website of websites) {
             ? cfCacheDisabledPolicy.apply((p) => p.id!)
             : cfS3CachePolicy.id,
           compress: true,
+          functionAssociations: [
+            {
+              eventType: 'viewer-request',
+              functionArn: indexRewriteFn.arn,
+            },
+          ],
         },
         orderedCacheBehaviors: [],
         restrictions: {
