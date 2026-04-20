@@ -43,7 +43,7 @@ jobs:
       group: infra-prod
       cancel-in-progress: false
     outputs:
-      website-names: ${{ steps.infra.outputs.websiteNames }}
+      wordpress-website-names: ${{ steps.infra.outputs.wordpressWebsiteNames }}
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v4
@@ -73,7 +73,7 @@ jobs:
       cancel-in-progress: false
     strategy:
       matrix:
-        website: ${{ fromJson(needs.infra.outputs.website-names) }}
+        website: ${{ fromJson(needs.infra.outputs.wordpress-website-names) }}
     steps:
       - uses: actions/checkout@v5
       - uses: oven-sh/setup-bun@v2

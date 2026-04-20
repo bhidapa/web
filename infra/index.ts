@@ -3,7 +3,15 @@ import * as aws_native from '@pulumi/aws-native';
 import * as awsx from '@pulumi/awsx';
 import * as pulumi from '@pulumi/pulumi';
 import * as fs from 'fs';
-import { name, portOf, proj, region, websites } from './defs.ts';
+import {
+  isStatic,
+  isWordpress,
+  name,
+  portOf,
+  proj,
+  region,
+  websites,
+} from './defs.ts';
 import { newImage } from './image.ts';
 import { createAssociation } from './association.ts';
 
@@ -183,7 +191,7 @@ const websitesServerSecurityGroup = new aws.ec2.SecurityGroup(
         cidrBlocks: ['0.0.0.0/0'],
         description: 'SSH access',
       },
-      ...websites.map((website) => ({
+      ...websites.filter(isWordpress).map((website) => ({
         fromPort: portOf(website),
         toPort: portOf(website),
         protocol: 'tcp',
@@ -628,7 +636,10 @@ cat > /usr/local/bin/wp-cli << 'EOF'
 #!/bin/bash
 WEBSITE="$1"
 if [ -z "$WEBSITE" ]; then
-  echo "Website argument not provided. Possible values are: ${websiteNames.join(', ')}." >&2
+  echo "Website argument not provided. Possible values are: ${websites
+    .filter(isWordpress)
+    .map((w) => w.name)
+    .join(', ')}." >&2
   exit 1
 fi
 if [ ! -d "/var/www/$WEBSITE/wp-data" ]; then
@@ -709,6 +720,7 @@ set -eux
 aws ecr get-login-password --region ${region} | docker login --username AWS --password-stdin ${ecrRepositoryUrl}
 
 ${websites
+  .filter(isWordpress)
   .map(
     (website) => `
 mkdir -p /var/www/${website.name}
@@ -866,49 +878,44 @@ const wafWebAcl = new aws.wafv2.WebAcl(
 );
 
 // Export website names
-export const websiteNames = websites.map((w) => w.name);
+export const wordpressWebsiteNames = websites
+  .filter(isWordpress)
+  .map((w) => w.name);
+export const staticWebsiteNames = websites.filter(isStatic).map((w) => w.name);
 
-// For Each Website
+// AWS Managed CloudFront policies (used by both WordPress and S3 distributions)
+const cfCacheDisabledPolicy = aws.cloudfront.getCachePolicyOutput({
+  name: 'Managed-CachingDisabled',
+});
+const cfForwardAllRequestPolicy = aws.cloudfront.getOriginRequestPolicyOutput({
+  name: 'Managed-AllViewerAndCloudFrontHeaders-2022-06',
+});
+
+// The only valid CloudFront Distribution behavior method combinations.
+const cfCacheBehaviorMethods = {
+  all: {
+    allowedMethods: [
+      'GET',
+      'HEAD',
+      'OPTIONS',
+      'PUT',
+      'POST',
+      'PATCH',
+      'DELETE',
+    ],
+    cachedMethods: ['GET', 'HEAD', 'OPTIONS'],
+  },
+  onlyGet: {
+    allowedMethods: ['GET', 'HEAD'],
+    cachedMethods: ['GET', 'HEAD'],
+  },
+  getAndOpts: {
+    allowedMethods: ['GET', 'HEAD', 'OPTIONS'],
+    cachedMethods: ['GET', 'HEAD', 'OPTIONS'],
+  },
+};
+
 for (const website of websites) {
-  // Use Application Load Balancer
-  const tg = new aws.lb.TargetGroup(`${website.name}-lb-tg`, {
-    name: name(`${website.name}-lb-tg`),
-    vpcId: vpc.id,
-    targetType: 'instance',
-    port: portOf(website),
-    protocol: 'HTTP',
-    tags: { proj },
-    healthCheck: {
-      enabled: true,
-      matcher: '200-399',
-      path: '/', // TODO: integrate with WP_Site_Health but needs authentication
-    },
-  });
-  new aws.lb.TargetGroupAttachment(`${website.name}-lb-tg-attachment`, {
-    targetGroupArn: tg.arn,
-    targetId: websitesServer.id,
-    port: portOf(website),
-  });
-  const lbRulePriority = 100 * (websites.indexOf(website) + 1);
-  new aws.lb.ListenerRule(`${website.name}-lb-rule`, {
-    listenerArn: lbHttp.apply((l) => l.arn),
-    priority: lbRulePriority,
-    conditions: [
-      {
-        hostHeader: {
-          values: [website.domain],
-        },
-      },
-    ],
-    actions: [
-      {
-        type: 'forward',
-        targetGroupArn: tg.arn,
-      },
-    ],
-    tags: { proj },
-  });
-
   // Hosted Zone for DNS
   const hostedZone = aws.route53.getZoneOutput({
     name: website.hostedZone,
@@ -969,56 +976,239 @@ for (const website of websites) {
     { provider: usEast1Provider },
   );
 
-  // CloudFront Cache Policies for WordPress Best Practices
-  // as per https://docs.aws.amazon.com/whitepapers/latest/best-practices-wordpress/cloudfront-distribution-creation.html
+  let cfDistribution: aws.cloudfront.Distribution;
 
-  // NOTE: we want to manually invalidate the cache and therefore can set high TTLs
+  if (isStatic(website)) {
+    // S3 static website bucket (private, served via CloudFront OAC)
+    const bucket = new aws.s3.Bucket(`${website.name}-bucket`, {
+      bucket: 'static-bhidapa-' + name(website.name),
+      tags: { proj, Name: name(website.name) },
+    });
 
-  // Static Assets Cache Policy (wp-content/*, wp-includes/*)
-  const cfStaticCachePolicy = new aws.cloudfront.CachePolicy(
-    `${website.name}-cf-static-cache-policy`,
-    {
-      name: name(`${website.name}-static-cache`),
-      comment: 'Cache policy for WordPress static content',
-      defaultTtl: 604800, // 1 week
-      minTtl: 0,
-      maxTtl: 31536000, // 1 year
-      parametersInCacheKeyAndForwardedToOrigin: {
-        enableAcceptEncodingGzip: true,
-        enableAcceptEncodingBrotli: true,
+    new aws.s3.BucketWebsiteConfiguration(`${website.name}-bucket-website`, {
+      bucket: bucket.id,
+      indexDocument: { suffix: 'index.html' },
+    });
+
+    new aws.s3.BucketVersioning(`${website.name}-bucket-versioning`, {
+      bucket: bucket.id,
+      versioningConfiguration: { status: 'Disabled' },
+    });
+
+    // block all public access - only cloudfront can read via OAC
+    new aws.s3.BucketPublicAccessBlock(
+      `${website.name}-bucket-public-access-block`,
+      {
+        bucket: bucket.id,
+        blockPublicAcls: true,
+        blockPublicPolicy: true,
+        ignorePublicAcls: true,
+        restrictPublicBuckets: true,
+      },
+    );
+
+    const oac = new aws.cloudfront.OriginAccessControl(`${website.name}-oac`, {
+      name: name(`${website.name}-oac`),
+      description: `OAC for ${website.name} S3 bucket`,
+      originAccessControlOriginType: 's3',
+      signingBehavior: 'always',
+      signingProtocol: 'sigv4',
+    });
+
+    // aggressive cache policy - s3 content is purely static, invalidate manually when deploying
+    const cfS3CachePolicy = new aws.cloudfront.CachePolicy(
+      `${website.name}-cf-s3-cache-policy`,
+      {
+        name: name(`${website.name}-s3-cache`),
+        comment: 'Aggressive cache policy for S3 static website content',
+        defaultTtl: 604800, // 1 week
+        minTtl: 0,
+        maxTtl: 31536000, // 1 year
+        parametersInCacheKeyAndForwardedToOrigin: {
+          enableAcceptEncodingGzip: true,
+          enableAcceptEncodingBrotli: true,
+          queryStringsConfig: { queryStringBehavior: 'none' },
+          headersConfig: { headerBehavior: 'none' },
+          cookiesConfig: { cookieBehavior: 'none' },
+        },
+      },
+    );
+
+    cfDistribution = new aws.cloudfront.Distribution(
+      `${website.name}-cf-distribution`,
+      {
+        enabled: true,
+        isIpv6Enabled: true,
+        httpVersion: 'http2',
+        priceClass: 'PriceClass_100', // Use only North America and Europe
+        aliases: allWebsites.map((w) => w.domain),
+        comment: `CloudFront distribution for ${website.name}`,
+        webAclId: wafWebAcl.arn,
+        origins: [
+          {
+            domainName: bucket.bucketRegionalDomainName,
+            originId: 's3',
+            originAccessControlId: oac.id,
+          },
+        ],
+        defaultRootObject: 'index.html',
+        defaultCacheBehavior: {
+          targetOriginId: 's3',
+          viewerProtocolPolicy: 'redirect-to-https',
+          ...cfCacheBehaviorMethods.getAndOpts,
+          cachePolicyId: website.noCache
+            ? cfCacheDisabledPolicy.apply((p) => p.id!)
+            : cfS3CachePolicy.id,
+          compress: true,
+        },
+        orderedCacheBehaviors: [],
+        restrictions: {
+          geoRestriction: {
+            restrictionType: 'none',
+          },
+        },
+        viewerCertificate: {
+          acmCertificateArn: cfCert.arn,
+          sslSupportMethod: 'sni-only',
+          minimumProtocolVersion: 'TLSv1.2_2021',
+        },
+        tags: { proj, Name: website.name },
+      },
+      { dependsOn: [cfCertsValidation] },
+    );
+
+    // allow cloudfront to read from the private bucket via OAC
+    new aws.s3.BucketPolicy(`${website.name}-bucket-policy`, {
+      bucket: bucket.id,
+      policy: pulumi.jsonStringify({
+        Version: '2012-10-17',
+        Statement: [
+          {
+            Sid: 'AllowCloudFrontServicePrincipal',
+            Effect: 'Allow',
+            Principal: { Service: 'cloudfront.amazonaws.com' },
+            Action: 's3:GetObject',
+            Resource: pulumi.interpolate`${bucket.arn}/*`,
+            Condition: {
+              StringEquals: {
+                'AWS:SourceArn': cfDistribution.arn,
+              },
+            },
+          },
+        ],
+      }),
+    });
+  } else {
+    // Use Application Load Balancer
+    const tg = new aws.lb.TargetGroup(`${website.name}-lb-tg`, {
+      name: name(`${website.name}-lb-tg`),
+      vpcId: vpc.id,
+      targetType: 'instance',
+      port: portOf(website),
+      protocol: 'HTTP',
+      tags: { proj },
+      healthCheck: {
+        enabled: true,
+        matcher: '200-399',
+        path: '/', // TODO: integrate with WP_Site_Health but needs authentication
+      },
+    });
+    new aws.lb.TargetGroupAttachment(`${website.name}-lb-tg-attachment`, {
+      targetGroupArn: tg.arn,
+      targetId: websitesServer.id,
+      port: portOf(website),
+    });
+    const lbRulePriority = 100 * (websites.indexOf(website) + 1);
+    new aws.lb.ListenerRule(`${website.name}-lb-rule`, {
+      listenerArn: lbHttp.apply((l) => l.arn),
+      priority: lbRulePriority,
+      conditions: [
+        {
+          hostHeader: {
+            values: [website.domain],
+          },
+        },
+      ],
+      actions: [
+        {
+          type: 'forward',
+          targetGroupArn: tg.arn,
+        },
+      ],
+      tags: { proj },
+    });
+
+    // CloudFront Cache Policies for WordPress Best Practices
+    // as per https://docs.aws.amazon.com/whitepapers/latest/best-practices-wordpress/cloudfront-distribution-creation.html
+
+    // NOTE: we want to manually invalidate the cache and therefore can set high TTLs
+
+    // Static Assets Cache Policy (wp-content/*, wp-includes/*)
+    const cfStaticCachePolicy = new aws.cloudfront.CachePolicy(
+      `${website.name}-cf-static-cache-policy`,
+      {
+        name: name(`${website.name}-static-cache`),
+        comment: 'Cache policy for WordPress static content',
+        defaultTtl: 604800, // 1 week
+        minTtl: 0,
+        maxTtl: 31536000, // 1 year
+        parametersInCacheKeyAndForwardedToOrigin: {
+          enableAcceptEncodingGzip: true,
+          enableAcceptEncodingBrotli: true,
+          queryStringsConfig: { queryStringBehavior: 'all' },
+          headersConfig: { headerBehavior: 'none' },
+          cookiesConfig: { cookieBehavior: 'none' },
+        },
+      },
+    );
+    const cfStaticOriginRequestPolicy = new aws.cloudfront.OriginRequestPolicy(
+      `${website.name}-cf-static-origin-request-policy`,
+      {
+        name: name(`${website.name}-static-origin`),
+        comment: 'Origin request policy for WordPress static content',
         queryStringsConfig: { queryStringBehavior: 'all' },
-        headersConfig: { headerBehavior: 'none' },
+        headersConfig: {
+          // we need the host header for the alb rules
+          headerBehavior: 'whitelist',
+          headers: { items: ['Host', 'CloudFront-Forwarded-Proto'] },
+        },
         cookiesConfig: { cookieBehavior: 'none' },
       },
-    },
-  );
-  const cfStaticOriginRequestPolicy = new aws.cloudfront.OriginRequestPolicy(
-    `${website.name}-cf-static-origin-request-policy`,
-    {
-      name: name(`${website.name}-static-origin`),
-      comment: 'Origin request policy for WordPress static content',
-      queryStringsConfig: { queryStringBehavior: 'all' },
-      headersConfig: {
-        // we need the host header for the alb rules
-        headerBehavior: 'whitelist',
-        headers: { items: ['Host', 'CloudFront-Forwarded-Proto'] },
-      },
-      cookiesConfig: { cookieBehavior: 'none' },
-    },
-  );
+    );
 
-  // Dynamic Pages Cache Policy (default behavior)
-  const cfDynamicCachePolicy = new aws.cloudfront.CachePolicy(
-    `${website.name}-cf-dynamic-cache-policy`,
-    {
-      name: name(`${website.name}-dynamic-cache`),
-      comment: 'Cache policy for WordPress dynamic front-end with invalidation',
-      defaultTtl: 604800, // 1 week
-      minTtl: 0,
-      maxTtl: 31536000, // 1 year
-      parametersInCacheKeyAndForwardedToOrigin: {
-        enableAcceptEncodingGzip: true,
-        enableAcceptEncodingBrotli: true,
+    // Dynamic Pages Cache Policy (default behavior)
+    const cfDynamicCachePolicy = new aws.cloudfront.CachePolicy(
+      `${website.name}-cf-dynamic-cache-policy`,
+      {
+        name: name(`${website.name}-dynamic-cache`),
+        comment:
+          'Cache policy for WordPress dynamic front-end with invalidation',
+        defaultTtl: 604800, // 1 week
+        minTtl: 0,
+        maxTtl: 31536000, // 1 year
+        parametersInCacheKeyAndForwardedToOrigin: {
+          enableAcceptEncodingGzip: true,
+          enableAcceptEncodingBrotli: true,
+          queryStringsConfig: { queryStringBehavior: 'all' },
+          headersConfig: {
+            headerBehavior: 'whitelist',
+            headers: { items: ['Host', 'CloudFront-Forwarded-Proto'] },
+          },
+          cookiesConfig: {
+            cookieBehavior: 'whitelist',
+            cookies: {
+              // because of the cookies in cache key, no logged-in user content (like the e-library) is cached
+              items: ['comment_*', 'wordpress_*', 'wp-settings-*'],
+            },
+          },
+        },
+      },
+    );
+    const cfDynamicOriginRequestPolicy = new aws.cloudfront.OriginRequestPolicy(
+      `${website.name}-cf-dynamic-origin-request-policy`,
+      {
+        name: name(`${website.name}-dynamic-origin`),
+        comment: 'Origin request policy for WordPress dynamic front-end',
         queryStringsConfig: { queryStringBehavior: 'all' },
         headersConfig: {
           headerBehavior: 'whitelist',
@@ -1027,187 +1217,176 @@ for (const website of websites) {
         cookiesConfig: {
           cookieBehavior: 'whitelist',
           cookies: {
-            // because of the cookies in cache key, no logged-in user content (like the e-library) is cached
+            // because of the cookies forwarding, no logged-in user content (like the e-library) is cached
             items: ['comment_*', 'wordpress_*', 'wp-settings-*'],
           },
         },
       },
-    },
-  );
-  const cfDynamicOriginRequestPolicy = new aws.cloudfront.OriginRequestPolicy(
-    `${website.name}-cf-dynamic-origin-request-policy`,
-    {
-      name: name(`${website.name}-dynamic-origin`),
-      comment: 'Origin request policy for WordPress dynamic front-end',
-      queryStringsConfig: { queryStringBehavior: 'all' },
-      headersConfig: {
-        headerBehavior: 'whitelist',
-        headers: { items: ['Host', 'CloudFront-Forwarded-Proto'] },
-      },
-      cookiesConfig: {
-        cookieBehavior: 'whitelist',
-        cookies: {
-          // because of the cookies forwarding, no logged-in user content (like the e-library) is cached
-          items: ['comment_*', 'wordpress_*', 'wp-settings-*'],
+    );
+
+    // CloudFront Distribution
+    cfDistribution = new aws.cloudfront.Distribution(
+      `${website.name}-cf-distribution`,
+      {
+        enabled: true,
+        isIpv6Enabled: true,
+        httpVersion: 'http2',
+        priceClass: 'PriceClass_100', // Use only North America and Europe
+        aliases: allWebsites.map((w) => w.domain),
+        comment: `CloudFront distribution for ${website.name}`,
+        webAclId: wafWebAcl.arn,
+        origins: [
+          {
+            domainName: lb.loadBalancer.dnsName,
+            originId: 'alb',
+            customOriginConfig: {
+              httpPort: 80,
+              originProtocolPolicy: 'http-only',
+              originReadTimeout: 60,
+              originKeepaliveTimeout: 5,
+              // not used but required
+              httpsPort: 443,
+              originSslProtocols: ['TLSv1.2'],
+            },
+          },
+        ],
+        // Default behavior: Dynamic front-end content
+        defaultCacheBehavior: {
+          targetOriginId: 'alb',
+          viewerProtocolPolicy: 'redirect-to-https',
+          ...cfCacheBehaviorMethods.all,
+          cachePolicyId: website.noCache
+            ? cfCacheDisabledPolicy.apply((p) => p.id!)
+            : cfDynamicCachePolicy.id,
+          originRequestPolicyId: cfDynamicOriginRequestPolicy.id,
+          compress: true,
         },
-      },
-    },
-  );
-
-  // AWS Managed Policies
-  const cfCacheDisabledPolicy = aws.cloudfront.getCachePolicyOutput({
-    name: 'Managed-CachingDisabled',
-  });
-  const cfForwardAllRequestPolicy = aws.cloudfront.getOriginRequestPolicyOutput(
-    {
-      name: 'Managed-AllViewerAndCloudFrontHeaders-2022-06',
-    },
-  );
-
-  // The only valid CloudFront Distribution behavior method combinations.
-  const cfCacheBehaviorMethods = {
-    all: {
-      allowedMethods: [
-        'GET',
-        'HEAD',
-        'OPTIONS',
-        'PUT',
-        'POST',
-        'PATCH',
-        'DELETE',
-      ],
-      cachedMethods: ['GET', 'HEAD', 'OPTIONS'],
-    },
-    onlyGet: {
-      allowedMethods: ['GET', 'HEAD'],
-      cachedMethods: ['GET', 'HEAD'],
-    },
-    getAndOpts: {
-      allowedMethods: ['GET', 'HEAD', 'OPTIONS'],
-      cachedMethods: ['GET', 'HEAD', 'OPTIONS'],
-    },
-  };
-
-  // CloudFront Distribution
-  const cfDistribution = new aws.cloudfront.Distribution(
-    `${website.name}-cf-distribution`,
-    {
-      enabled: true,
-      isIpv6Enabled: true,
-      httpVersion: 'http2',
-      priceClass: 'PriceClass_100', // Use only North America and Europe
-      aliases: allWebsites.map((w) => w.domain),
-      comment: `CloudFront distribution for ${website.name}`,
-      webAclId: wafWebAcl.arn,
-      origins: [
-        {
-          domainName: lb.loadBalancer.dnsName,
-          originId: 'alb',
-          customOriginConfig: {
-            httpPort: 80,
-            originProtocolPolicy: 'http-only',
-            originReadTimeout: 60,
-            originKeepaliveTimeout: 5,
-            // not used but required
-            httpsPort: 443,
-            originSslProtocols: ['TLSv1.2'],
+        // Ordered cache behaviors (evaluated in order, first match wins)
+        orderedCacheBehaviors: [
+          // WordPress Admin Dashboard - HTTPS only, pass everything
+          {
+            pathPattern: 'wp-admin/*',
+            targetOriginId: 'alb',
+            viewerProtocolPolicy: 'https-only',
+            ...cfCacheBehaviorMethods.all,
+            cachePolicyId: cfCacheDisabledPolicy.apply((p) => p.id!),
+            originRequestPolicyId: cfForwardAllRequestPolicy.apply(
+              (p) => p.id!,
+            ),
+          },
+          // WordPress Login Page - HTTPS only, pass everything
+          {
+            pathPattern: 'wp-login.php',
+            targetOriginId: 'alb',
+            viewerProtocolPolicy: 'https-only',
+            ...cfCacheBehaviorMethods.all,
+            cachePolicyId: cfCacheDisabledPolicy.apply((p) => p.id!),
+            originRequestPolicyId: cfForwardAllRequestPolicy.apply(
+              (p) => p.id!,
+            ),
+          },
+          // WordPress API - HTTPS only, pass everything
+          {
+            pathPattern: 'wp-json/*',
+            targetOriginId: 'alb',
+            viewerProtocolPolicy: 'https-only',
+            ...cfCacheBehaviorMethods.all,
+            cachePolicyId: cfCacheDisabledPolicy.apply((p) => p.id!),
+            originRequestPolicyId: cfForwardAllRequestPolicy.apply(
+              (p) => p.id!,
+            ),
+          },
+          {
+            pathPattern: 'xmlrpc.php',
+            targetOriginId: 'alb',
+            viewerProtocolPolicy: 'https-only',
+            ...cfCacheBehaviorMethods.all,
+            cachePolicyId: cfCacheDisabledPolicy.apply((p) => p.id!),
+            originRequestPolicyId: cfForwardAllRequestPolicy.apply(
+              (p) => p.id!,
+            ),
+          },
+          {
+            pathPattern: 'wp-cron.php',
+            targetOriginId: 'alb',
+            viewerProtocolPolicy: 'https-only',
+            ...cfCacheBehaviorMethods.all, // we need both GET and POST because of loopback requests
+            cachePolicyId: cfCacheDisabledPolicy.apply((p) => p.id!),
+            originRequestPolicyId: cfForwardAllRequestPolicy.apply(
+              (p) => p.id!,
+            ),
+          },
+          // Static Content (core WordPress static files, uploads, themes, plugins)
+          {
+            pathPattern: 'wp-content/*',
+            targetOriginId: 'alb',
+            viewerProtocolPolicy: 'redirect-to-https',
+            ...cfCacheBehaviorMethods.getAndOpts,
+            cachePolicyId: website.noCache
+              ? cfCacheDisabledPolicy.apply((p) => p.id!)
+              : cfStaticCachePolicy.id,
+            originRequestPolicyId: cfStaticOriginRequestPolicy.id,
+            compress: true,
+          },
+          {
+            pathPattern: 'wp-includes/*',
+            targetOriginId: 'alb',
+            viewerProtocolPolicy: 'redirect-to-https',
+            ...cfCacheBehaviorMethods.getAndOpts,
+            cachePolicyId: website.noCache
+              ? cfCacheDisabledPolicy.apply((p) => p.id!)
+              : cfStaticCachePolicy.id,
+            originRequestPolicyId: cfStaticOriginRequestPolicy.id,
+            compress: true,
+          },
+        ],
+        restrictions: {
+          geoRestriction: {
+            restrictionType: 'none',
           },
         },
-      ],
-      // Default behavior: Dynamic front-end content
-      defaultCacheBehavior: {
-        targetOriginId: 'alb',
-        viewerProtocolPolicy: 'redirect-to-https',
-        ...cfCacheBehaviorMethods.all,
-        cachePolicyId: website.noCache
-          ? cfCacheDisabledPolicy.apply((p) => p.id!)
-          : cfDynamicCachePolicy.id,
-        originRequestPolicyId: cfDynamicOriginRequestPolicy.id,
-        compress: true,
+        viewerCertificate: {
+          acmCertificateArn: cfCert.arn,
+          sslSupportMethod: 'sni-only',
+          minimumProtocolVersion: 'TLSv1.2_2021',
+        },
+        tags: { proj, Name: website.name },
       },
-      // Ordered cache behaviors (evaluated in order, first match wins)
-      orderedCacheBehaviors: [
-        // WordPress Admin Dashboard - HTTPS only, pass everything
+      { dependsOn: [cfCertsValidation] },
+    );
+
+    // ALB redirect rules for alternate domains
+    for (const alt of website.alternate || []) {
+      new aws.lb.ListenerRule(
+        `${website.name}-to-${alt.name}-redirect-lb-rule`,
         {
-          pathPattern: 'wp-admin/*',
-          targetOriginId: 'alb',
-          viewerProtocolPolicy: 'https-only',
-          ...cfCacheBehaviorMethods.all,
-          cachePolicyId: cfCacheDisabledPolicy.apply((p) => p.id!),
-          originRequestPolicyId: cfForwardAllRequestPolicy.apply((p) => p.id!),
+          listenerArn: lbHttp.arn,
+          priority: lbRulePriority + 10 + website.alternate!.indexOf(alt),
+          conditions: [
+            {
+              hostHeader: {
+                values: [alt.domain],
+              },
+            },
+          ],
+          actions: [
+            {
+              type: 'redirect',
+              redirect: {
+                host: website.domain,
+                path: '/#{path}',
+                query: '#{query}',
+                protocol: 'HTTPS',
+                port: '443',
+                statusCode: 'HTTP_301',
+              },
+            },
+          ],
+          tags: { proj },
         },
-        // WordPress Login Page - HTTPS only, pass everything
-        {
-          pathPattern: 'wp-login.php',
-          targetOriginId: 'alb',
-          viewerProtocolPolicy: 'https-only',
-          ...cfCacheBehaviorMethods.all,
-          cachePolicyId: cfCacheDisabledPolicy.apply((p) => p.id!),
-          originRequestPolicyId: cfForwardAllRequestPolicy.apply((p) => p.id!),
-        },
-        // WordPress API - HTTPS only, pass everything
-        {
-          pathPattern: 'wp-json/*',
-          targetOriginId: 'alb',
-          viewerProtocolPolicy: 'https-only',
-          ...cfCacheBehaviorMethods.all,
-          cachePolicyId: cfCacheDisabledPolicy.apply((p) => p.id!),
-          originRequestPolicyId: cfForwardAllRequestPolicy.apply((p) => p.id!),
-        },
-        {
-          pathPattern: 'xmlrpc.php',
-          targetOriginId: 'alb',
-          viewerProtocolPolicy: 'https-only',
-          ...cfCacheBehaviorMethods.all,
-          cachePolicyId: cfCacheDisabledPolicy.apply((p) => p.id!),
-          originRequestPolicyId: cfForwardAllRequestPolicy.apply((p) => p.id!),
-        },
-        {
-          pathPattern: 'wp-cron.php',
-          targetOriginId: 'alb',
-          viewerProtocolPolicy: 'https-only',
-          ...cfCacheBehaviorMethods.all, // we need both GET and POST because of loopback requests
-          cachePolicyId: cfCacheDisabledPolicy.apply((p) => p.id!),
-          originRequestPolicyId: cfForwardAllRequestPolicy.apply((p) => p.id!),
-        },
-        // Static Content (core WordPress static files, uploads, themes, plugins)
-        {
-          pathPattern: 'wp-content/*',
-          targetOriginId: 'alb',
-          viewerProtocolPolicy: 'redirect-to-https',
-          ...cfCacheBehaviorMethods.getAndOpts,
-          cachePolicyId: website.noCache
-            ? cfCacheDisabledPolicy.apply((p) => p.id!)
-            : cfStaticCachePolicy.id,
-          originRequestPolicyId: cfStaticOriginRequestPolicy.id,
-          compress: true,
-        },
-        {
-          pathPattern: 'wp-includes/*',
-          targetOriginId: 'alb',
-          viewerProtocolPolicy: 'redirect-to-https',
-          ...cfCacheBehaviorMethods.getAndOpts,
-          cachePolicyId: website.noCache
-            ? cfCacheDisabledPolicy.apply((p) => p.id!)
-            : cfStaticCachePolicy.id,
-          originRequestPolicyId: cfStaticOriginRequestPolicy.id,
-          compress: true,
-        },
-      ],
-      restrictions: {
-        geoRestriction: {
-          restrictionType: 'none',
-        },
-      },
-      viewerCertificate: {
-        acmCertificateArn: cfCert.arn,
-        sslSupportMethod: 'sni-only',
-        minimumProtocolVersion: 'TLSv1.2_2021',
-      },
-      tags: { proj, Name: website.name },
-    },
-    { dependsOn: [cfCertsValidation] },
-  );
+      );
+    }
+  }
 
   // Point domain DNS to CloudFront
   new aws.route53.Record(`${website.name}-dns-a`, {
@@ -1259,35 +1438,6 @@ for (const website of websites) {
           `Unsupported record type ${alt.recordType} for alternate domain ${alt.domain}`,
         );
     }
-  }
-
-  // ALB redirect rules for alternate domains
-  for (const alt of website.alternate || []) {
-    new aws.lb.ListenerRule(`${website.name}-to-${alt.name}-redirect-lb-rule`, {
-      listenerArn: lbHttp.arn,
-      priority: lbRulePriority + 10 + website.alternate!.indexOf(alt),
-      conditions: [
-        {
-          hostHeader: {
-            values: [alt.domain],
-          },
-        },
-      ],
-      actions: [
-        {
-          type: 'redirect',
-          redirect: {
-            host: website.domain,
-            path: '/#{path}',
-            query: '#{query}',
-            protocol: 'HTTPS',
-            port: '443',
-            statusCode: 'HTTP_301',
-          },
-        },
-      ],
-      tags: { proj },
-    });
   }
 }
 

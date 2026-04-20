@@ -1,7 +1,8 @@
 import * as aws from '@pulumi/aws';
 import * as pulumi from '@pulumi/pulumi';
 
-export interface Website {
+export interface WordpressWebsite {
+  type: 'wordpress';
   name: string;
   hostedZone: string;
   domain: string;
@@ -17,8 +18,21 @@ export interface Website {
   }[];
 }
 
-export const websites: Website[] = [
+export interface StaticWebsite {
+  type: 'static';
+  name: string;
+  hostedZone: string;
+  domain: string;
+  /** Disable caching on Cloudfront. Mainly useful for development. */
+  noCache?: boolean;
+  // No alternate domains for S3 websites, we dont need them for now.
+  // To support alternate domains, we need to use CloudFront Functions.
+  alternate?: never[];
+}
+
+const wp: WordpressWebsite[] = [
   {
+    type: 'wordpress',
     name: 'bhidapa',
     hostedZone: 'bhidapa.ba',
     domain: 'bhidapa.ba',
@@ -55,6 +69,7 @@ export const websites: Website[] = [
     ],
   },
   {
+    type: 'wordpress',
     name: 'akp',
     hostedZone: 'akp.ba',
     domain: 'akp.ba',
@@ -74,7 +89,30 @@ export const websites: Website[] = [
   },
 ];
 
-export function portOf(website: Website): number {
+const st: StaticWebsite[] = [
+  {
+    type: 'static',
+    name: 'congress',
+    hostedZone: 'bhidapa.ba',
+    domain: 'congress.bhidapa.ba',
+  },
+];
+
+export function isStatic(
+  website: WordpressWebsite | StaticWebsite,
+): website is StaticWebsite {
+  return website.type === 'static';
+}
+
+export function isWordpress(
+  website: WordpressWebsite | StaticWebsite,
+): website is WordpressWebsite {
+  return website.type === 'wordpress';
+}
+
+export const websites = [...wp, ...st];
+
+export function portOf(website: WordpressWebsite): number {
   return 8000 + websites.indexOf(website) + 1;
 }
 
