@@ -1075,6 +1075,17 @@ function handler(event) {
           },
         ],
         defaultRootObject: 'index.html',
+        customErrorResponses: [
+          {
+            // we return a 404
+            responseCode: 404,
+            responsePagePath: '/404.html',
+            // to the buckets 403
+            // because the bucket is private and S3 REST API returns 403 for missing objects
+            errorCode: 403,
+            errorCachingMinTtl: 10,
+          },
+        ],
         defaultCacheBehavior: {
           targetOriginId: 's3',
           viewerProtocolPolicy: 'redirect-to-https',
