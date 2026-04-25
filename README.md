@@ -10,5 +10,5 @@ This codebase manages the following websites:
 
 - [BHIDAPA](https://bhidapa.ba/en/)
 - [Academy of Psychotherapy](https://akp.ba/en/)
-- 🔜 [Congress](https://congress.bhidapa.ba/)
+- [Congress](https://congress.bhidapa.ba/) (not WordPress, static websites)
 - 🔜 [Journal](https://journal.bhidapa.ba/) (not WordPress, managing only infra)
