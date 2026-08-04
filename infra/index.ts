@@ -1,6 +1,5 @@
 import * as aws from '@pulumi/aws';
 import * as aws_native from '@pulumi/aws-native';
-import * as awsx from '@pulumi/awsx';
 import * as pulumi from '@pulumi/pulumi';
 import * as fs from 'fs';
 import {
@@ -159,24 +158,6 @@ const cfPrefixList = aws.ec2.getManagedPrefixListOutput({
     },
   ],
 });
-const lbSecurityGroup = new aws.ec2.SecurityGroup('lb-sg', {
-  name: name('lb-sg'),
-  vpcId: vpc.id,
-  description: 'Security group for Application Load Balancer',
-  ingress: [
-    {
-      protocol: 'tcp',
-      fromPort: 80,
-      toPort: 80,
-      prefixListIds: [cfPrefixList.id],
-      description: 'Decrypted HTTP from CloudFront',
-    },
-  ],
-  egress: [
-    { protocol: '-1', fromPort: 0, toPort: 0, cidrBlocks: ['0.0.0.0/0'] },
-  ],
-  tags: { proj, Name: name('lb-sg') },
-});
 const websitesServerSecurityGroup = new aws.ec2.SecurityGroup(
   'websites-server-sg',
   {
@@ -195,8 +176,8 @@ const websitesServerSecurityGroup = new aws.ec2.SecurityGroup(
         fromPort: portOf(website),
         toPort: portOf(website),
         protocol: 'tcp',
-        securityGroups: [lbSecurityGroup.id],
-        description: `HTTP from ALB on port ${portOf(website)}`,
+        prefixListIds: [cfPrefixList.id],
+        description: `HTTP from CloudFront on port ${portOf(website)}`,
       })),
     ],
     egress: [
@@ -770,30 +751,6 @@ docker compose up -d --remove-orphans --wait
   ],
 });
 
-// Application Load Balancer (HTTP only - CloudFront handles SSL)
-const lb = new awsx.lb.ApplicationLoadBalancer('lb', {
-  name: name('lb'),
-  securityGroups: [lbSecurityGroup.id],
-  subnets: [publicSubnetA, publicSubnetB],
-  listener: {
-    port: 80,
-    protocol: 'HTTP',
-    defaultActions: [
-      {
-        type: 'fixed-response',
-        fixedResponse: {
-          contentType: 'text/plain',
-          statusCode: '418',
-          messageBody: "I'm a teapot",
-        },
-      },
-    ],
-    tags: { proj },
-  },
-  tags: { proj },
-});
-const lbHttp = lb.listeners.apply((l) => l![0]!);
-
 // CloudFront Provider for us-east-1 (required for CloudFront certificates)
 const usEast1Provider = new aws.Provider('us-east-1-provider', {
   region: 'us-east-1',
@@ -1139,45 +1096,6 @@ function handler(event) {
       }),
     });
   } else {
-    // Use Application Load Balancer
-    const tg = new aws.lb.TargetGroup(`${website.name}-lb-tg`, {
-      name: name(`${website.name}-lb-tg`),
-      vpcId: vpc.id,
-      targetType: 'instance',
-      port: portOf(website),
-      protocol: 'HTTP',
-      tags: { proj },
-      healthCheck: {
-        enabled: true,
-        matcher: '200-399',
-        path: '/', // TODO: integrate with WP_Site_Health but needs authentication
-      },
-    });
-    new aws.lb.TargetGroupAttachment(`${website.name}-lb-tg-attachment`, {
-      targetGroupArn: tg.arn,
-      targetId: websitesServer.id,
-      port: portOf(website),
-    });
-    const lbRulePriority = 100 * (websites.indexOf(website) + 1);
-    new aws.lb.ListenerRule(`${website.name}-lb-rule`, {
-      listenerArn: lbHttp.apply((l) => l.arn),
-      priority: lbRulePriority,
-      conditions: [
-        {
-          hostHeader: {
-            values: [website.domain],
-          },
-        },
-      ],
-      actions: [
-        {
-          type: 'forward',
-          targetGroupArn: tg.arn,
-        },
-      ],
-      tags: { proj },
-    });
-
     // CloudFront Cache Policies for WordPress Best Practices
     // as per https://docs.aws.amazon.com/whitepapers/latest/best-practices-wordpress/cloudfront-distribution-creation.html
 
@@ -1208,7 +1126,7 @@ function handler(event) {
         comment: 'Origin request policy for WordPress static content',
         queryStringsConfig: { queryStringBehavior: 'all' },
         headersConfig: {
-          // we need the host header for the alb rules
+          // we need the host header so nginx on ec2 can route to the right site
           headerBehavior: 'whitelist',
           headers: { items: ['Host', 'CloudFront-Forwarded-Proto'] },
         },
@@ -1264,6 +1182,33 @@ function handler(event) {
       },
     );
 
+    // redirect alternate domains to the main domain at the CF edge, before hitting the origin
+    const altRedirectFn =
+      (website.alternate?.length ?? 0) > 0
+        ? new aws.cloudfront.Function(`${website.name}-alt-redirect-fn`, {
+            name: name(`${website.name}-alt-redirect`),
+            runtime: 'cloudfront-js-2.0',
+            publish: true,
+            code: `
+var MAIN_DOMAIN = '${website.domain}';
+var ALT_DOMAINS = [${(website.alternate ?? []).map((a) => `'${a.domain}'`).join(', ')}];
+function handler(event) {
+  var host = event.request.headers.host && event.request.headers.host.value;
+  if (host && ALT_DOMAINS.indexOf(host) !== -1) {
+    return {
+      statusCode: 301,
+      statusDescription: 'Moved Permanently',
+      headers: {
+        location: { value: 'https://' + MAIN_DOMAIN + event.request.uri },
+      },
+    };
+  }
+  return event.request;
+}
+`,
+          })
+        : null;
+
     // CloudFront Distribution
     cfDistribution = new aws.cloudfront.Distribution(
       `${website.name}-cf-distribution`,
@@ -1277,10 +1222,10 @@ function handler(event) {
         webAclId: wafWebAcl.arn,
         origins: [
           {
-            domainName: lb.loadBalancer.dnsName,
-            originId: 'alb',
+            domainName: websitesServerEip.publicDns,
+            originId: 'ec2',
             customOriginConfig: {
-              httpPort: 80,
+              httpPort: portOf(website),
               originProtocolPolicy: 'http-only',
               originReadTimeout: 60,
               originKeepaliveTimeout: 5,
@@ -1292,7 +1237,7 @@ function handler(event) {
         ],
         // Default behavior: Dynamic front-end content
         defaultCacheBehavior: {
-          targetOriginId: 'alb',
+          targetOriginId: 'ec2',
           viewerProtocolPolicy: 'redirect-to-https',
           ...cfCacheBehaviorMethods.all,
           cachePolicyId: website.noCache
@@ -1300,13 +1245,16 @@ function handler(event) {
             : cfDynamicCachePolicy.id,
           originRequestPolicyId: cfDynamicOriginRequestPolicy.id,
           compress: true,
+          functionAssociations: altRedirectFn
+            ? [{ eventType: 'viewer-request', functionArn: altRedirectFn.arn }]
+            : [],
         },
         // Ordered cache behaviors (evaluated in order, first match wins)
         orderedCacheBehaviors: [
           // WordPress Admin Dashboard - HTTPS only, pass everything
           {
             pathPattern: 'wp-admin/*',
-            targetOriginId: 'alb',
+            targetOriginId: 'ec2',
             viewerProtocolPolicy: 'https-only',
             ...cfCacheBehaviorMethods.all,
             cachePolicyId: cfCacheDisabledPolicy.apply((p) => p.id!),
@@ -1317,7 +1265,7 @@ function handler(event) {
           // WordPress Login Page - HTTPS only, pass everything
           {
             pathPattern: 'wp-login.php',
-            targetOriginId: 'alb',
+            targetOriginId: 'ec2',
             viewerProtocolPolicy: 'https-only',
             ...cfCacheBehaviorMethods.all,
             cachePolicyId: cfCacheDisabledPolicy.apply((p) => p.id!),
@@ -1328,7 +1276,7 @@ function handler(event) {
           // WordPress API - HTTPS only, pass everything
           {
             pathPattern: 'wp-json/*',
-            targetOriginId: 'alb',
+            targetOriginId: 'ec2',
             viewerProtocolPolicy: 'https-only',
             ...cfCacheBehaviorMethods.all,
             cachePolicyId: cfCacheDisabledPolicy.apply((p) => p.id!),
@@ -1338,7 +1286,7 @@ function handler(event) {
           },
           {
             pathPattern: 'xmlrpc.php',
-            targetOriginId: 'alb',
+            targetOriginId: 'ec2',
             viewerProtocolPolicy: 'https-only',
             ...cfCacheBehaviorMethods.all,
             cachePolicyId: cfCacheDisabledPolicy.apply((p) => p.id!),
@@ -1348,7 +1296,7 @@ function handler(event) {
           },
           {
             pathPattern: 'wp-cron.php',
-            targetOriginId: 'alb',
+            targetOriginId: 'ec2',
             viewerProtocolPolicy: 'https-only',
             ...cfCacheBehaviorMethods.all, // we need both GET and POST because of loopback requests
             cachePolicyId: cfCacheDisabledPolicy.apply((p) => p.id!),
@@ -1359,7 +1307,7 @@ function handler(event) {
           // Static Content (core WordPress static files, uploads, themes, plugins)
           {
             pathPattern: 'wp-content/*',
-            targetOriginId: 'alb',
+            targetOriginId: 'ec2',
             viewerProtocolPolicy: 'redirect-to-https',
             ...cfCacheBehaviorMethods.getAndOpts,
             cachePolicyId: website.noCache
@@ -1370,7 +1318,7 @@ function handler(event) {
           },
           {
             pathPattern: 'wp-includes/*',
-            targetOriginId: 'alb',
+            targetOriginId: 'ec2',
             viewerProtocolPolicy: 'redirect-to-https',
             ...cfCacheBehaviorMethods.getAndOpts,
             cachePolicyId: website.noCache
@@ -1395,37 +1343,7 @@ function handler(event) {
       { dependsOn: [cfCertsValidation] },
     );
 
-    // ALB redirect rules for alternate domains
-    for (const alt of website.alternate || []) {
-      new aws.lb.ListenerRule(
-        `${website.name}-to-${alt.name}-redirect-lb-rule`,
-        {
-          listenerArn: lbHttp.arn,
-          priority: lbRulePriority + 10 + website.alternate!.indexOf(alt),
-          conditions: [
-            {
-              hostHeader: {
-                values: [alt.domain],
-              },
-            },
-          ],
-          actions: [
-            {
-              type: 'redirect',
-              redirect: {
-                host: website.domain,
-                path: '/#{path}',
-                query: '#{query}',
-                protocol: 'HTTPS',
-                port: '443',
-                statusCode: 'HTTP_301',
-              },
-            },
-          ],
-          tags: { proj },
-        },
-      );
-    }
+
   }
 
   // Point domain DNS to CloudFront
