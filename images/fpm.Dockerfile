@@ -1,4 +1,4 @@
-FROM wordpress:6.8-php8.3-fpm
+FROM wordpress:7.1-php8.5-fpm
 
 # Install fcgi for healthcheck
 RUN apt-get update && apt-get install -y libfcgi-bin
