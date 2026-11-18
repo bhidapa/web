@@ -1,10 +1,15 @@
 // Update version in cookie-consent.php when changing this file.
 const { lang, translations: t } = window.cookieConsent;
 
+// functional is the wp consent api's strictly necessary category, it never needs consent and opt-in would deny it otherwise
+window.wp_set_consent('functional', 'allow');
+
 /** @param {'allow' | 'deny'} value */
 function setStatisticsConsent(value) {
   // site kit maps the wp consent api "statistics" category to google's analytics_storage
   window.wp_set_consent('statistics', value);
+  // the banner has a single analytics category, so anonymous statistics follow the same choice
+  window.wp_set_consent('statistics-anonymous', value);
 }
 
 window.CookieConsent.run({
