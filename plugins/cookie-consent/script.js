@@ -12,7 +12,18 @@ function setStatisticsConsent(value) {
   window.wp_set_consent('statistics-anonymous', value);
 }
 
+// mirrors the banner state instead of service callbacks because service onReject never fires on a first rejection,
+// which would leave a stale "allow" behind (the wp consent api cookies outlive cc_cookie when it gets cleared)
+function syncStatisticsConsent() {
+  setStatisticsConsent(
+    window.CookieConsent.acceptedCategory('analytics') ? 'allow' : 'deny',
+  );
+}
+
 window.CookieConsent.run({
+  // fires on the first choice and on every page load with a valid choice, the page load one lands before site kit reads consent on DOMContentLoaded
+  onConsent: syncStatisticsConsent,
+  onChange: syncStatisticsConsent,
   guiOptions: {
     consentModal: {
       position: 'bottom right',
@@ -28,11 +39,8 @@ window.CookieConsent.run({
         cookies: [{ name: /^_ga/ }],
       },
       services: {
-        'Google Analytics': {
-          // also runs on every page load when consent was given earlier
-          onAccept: () => setStatisticsConsent('allow'),
-          onReject: () => setStatisticsConsent('deny'),
-        },
+        // listed so the preferences modal names the service, consent is synced from the category state above
+        'Google Analytics': {},
       },
     },
   },
@@ -81,3 +89,8 @@ window.CookieConsent.run({
     },
   },
 });
+
+// run() reads cc_cookie synchronously, so without a valid banner choice any leftover "allow" gets wiped before site kit reads it
+if (!window.CookieConsent.validConsent()) {
+  setStatisticsConsent('deny');
+}
