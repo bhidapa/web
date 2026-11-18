@@ -70,6 +70,58 @@ add_action('wp_enqueue_scripts', function () {
         [],
         '3.1.0',
     );
+    wp_enqueue_style(
+        'cookie-consent',
+        plugins_url('style.css', __FILE__),
+        ['vanilla-cookieconsent'],
+        // bump when changing style.css so caches pick it up
+        '0.0.0',
+    );
+
+    // every site styles its blocks differently in theme.json, so the banner takes the active theme's
+    // body, link, heading and button block styles instead of hardcoding one look for all sites
+    $styles = wp_get_global_styles();
+    $button = $styles['blocks']['core/button'] ?? [];
+    $outline = $button['variations']['outline'] ?? [];
+    $vars = array_filter([
+        '--cc-bg' => $styles['color']['background'] ?? null,
+        '--cc-primary-color' => $styles['color']['text'] ?? null,
+        '--cc-secondary-color' => $styles['color']['text'] ?? null,
+        '--cc-link-color' => $styles['elements']['link']['color']['text'] ?? null,
+        '--cc-btn-border-radius' => $button['border']['radius'] ?? null,
+        '--cc-btn-primary-bg' => $button['color']['background'] ?? null,
+        '--cc-btn-primary-color' => $button['color']['text'] ?? null,
+        // the banner's secondary buttons look like the outline block button variation
+        '--cc-btn-secondary-bg' => $outline['color']['background'] ?? null,
+        '--cc-btn-secondary-color' => $outline['color']['text'] ?? null,
+    ]);
+    // vanilla-cookieconsent derives its other colors from these on :root, so they're set there too
+    $css = ':root{';
+    foreach ($vars as $name => $value) {
+        $css .= "$name:$value;";
+    }
+    $css .= '}';
+    // block typography only, the block padding is too wide for the banner's side by side buttons
+    foreach (
+        [
+            '#cc-main' => $styles['typography'] ?? [],
+            '#cc-main .cm__title, #cc-main .pm__title' =>
+                $styles['elements']['h2']['typography'] ?? [],
+            '#cc-main .pm__section-title' =>
+                $styles['elements']['h3']['typography'] ?? [],
+            '#cc-main .cm__btn, #cc-main .pm__btn' =>
+                $button['typography'] ?? [],
+        ]
+        as $selector => $typography
+    ) {
+        $css .=
+            wp_style_engine_get_styles(
+                ['typography' => $typography],
+                ['selector' => $selector],
+            )['css'] ?? '';
+    }
+    wp_add_inline_style('cookie-consent', $css);
+
     wp_enqueue_script(
         'vanilla-cookieconsent',
         plugins_url('lib/cookieconsent.umd.js', __FILE__),

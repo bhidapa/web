@@ -1,0 +1,23 @@
+/* Update version in cookie-consent.php when changing this file. */
+
+/* the theme's colors are set inline by cookie-consent.php, these only adapt vanilla-cookieconsent to how block buttons behave */
+:root {
+  /* block buttons keep their colors on hover and get lifted by a shadow instead */
+  --cc-btn-primary-hover-bg: var(--cc-btn-primary-bg);
+  --cc-btn-primary-hover-color: var(--cc-btn-primary-color);
+  --cc-btn-primary-hover-border-color: var(--cc-btn-primary-bg);
+  --cc-btn-secondary-hover-bg: var(--cc-btn-secondary-bg);
+  --cc-btn-secondary-hover-color: var(--cc-btn-secondary-color);
+  /* outline block buttons draw their border in the text color */
+  --cc-btn-secondary-border-color: var(--cc-btn-secondary-color);
+  --cc-btn-secondary-hover-border-color: var(--cc-btn-secondary-color);
+}
+
+#cc-main .cm__btn,
+#cc-main .pm__btn {
+  transition: box-shadow 0.2s ease;
+}
+#cc-main .cm__btn:hover,
+#cc-main .pm__btn:hover {
+  box-shadow: var(--wp--preset--shadow--elevation-1);
+}
