@@ -19,7 +19,13 @@ if (!theme) {
   throw new Error(`No theme configured for website ${website}`);
 }
 
-const bundles = ['mu-plugins', `themes/${theme}`, 'plugins/e-library'];
+// plugins get synced to every website, activating them is done per website in wp admin
+const bundles = [
+  'mu-plugins',
+  `themes/${theme}`,
+  'plugins/e-library',
+  'plugins/cookie-consent',
+];
 
 console.log(`Pushing to ${website}`);
 await Promise.all(

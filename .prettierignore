@@ -1,1 +1,3 @@
 composer.lock
+# vendored vanilla-cookieconsent dist files
+plugins/cookie-consent/lib/

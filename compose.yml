@@ -46,6 +46,7 @@ services:
       - bhd-wp-data:/var/www/html
       - ./mu-plugins:/var/www/html/wp-content/mu-plugins
       - ./plugins/e-library:/var/www/html/wp-content/plugins/e-library
+      - ./plugins/cookie-consent:/var/www/html/wp-content/plugins/cookie-consent
       - ./themes/bhd:/var/www/html/wp-content/themes/bhd
   # akp.ba
   akp:
@@ -63,4 +64,5 @@ services:
       - akp-wp-data:/var/www/html
       - ./mu-plugins:/var/www/html/wp-content/mu-plugins
       - ./plugins/e-library:/var/www/html/wp-content/plugins/e-library
+      - ./plugins/cookie-consent:/var/www/html/wp-content/plugins/cookie-consent
       - ./themes/azp:/var/www/html/wp-content/themes/azp
