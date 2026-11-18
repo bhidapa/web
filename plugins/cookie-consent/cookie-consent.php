@@ -87,7 +87,8 @@ add_action('wp_enqueue_scripts', function () {
         '--cc-bg' => $styles['color']['background'] ?? null,
         '--cc-primary-color' => $styles['color']['text'] ?? null,
         '--cc-secondary-color' => $styles['color']['text'] ?? null,
-        '--cc-link-color' => $styles['elements']['link']['color']['text'] ?? null,
+        '--cc-link-color' =>
+            $styles['elements']['link']['color']['text'] ?? null,
         '--cc-btn-border-radius' => $button['border']['radius'] ?? null,
         '--cc-btn-primary-bg' => $button['color']['background'] ?? null,
         '--cc-btn-primary-color' => $button['color']['text'] ?? null,
@@ -114,11 +115,13 @@ add_action('wp_enqueue_scripts', function () {
         ]
         as $selector => $typography
     ) {
-        $css .=
-            wp_style_engine_get_styles(
-                ['typography' => $typography],
-                ['selector' => $selector],
-            )['css'] ?? '';
+        $rule = wp_style_engine_get_styles(
+            ['typography' => $typography],
+            ['selector' => $selector],
+        );
+        // wp array_filters the result so css is missing without declarations, the stubs type it as always set
+        /** @phpstan-ignore nullCoalesce.offset */
+        $css .= $rule['css'] ?? '';
     }
     wp_add_inline_style('cookie-consent', $css);
 
