@@ -58,6 +58,8 @@ add_filter('wp_get_consent_type', fn() => 'optin');
 // site kit's consent mode only denies by default in the eea, switzerland and the uk, dropping the region denies for every visitor
 add_filter('googlesitekit_consent_defaults', function ($defaults) {
     unset($defaults['region']);
+    // site kit grants a stored choice on DOMContentLoaded from a footer script, its 500ms default can let the first page view go out without consent
+    $defaults['wait_for_update'] = 2000;
     return $defaults;
 });
 
