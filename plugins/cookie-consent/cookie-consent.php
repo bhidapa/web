@@ -138,7 +138,7 @@ add_action('wp_enqueue_scripts', function () {
         // wp-consent-api provides wp_set_consent which site kit listens to for google consent mode updates
         ['vanilla-cookieconsent', 'wp-consent-api'],
         // bump when changing script.js so caches pick it up
-        '0.0.0',
+        '0.0.1',
         ['in_footer' => true],
     );
 
