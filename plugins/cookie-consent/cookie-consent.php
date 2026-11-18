@@ -4,7 +4,7 @@
  * Author:      BHIDAPA
  * Author URI:  https://bhidapa.ba/
  * Description: Cookie consent banner using vanilla-cookieconsent that reports the visitor's choice to the WP Consent API, is translatable through Polylang and is styled from the active theme's block styles.
- * Version:     0.0.1
+ * Version:     0.0.2
  * Requires Plugins: wp-consent-api
  */
 
@@ -83,19 +83,23 @@ add_action('wp_enqueue_scripts', function () {
     $styles = wp_get_global_styles();
     $button = $styles['blocks']['core/button'] ?? [];
     $outline = $button['variations']['outline'] ?? [];
-    $vars = array_filter([
-        '--cc-bg' => $styles['color']['background'] ?? null,
-        '--cc-primary-color' => $styles['color']['text'] ?? null,
-        '--cc-secondary-color' => $styles['color']['text'] ?? null,
-        '--cc-link-color' =>
-            $styles['elements']['link']['color']['text'] ?? null,
-        '--cc-btn-border-radius' => $button['border']['radius'] ?? null,
-        '--cc-btn-primary-bg' => $button['color']['background'] ?? null,
-        '--cc-btn-primary-color' => $button['color']['text'] ?? null,
-        // the banner's secondary buttons look like the outline block button variation
-        '--cc-btn-secondary-bg' => $outline['color']['background'] ?? null,
-        '--cc-btn-secondary-color' => $outline['color']['text'] ?? null,
-    ]);
+    $vars = array_filter(
+        [
+            '--cc-bg' => $styles['color']['background'] ?? null,
+            '--cc-primary-color' => $styles['color']['text'] ?? null,
+            '--cc-secondary-color' => $styles['color']['text'] ?? null,
+            '--cc-link-color' =>
+                $styles['elements']['link']['color']['text'] ?? null,
+            '--cc-btn-border-radius' => $button['border']['radius'] ?? null,
+            '--cc-btn-primary-bg' => $button['color']['background'] ?? null,
+            '--cc-btn-primary-color' => $button['color']['text'] ?? null,
+            // the banner's secondary buttons look like the outline block button variation
+            '--cc-btn-secondary-bg' => $outline['color']['background'] ?? null,
+            '--cc-btn-secondary-color' => $outline['color']['text'] ?? null,
+        ],
+        // only unset styles are dropped, a plain array_filter would also drop falsy values like a "0" radius
+        fn($value) => $value !== null,
+    );
     // vanilla-cookieconsent derives its other colors from these on :root, so they're set there too
     $css = ':root{';
     foreach ($vars as $name => $value) {
