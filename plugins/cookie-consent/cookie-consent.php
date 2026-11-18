@@ -3,8 +3,8 @@
  * Plugin Name: Cookie Consent
  * Author:      BHIDAPA
  * Author URI:  https://bhidapa.ba/
- * Description: Cookie consent banner using vanilla-cookieconsent that reports the visitor's choice to the WP Consent API and is translatable through Polylang.
- * Version:     0.0.0
+ * Description: Cookie consent banner using vanilla-cookieconsent that reports the visitor's choice to the WP Consent API, is translatable through Polylang and is styled from the active theme's block styles.
+ * Version:     0.0.1
  * Requires Plugins: wp-consent-api
  */
 
