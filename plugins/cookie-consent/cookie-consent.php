@@ -3,8 +3,9 @@
  * Plugin Name: Cookie Consent
  * Author:      BHIDAPA
  * Author URI:  https://bhidapa.ba/
- * Description: Cookie consent banner using vanilla-cookieconsent, wired to Google consent mode and translatable through Polylang.
+ * Description: Cookie consent banner using vanilla-cookieconsent that reports the visitor's choice to the WP Consent API and is translatable through Polylang.
  * Version:     0.0.0
+ * Requires Plugins: wp-consent-api
  */
 
 /**
@@ -51,27 +52,14 @@ add_action('init', function () {
     }
 });
 
-// priority 0 so the denied default lands in the datalayer before site kit's gtag config sends the page view
-add_action(
-    'wp_head',
-    function () {
-        ?>
-<script>
-window.dataLayer = window.dataLayer || [];
-window.gtag = window.gtag || function () { window.dataLayer.push(arguments); };
-// everything is denied until the visitor accepts in the banner, wait_for_update holds the page view until the banner applies a stored choice
-window.gtag('consent', 'default', {
-    ad_storage: 'denied',
-    ad_user_data: 'denied',
-    ad_personalization: 'denied',
-    analytics_storage: 'denied',
-    wait_for_update: 2000,
+// visitors must opt in, so the wp consent api treats every category without an explicit "allow" as denied
+add_filter('wp_get_consent_type', fn() => 'optin');
+
+// site kit's consent mode only denies by default in the eea, switzerland and the uk, dropping the region denies for every visitor
+add_filter('googlesitekit_consent_defaults', function ($defaults) {
+    unset($defaults['region']);
+    return $defaults;
 });
-</script>
-<?php
-    },
-    0,
-);
 
 add_action('wp_enqueue_scripts', function () {
     wp_enqueue_style(
@@ -90,7 +78,8 @@ add_action('wp_enqueue_scripts', function () {
     wp_enqueue_script(
         'cookie-consent',
         plugins_url('script.js', __FILE__),
-        ['vanilla-cookieconsent'],
+        // wp-consent-api provides wp_set_consent which site kit listens to for google consent mode updates
+        ['vanilla-cookieconsent', 'wp-consent-api'],
         // bump when changing script.js so caches pick it up
         '0.0.0',
         ['in_footer' => true],

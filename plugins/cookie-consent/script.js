@@ -1,10 +1,10 @@
 // Update version in cookie-consent.php when changing this file.
 const { lang, translations: t } = window.cookieConsent;
 
-/** @param {'granted' | 'denied'} state */
-function updateAnalyticsConsent(state) {
-  // gtag is defined in the head by the plugin before site kit loads google analytics
-  window.gtag('consent', 'update', { analytics_storage: state });
+/** @param {'allow' | 'deny'} value */
+function setStatisticsConsent(value) {
+  // site kit maps the wp consent api "statistics" category to google's analytics_storage
+  window.wp_set_consent('statistics', value);
 }
 
 window.CookieConsent.run({
@@ -25,8 +25,8 @@ window.CookieConsent.run({
       services: {
         'Google Analytics': {
           // also runs on every page load when consent was given earlier
-          onAccept: () => updateAnalyticsConsent('granted'),
-          onReject: () => updateAnalyticsConsent('denied'),
+          onAccept: () => setStatisticsConsent('allow'),
+          onReject: () => setStatisticsConsent('deny'),
         },
       },
     },
